@@ -1,0 +1,6 @@
+# Worker local (wrangler dev) · nunca commitar o .dev.vars
+SUPABASE_URL=https://SEU-PROJETO.supabase.co
+SUPABASE_ANON_KEY=sua-anon-key
+SUPABASE_SERVICE_ROLE_KEY=sua-service-role-key
+ANTHROPIC_API_KEY=sk-ant-...
+RESEND_API_KEY=

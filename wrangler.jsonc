@@ -1,0 +1,26 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "rcn-portal",
+  "main": "worker/index.ts",
+  "compatibility_date": "2026-10-01",
+  "compatibility_flags": ["nodejs_compat"],
+  // O site (React) sai de ./dist. /api/* passa pelo Worker; o resto é SPA.
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*"]
+  },
+  "queues": {
+    "producers": [{ "binding": "ANALYSIS_QUEUE", "queue": "rcn-analysis" }],
+    "consumers": [{ "queue": "rcn-analysis", "max_batch_size": 1, "max_retries": 3 }]
+  },
+  "triggers": { "crons": ["*/5 * * * *"] },
+  "limits": { "cpu_ms": 300000 },
+  "vars": {
+    "PORTAL_URL": "https://rcn-portal.SEU-SUBDOMINIO.workers.dev",
+    "EMAIL_FROM": "Portal RCN <portal@seudominio.com.br>"
+  },
+  "observability": { "enabled": true }
+  // Segredos (wrangler secret put …): SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY, ANTHROPIC_API_KEY, RESEND_API_KEY
+}

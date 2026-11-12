@@ -1,0 +1,171 @@
+import { Link, useNavigate } from 'react-router-dom';
+import { SLOT_ORDER, SLOTS } from '../../shared/domain';
+import { DocChip, ErrorState, PageSkeleton } from '../components/ui';
+import { useProfile } from '../lib/auth';
+import { useDocs, useGami, useReports, type DocState } from '../lib/data';
+import { firstName, fmtBRL, fmtDay, fmtDueShort, fmtPeriod } from '../lib/format';
+
+export function slotHref(d: DocState): string {
+  if (d.status === 'none') return `/documentos/nova?slot=${d.slot}`;
+  if (d.status === 'pronta') return `/documentos/${d.slot}/devolutiva`;
+  return `/documentos/${d.slot}/status`;
+}
+
+export function docLine(d: DocState): string {
+  const v = d.latest?.version;
+  if (d.status === 'none') return 'Toque para enviar';
+  if (d.status === 'analise') return `Versão ${v} · em análise`;
+  if (d.status === 'revisao') return `Versão ${v} · previsão ${fmtDueShort(d.latest!.due_at)}`;
+  return `Versão ${v} · devolutiva pronta`;
+}
+
+export function NewBadge() {
+  return <span style={{ background: 'var(--gold)', color: 'var(--t)', fontSize: 11, fontWeight: 700, padding: '1px 7px', borderRadius: 9 }}>NOVA</span>;
+}
+
+export default function Inicio() {
+  const profile = useProfile();
+  const docsQ = useDocs();
+  const gami = useGami();
+  const reports = useReports();
+  const nav = useNavigate();
+  const loading = docsQ.isLoading || gami.isLoading || reports.isLoading;
+  const error = docsQ.isError || gami.isError || reports.isError;
+
+  if (loading) return <div className="page"><PageSkeleton /></div>;
+  if (error)
+    return (
+      <div className="page">
+        <ErrorState onRetry={() => { docsQ.refetch(); gami.refetch(); reports.refetch(); }} />
+      </div>
+    );
+
+  const { docs, unseen } = docsQ;
+  const fresh = SLOT_ORDER.every((s) => docs[s].versions.length === 0);
+  const ready = unseen[0] ? docs[unseen[0]] : null;
+  const reps = reports.data || [];
+  const last = reps[0];
+  const total = reps.reduce((a, r) => a + r.revenue, 0);
+  const lvl = gami.current;
+  const pct = gami.xpMax ? (gami.xpLevel / gami.xpMax) * 100 : 0;
+
+  return (
+    <div className="page">
+      <div className="between" style={{ alignItems: 'flex-end', flexWrap: 'wrap', gap: 16 }}>
+        <div>
+          <h1 className="h-page">Olá, {firstName(profile.full_name)}!</h1>
+          <div style={{ fontSize: 15, color: 'var(--t3)', marginTop: 6 }}>{[profile.studio, profile.group_name].filter(Boolean).join(' · ')}</div>
+        </div>
+        <Link to="/relatorios/novo" className="btn btn-primary" style={{ flex: '1 1 auto', maxWidth: 320 }}>
+          <span className="plus">+</span>Enviar relatório quinzenal
+        </Link>
+      </div>
+
+      {ready && (
+        <Link to={`/documentos/${ready.slot}/devolutiva`} className="card" style={{ border: '2px solid var(--ac)', padding: 16, display: 'flex', gap: 14, alignItems: 'center', flexWrap: 'wrap', color: 'inherit', textDecoration: 'none' }}>
+          <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'var(--ac)', color: '#fff', display: 'grid', placeItems: 'center', fontWeight: 700, flex: 'none' }}>✉</div>
+          <div style={{ flex: 1, minWidth: 180 }}>
+            <div style={{ fontWeight: 700, fontSize: 16 }}>Sua devolutiva chegou</div>
+            <div style={{ fontSize: 14, color: 'var(--t2)' }}>
+              {SLOTS[ready.slot].title} · versão {ready.latest!.version}
+            </div>
+          </div>
+          <div style={{ fontWeight: 600, fontSize: 15, color: 'var(--ac)', whiteSpace: 'nowrap' }}>Ver devolutiva ›</div>
+        </Link>
+      )}
+
+      {fresh && (
+        <div className="card" style={{ padding: '22px 20px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div style={{ fontWeight: 700, fontSize: 20, lineHeight: 1.25 }}>Comece enviando seu primeiro material</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12, fontSize: 15, lineHeight: 1.45, color: 'var(--t2)' }}>
+            {['Escolha entre portfólio, proposta ou contrato.', 'Envie o arquivo, um link ou cole o texto.', 'Receba a devolutiva revisada pela equipe em até 48h.'].map((t, i) => (
+              <div key={i} style={{ display: 'flex', gap: 12 }}>
+                <div style={{ width: 26, height: 26, borderRadius: '50%', background: 'var(--ac-soft)', color: 'var(--ac)', display: 'grid', placeItems: 'center', fontWeight: 700, fontSize: 13, flex: 'none' }}>{i + 1}</div>
+                <div>{t}</div>
+              </div>
+            ))}
+          </div>
+          <Link to="/documentos/nova" className="btn btn-primary" style={{ height: 54, borderRadius: 14, fontSize: 16, gap: 10 }}>
+            <span className="plus">+</span>Enviar material para análise
+          </Link>
+        </div>
+      )}
+
+      {lvl && (
+        <Link to="/gamificacao" style={{ background: 'var(--ac)', color: '#fff', borderRadius: 18, padding: 24, display: 'flex', flexDirection: 'column', gap: 14, textDecoration: 'none' }}>
+          <div className="label" style={{ color: 'var(--gold)' }}>
+            Nível {lvl.n} de {gami.levels.length}
+            {lvl.goal ? ` · Meta ${lvl.goal}` : ''}
+          </div>
+          <div>
+            <div style={{ fontWeight: 800, fontSize: 34, lineHeight: 1 }}>{lvl.name}</div>
+            {lvl.tagline && <div style={{ fontSize: 15, color: '#D5DCEA', marginTop: 6 }}>{lvl.tagline}</div>}
+          </div>
+          <div className="between" style={{ fontSize: 14, flexWrap: 'wrap' }}>
+            <span>
+              {gami.xpLevel} de {gami.xpMax} XP
+            </span>
+            <span style={{ whiteSpace: 'nowrap' }}>
+              {gami.tasksDone}/{gami.tasksTotal} tarefas principais
+            </span>
+          </div>
+          <div style={{ height: 8, borderRadius: 4, background: 'rgba(255,255,255,.16)', overflow: 'hidden' }}>
+            <div style={{ width: pct + '%', height: '100%', borderRadius: 4, background: 'var(--gold)' }} />
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(92px,1fr))', gap: 8, fontSize: 12, fontWeight: 700, letterSpacing: '.04em', textAlign: 'center' }}>
+            {gami.levels.map((l) => {
+              const done = l.n < lvl.n, cur = l.n === lvl.n;
+              return (
+                <div key={l.n} style={{ padding: '9px 4px', borderRadius: 8, background: cur ? 'var(--gold)' : done ? 'rgba(255,255,255,.14)' : 'rgba(255,255,255,.06)', color: cur ? 'var(--t)' : done ? '#fff' : '#B9C4D9' }}>
+                  {done ? '✓ ' : ''}
+                  {l.name.toUpperCase()}
+                </div>
+              );
+            })}
+          </div>
+        </Link>
+      )}
+
+      <div className="grid-auto">
+        <Link to="/relatorios" className="card" style={{ color: 'inherit', textDecoration: 'none' }}>
+          <div className="label">Último relatório</div>
+          <div style={{ fontWeight: 700, fontSize: 26, marginTop: 8 }}>{last ? fmtBRL(last.revenue) : '—'}</div>
+          <div style={{ fontSize: 14, color: 'var(--t3)', marginTop: 2 }}>
+            {last ? `Quinzena ${fmtPeriod(last.period_start, last.period_end)} · enviado ${fmtDay(last.created_at, false)}` : 'Envie seu primeiro relatório'}
+          </div>
+        </Link>
+        <Link to="/relatorios" className="card" style={{ color: 'inherit', textDecoration: 'none' }}>
+          <div className="label">Faturamento registrado</div>
+          <div style={{ fontWeight: 700, fontSize: 26, marginTop: 8 }}>{fmtBRL(total)}</div>
+          <div style={{ fontSize: 14, color: 'var(--t3)', marginTop: 2 }}>
+            {reps.length ? `Soma de ${reps.length} relatório${reps.length > 1 ? 's' : ''}` : 'Nenhum relatório ainda'}
+          </div>
+        </Link>
+      </div>
+
+      <div className="card" style={{ padding: '20px 20px 8px' }}>
+        <div className="between" style={{ alignItems: 'baseline' }}>
+          <div className="h-card">Seus materiais</div>
+          <Link to="/documentos" className="link">
+            Ver todos
+          </Link>
+        </div>
+        {SLOT_ORDER.map((s) => {
+          const d = docs[s];
+          return (
+            <button key={s} onClick={() => nav(slotHref(d))} className="between divrow" style={{ alignItems: 'center', minHeight: 64, padding: '8px 0', width: '100%' }}>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontWeight: 600, fontSize: 15, display: 'flex', gap: 8, alignItems: 'center' }}>
+                  {SLOTS[s].title}
+                  {d.unseen && <NewBadge />}
+                </div>
+                <div style={{ fontSize: 13, color: 'var(--t3)' }}>{docLine(d)}</div>
+              </div>
+              <DocChip d={d} />
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
