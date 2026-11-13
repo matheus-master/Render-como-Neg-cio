@@ -60,6 +60,7 @@ export function fmtPeriod(a: string, b: string): string {
 export const fmtBRL = (n: number) => 'R$ ' + new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 0 }).format(n);
 export const fmtMB = (bytes: number) => new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 1 }).format(bytes / 1024 / 1024) + ' MB';
 
+/** Iniciais das duas primeiras palavras que começam com letra (ignora "(Equipe)", números etc.). */
 export const initials = (name: string) =>
-  name.split(' ').filter(Boolean).slice(0, 2).map((w) => w[0]!.toUpperCase()).join('') || '?';
+  name.split(/\s+/).filter((w) => /^\p{L}/u.test(w)).slice(0, 2).map((w) => w[0]!.toUpperCase()).join('') || '?';
 export const firstName = (name: string) => name.split(' ').filter(Boolean)[0] || '';
