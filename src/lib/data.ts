@@ -125,6 +125,9 @@ export function useSetChecks() {
 // Gamificação
 // ---------------------------------------------------------------------
 export interface Level { n: number; name: string; tagline: string | null; goal: string | null }
+export interface TaskMark { task_id: number; status: 'andamento' | 'feita' }
+/** href: para onde leva a tarefa automática (documento ligado a ela). */
+export type TaskState = { kind: 'pendente' | 'feita' | 'andamento'; note?: string; href?: string };
 export interface Task { id: number; level: number; position: number; title: string; description: string; category: string; xp: number; auto_slot: Slot | null }
 
 export function useGami() {
@@ -134,12 +137,32 @@ export function useGami() {
   const comp = useQuery({
     queryKey: ['task_completions', uid],
     enabled: !!uid,
-    queryFn: async () => (unwrap(await supabase.from('task_completions').select('task_id')) as { task_id: number }[]).map((r) => r.task_id),
+    queryFn: async (): Promise<TaskMark[]> => {
+      const r = await supabase.from('task_completions').select('task_id, status');
+      // Antes da migração 20261113 a coluna status não existe: tudo que está lá conta como feito.
+      if (r.error) return (unwrap(await supabase.from('task_completions').select('task_id')) as { task_id: number }[]).map((x) => ({ task_id: x.task_id, status: 'feita' }));
+      return r.data as TaskMark[];
+    },
   });
   const { docs, isLoading: dl, isError: de } = useDocs();
 
+  const mark = (t: Task) => comp.data?.find((m) => m.task_id === t.id)?.status;
   const isDone = (t: Task) =>
-    t.auto_slot ? docs[t.auto_slot].status === 'pronta' && docs[t.auto_slot].latest?.verdict === 'ok' : !!comp.data?.includes(t.id);
+    t.auto_slot ? docs[t.auto_slot].status === 'pronta' && docs[t.auto_slot].latest?.verdict === 'ok' : mark(t) === 'feita';
+  /** Situação da tarefa, com o motivo quando está em andamento. */
+  const stateOf = (t: Task): TaskState => {
+    if (t.auto_slot) {
+      const slot = t.auto_slot, d = docs[slot];
+      if (isDone(t)) return { kind: 'feita', note: 'Concluída pela devolutiva', href: `/documentos/${slot}/devolutiva` };
+      if (d.status === 'analise') return { kind: 'andamento', note: 'Material enviado · em análise', href: `/documentos/${slot}/status` };
+      if (d.status === 'revisao') return { kind: 'andamento', note: 'Em revisão pela equipe', href: `/documentos/${slot}/status` };
+      if (d.status === 'pronta') return { kind: 'andamento', note: 'Devolutiva pediu ajustes · envie a nova versão', href: `/documentos/${slot}/devolutiva` };
+      return { kind: 'pendente', note: 'Conclui sozinha quando a devolutiva vier Aprovado · Enviar material', href: `/documentos/nova?slot=${slot}` };
+    }
+    if (isDone(t)) return { kind: 'feita' };
+    return mark(t) === 'andamento' ? { kind: 'andamento' } : { kind: 'pendente' };
+  };
+
 
   const lv = levels.data || [];
   const ts = tasks.data || [];
@@ -150,7 +173,11 @@ export function useGami() {
   const xpMax = curTasks.reduce((a, t) => a + t.xp, 0);
   const xpLevel = curTasks.filter(isDone).reduce((a, t) => a + t.xp, 0);
   const xpTotal = ts.filter(isDone).reduce((a, t) => a + t.xp, 0);
+  const curStarted = curTasks.filter((t) => stateOf(t).kind === 'andamento');
   return {
+    stateOf,
+    tasksStarted: curStarted.length,
+    xpStarted: curStarted.reduce((a, t) => a + t.xp, 0),
     levels: lv,
     tasks: ts,
     byLevel,
@@ -167,16 +194,23 @@ export function useGami() {
   };
 }
 
-export function useToggleTask() {
+export function useSetTaskStatus() {
   const qc = useQueryClient();
   const uid = useUid();
   return useMutation({
-    mutationFn: async ({ taskId, done }: { taskId: number; done: boolean }) =>
-      done
-        ? unwrap(await supabase.from('task_completions').insert({ task_id: taskId }))
-        : unwrap(await supabase.from('task_completions').delete().eq('task_id', taskId).eq('student_id', uid!)),
-    onMutate: ({ taskId, done }) =>
-      qc.setQueryData<number[]>(['task_completions', uid], (old = []) => (done ? [...old, taskId] : old.filter((x) => x !== taskId))),
+    mutationFn: async ({ taskId, status }: { taskId: number; status: 'pendente' | TaskMark['status'] }) => {
+      if (status === 'pendente') return unwrap(await supabase.from('task_completions').delete().eq('task_id', taskId).eq('student_id', uid!));
+      const up = await supabase.from('task_completions').upsert({ student_id: uid, task_id: taskId, status, updated_at: new Date().toISOString() });
+      if (!up.error) return null;
+      // Banco ainda sem a coluna status: só dá para marcar como feita.
+      if (status === 'andamento') throw new Error('Rode a migração 20261113_task_progress no Supabase para usar "Em andamento".');
+      return unwrap(await supabase.from('task_completions').insert({ task_id: taskId }));
+    },
+    onMutate: ({ taskId, status }) =>
+      qc.setQueryData<TaskMark[]>(['task_completions', uid], (old = []) => {
+        const rest = old.filter((m) => m.task_id !== taskId);
+        return status === 'pendente' ? rest : [...rest, { task_id: taskId, status }];
+      }),
     onSettled: () => qc.invalidateQueries({ queryKey: ['task_completions'] }),
   });
 }

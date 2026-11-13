@@ -106,11 +106,14 @@ export default function Inicio() {
               {gami.xpLevel} de {gami.xpMax} XP
             </span>
             <span style={{ whiteSpace: 'nowrap' }}>
-              {gami.tasksDone}/{gami.tasksTotal} tarefas principais
+              {gami.tasksDone}/{gami.tasksTotal} tarefas principais{gami.tasksStarted ? ` · ${gami.tasksStarted} em andamento` : ''}
             </span>
           </div>
           <div style={{ height: 8, borderRadius: 4, background: 'rgba(255,255,255,.16)', overflow: 'hidden' }}>
-            <div style={{ width: pct + '%', height: '100%', borderRadius: 4, background: 'var(--gold)' }} />
+            <div style={{ display: 'flex', height: '100%' }}>
+              <div style={{ width: pct + '%', height: '100%', background: 'var(--gold)' }} />
+              <div style={{ width: (gami.xpMax ? (gami.xpStarted / gami.xpMax) * 100 : 0) + '%', height: '100%', background: 'repeating-linear-gradient(45deg, rgba(242,183,31,.55) 0 6px, rgba(242,183,31,.3) 6px 12px)' }} />
+            </div>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(92px,1fr))', gap: 8, fontSize: 12, fontWeight: 700, letterSpacing: '.04em', textAlign: 'center' }}>
             {gami.levels.map((l) => {

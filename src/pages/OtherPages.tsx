@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { BackLink, ErrorState, PageHead, PageSkeleton } from '../components/ui';
 import { useAuth, useProfile } from '../lib/auth';
-import { useGami, useRedButton, useReports, useSetting, useSurvey, useToggleTask } from '../lib/data';
+import { useGami, useRedButton, useReports, useSetting, useSurvey, useSetTaskStatus } from '../lib/data';
 import { fmtBRL, fmtDate, fmtDay, fmtPeriod } from '../lib/format';
 import { supabase } from '../lib/supabase';
 import { useToast } from '../lib/toast';
@@ -13,7 +13,8 @@ import { useToast } from '../lib/toast';
 // ---------------------------------------------------------------------
 export function Gamificacao() {
   const g = useGami();
-  const toggle = useToggleTask();
+  const setStatus = useSetTaskStatus();
+  const toast = useToast();
   const nav = useNavigate();
   const [sel, setSel] = useState<number | null>(null);
 
@@ -22,12 +23,24 @@ export function Gamificacao() {
   const cur = g.current;
   const shown = sel ?? cur?.n ?? 1;
   const lvl = g.levels.find((l) => l.n === shown);
+  const next = g.levels.find((l) => l.n === shown + 1);
   const tasks = g.byLevel(shown);
+  const states = tasks.map((t) => g.stateOf(t));
   const xpMax = tasks.reduce((a, t) => a + t.xp, 0);
-  const xpLevel = tasks.filter(g.isDone).reduce((a, t) => a + t.xp, 0);
-  const done = tasks.filter(g.isDone).length;
+  const xpDone = tasks.filter((_, i) => states[i]!.kind === 'feita').reduce((a, t) => a + t.xp, 0);
+  const xpStarted = tasks.filter((_, i) => states[i]!.kind === 'andamento').reduce((a, t) => a + t.xp, 0);
+  const done = states.filter((s) => s.kind === 'feita').length;
+  const started = states.filter((s) => s.kind === 'andamento').length;
+  const left = tasks.length - done;
   const isPast = cur && shown < cur.n;
   const isFuture = cur && shown > cur.n;
+  // Próximo passo: a primeira em andamento; se não houver, a primeira pendente.
+  const nextIdx = states.findIndex((s) => s.kind === 'andamento') >= 0 ? states.findIndex((s) => s.kind === 'andamento') : states.findIndex((s) => s.kind === 'pendente');
+  const nextTask = nextIdx >= 0 ? tasks[nextIdx] : null;
+
+  const set = (taskId: number, status: 'pendente' | 'andamento' | 'feita') =>
+    setStatus.mutate({ taskId, status }, { onError: (e) => toast((e as Error).message) });
+  const pct = (n: number) => (xpMax ? (n / xpMax) * 100 : 0);
 
   return (
     <div className="page">
@@ -53,22 +66,49 @@ export function Gamificacao() {
         </div>
       ) : (
         <>
+          {nextTask && !isPast && (
+            <div style={{ background: 'var(--ac)', color: '#fff', borderRadius: 18, padding: '20px 22px', display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>
+              <div style={{ flex: '1 1 260px', minWidth: 0 }}>
+                <div className="label" style={{ color: 'var(--gold)' }}>Seu próximo passo</div>
+                <div style={{ fontWeight: 700, fontSize: 20, marginTop: 6 }}>{nextTask.title}</div>
+                <div style={{ fontSize: 14, color: '#D5DCEA', marginTop: 4 }}>
+                  {left === 1 ? 'Última tarefa' : `Faltam ${left} tarefas`}
+                  {next ? ` para chegar a ${next.name}` : ' para fechar este nível'}
+                  {started > 0 ? ` · ${started} em andamento` : ''}
+                </div>
+              </div>
+              {nextTask.auto_slot ? (
+                <button className="btn btn-gold" onClick={() => nav(states[nextIdx]!.href!)}>
+                  {states[nextIdx]!.kind === 'pendente' ? 'Enviar documento' : 'Ver documento'}
+                </button>
+              ) : states[nextIdx]!.kind === 'pendente' ? (
+                <button className="btn btn-gold" onClick={() => set(nextTask.id, 'andamento')}>▶ Começar agora</button>
+              ) : (
+                <button className="btn btn-gold" onClick={() => set(nextTask.id, 'feita')}>✓ Marcar como feita</button>
+              )}
+            </div>
+          )}
+
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(200px,1fr))', gap: 14 }}>
             <div className="card">
               <div className="label">XP neste nível</div>
               <div style={{ fontWeight: 700, fontSize: 28, marginTop: 8 }}>
-                {xpLevel} <span style={{ fontSize: 15, color: 'var(--t3)', fontWeight: 600 }}>/ {xpMax}</span>
+                {xpDone} <span style={{ fontSize: 15, color: 'var(--t3)', fontWeight: 600 }}>/ {xpMax}</span>
               </div>
-              <div style={{ height: 8, borderRadius: 4, background: 'var(--alt3)', overflow: 'hidden', marginTop: 10 }}>
-                <div style={{ width: (xpMax ? (xpLevel / xpMax) * 100 : 0) + '%', height: '100%', borderRadius: 4, background: 'var(--ac)' }} />
+              <div style={{ height: 8, borderRadius: 4, background: 'var(--alt3)', overflow: 'hidden', marginTop: 10, display: 'flex' }}>
+                <div style={{ width: pct(xpDone) + '%', height: '100%', background: 'var(--ac)', transition: 'width .4s' }} />
+                <div style={{ width: pct(xpStarted) + '%', height: '100%', background: 'repeating-linear-gradient(45deg, color-mix(in oklab, var(--ac) 45%, #fff) 0 6px, color-mix(in oklab, var(--ac) 30%, #fff) 6px 12px)', transition: 'width .4s' }} />
               </div>
+              {xpStarted > 0 && <div style={{ fontSize: 13, color: 'var(--t3)', marginTop: 6 }}>+{xpStarted} XP em andamento</div>}
             </div>
             <div className="card">
               <div className="label">Tarefas principais</div>
               <div style={{ fontWeight: 700, fontSize: 28, marginTop: 8 }}>
                 {done} <span style={{ fontSize: 15, color: 'var(--t3)', fontWeight: 600 }}>/ {tasks.length}</span>
               </div>
-              {lvl?.goal && <div style={{ fontSize: 14, color: 'var(--t3)', marginTop: 4 }}>Meta de faturamento: {lvl.goal}</div>}
+              <div style={{ fontSize: 14, color: 'var(--t3)', marginTop: 4 }}>
+                {started > 0 ? `${started} em andamento` : lvl?.goal ? `Meta de faturamento: ${lvl.goal}` : 'Comece por uma tarefa'}
+              </div>
             </div>
             <div className="card">
               <div className="label">XP total conquistado</div>
@@ -76,32 +116,55 @@ export function Gamificacao() {
               <div style={{ fontSize: 14, color: 'var(--t3)', marginTop: 4 }}>Somando todos os níveis</div>
             </div>
           </div>
+
           <div className="card" style={{ padding: '20px 20px 6px' }}>
             <div className="h-card">
               Nível {lvl?.n} · {lvl?.name}
             </div>
             {lvl?.tagline && <div style={{ fontSize: 15, color: 'var(--t3)', marginTop: 2, marginBottom: 8 }}>{lvl.tagline}</div>}
             {tasks.map((t, i) => {
-              const on = g.isDone(t);
-              const click = () => (t.auto_slot ? nav(`/documentos/${t.auto_slot}/devolutiva`) : toggle.mutate({ taskId: t.id, done: !on }));
+              const st = states[i]!;
+              const on = st.kind === 'feita';
+              const going = st.kind === 'andamento';
               return (
-                <button key={t.id} onClick={click} role={t.auto_slot ? undefined : 'checkbox'} aria-checked={t.auto_slot ? undefined : on} className="row" style={{ padding: '14px 0', borderTop: '1px solid var(--b-div)', width: '100%' }}>
-                  <div style={{ width: 22, fontWeight: 700, color: 'var(--t4)', flex: 'none' }}>{i + 1}</div>
+                <div key={t.id} className="row" style={{ padding: '14px 0', borderTop: '1px solid var(--b-div)', alignItems: 'center', background: going ? 'linear-gradient(90deg, var(--ac-soft), transparent 70%)' : undefined, margin: going ? '0 -20px' : undefined, paddingLeft: going ? 20 : 0, paddingRight: going ? 20 : 0 }}>
+                  <div style={{ width: 22, fontWeight: 700, color: going ? 'var(--ac)' : 'var(--t4)', flex: 'none' }}>{i + 1}</div>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: 600, fontSize: 15, color: on ? 'var(--t3)' : 'var(--t)' }}>{t.title}</div>
+                    <div style={{ fontWeight: 600, fontSize: 15, color: on ? 'var(--t3)' : 'var(--t)', textDecoration: on ? 'line-through' : 'none' }}>{t.title}</div>
                     <div style={{ fontSize: 13, lineHeight: 1.4, color: 'var(--t3)' }}>
                       {t.description}
                       {t.category ? ' · ' + t.category : ''}
                     </div>
-                    {t.auto_slot && (
-                      <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--ac)', marginTop: 2 }}>
-                        {on ? 'Concluída pela devolutiva' : 'Conclui sozinha quando a devolutiva vier Aprovado'}
-                      </div>
-                    )}
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', marginTop: 6 }}>
+                      {going && <span className="chip chip-soft" style={{ fontSize: 12, padding: '3px 8px' }}>● Em andamento</span>}
+                      {on && <span className="chip" style={{ fontSize: 12, padding: '3px 8px', background: 'var(--ok-bg)', color: 'var(--ok-t)' }}>✓ Feita</span>}
+                      {t.auto_slot ? (
+                        <button onClick={() => nav(st.href!)} style={{ fontSize: 12, fontWeight: 600, color: 'var(--ac)' }}>
+                          {st.note} ›
+                        </button>
+                      ) : st.kind === 'pendente' ? (
+                        <button onClick={() => set(t.id, 'andamento')} style={{ fontSize: 12, fontWeight: 600, color: 'var(--ac)', border: '1px solid var(--ac)', borderRadius: 8, padding: '3px 8px' }}>
+                          ▶ Começar
+                        </button>
+                      ) : going ? (
+                        <button onClick={() => set(t.id, 'pendente')} style={{ fontSize: 12, fontWeight: 600, color: 'var(--t3)' }}>
+                          Ainda não comecei
+                        </button>
+                      ) : null}
+                    </div>
                   </div>
-                  <div style={{ fontWeight: 700, fontSize: 14, whiteSpace: 'nowrap' }}>+{t.xp} XP</div>
-                  <div style={{ width: 28, height: 28, borderRadius: 8, flex: 'none', display: 'grid', placeItems: 'center', color: '#fff', fontSize: 15, fontWeight: 700, background: on ? 'var(--ok)' : '#fff', border: on ? 'none' : '2px solid var(--b-dash)' }}>{on ? '✓' : ''}</div>
-                </button>
+                  <div style={{ fontWeight: 700, fontSize: 14, whiteSpace: 'nowrap', color: going ? 'var(--ac)' : undefined }}>+{t.xp} XP</div>
+                  <button
+                    role="checkbox"
+                    aria-checked={on}
+                    aria-label={on ? 'Desmarcar ' + t.title : 'Marcar como feita: ' + t.title}
+                    disabled={!!t.auto_slot}
+                    onClick={() => set(t.id, on ? 'andamento' : 'feita')}
+                    style={{ width: 28, height: 28, borderRadius: 8, flex: 'none', display: 'grid', placeItems: 'center', color: '#fff', fontSize: 15, fontWeight: 700, background: on ? 'var(--ok)' : going ? 'var(--ac-soft)' : '#fff', border: on ? 'none' : going ? '2px solid var(--ac)' : '2px solid var(--b-dash)', cursor: t.auto_slot ? 'default' : 'pointer' }}
+                  >
+                    {on ? '✓' : going ? <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--ac)' }} /> : ''}
+                  </button>
+                </div>
               );
             })}
           </div>
