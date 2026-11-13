@@ -1,5 +1,5 @@
 import { useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
 import { BackLink, ErrorState, PageHead, Mark } from '../components/ui';
 import { useReports, type Report } from '../lib/data';
@@ -7,8 +7,6 @@ import { fmtBRL, fmtDay, fmtPeriod } from '../lib/format';
 import { supabase } from '../lib/supabase';
 import { useToast } from '../lib/toast';
 
-const closedLabel = (n: number) => `${n} fechada${n === 1 ? '' : 's'}`;
-const prospection = (r: Report) => `${r.contacts} contatos · ${r.proposals} propostas · ${closedLabel(r.closed)}`;
 
 // ---------------------------------------------------------------------
 // Lista + evolução
@@ -48,30 +46,28 @@ export function Relatorios() {
         <>
           <Evolution reps={reps} />
           <Journey reps={reps} />
-          <div className="card" style={{ padding: '4px 20px' }}>
+          <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+            <div className="rep-row rep-head">
+              <div>Quinzena</div>
+              <div>Faturamento</div>
+              <div>Prospecção</div>
+              <div>Destaque</div>
+              <div />
+            </div>
             {reps.map((r) => (
-              <Link key={r.id} to={`/relatorios/${r.id}`} className="divrow" style={{ display: 'block', padding: '18px 0', color: 'inherit', textDecoration: 'none' }}>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(150px,1fr))', gap: '8px 16px', alignItems: 'center' }}>
-                  <div>
-                    <div style={{ fontWeight: 600, fontSize: 16 }}>{fmtPeriod(r.period_start, r.period_end)}</div>
-                    <div style={{ fontSize: 13, color: 'var(--t3)' }}>Enviado {fmtDay(r.created_at, false)}</div>
-                  </div>
-                  <div>
-                    <div style={{ fontSize: 13, color: 'var(--t3)' }}>Faturamento</div>
-                    <div style={{ fontWeight: 600, fontSize: 18 }}>{fmtBRL(r.revenue)}</div>
-                  </div>
-                  <div>
-                    <div style={{ fontSize: 13, color: 'var(--t3)' }}>Prospecção</div>
-                    <div style={{ fontSize: 15 }}>{prospection(r)}</div>
-                  </div>
+              <Link key={r.id} to={`/relatorios/${r.id}`} className="rep-row">
+                <div>
+                  <div style={{ fontWeight: 600, fontSize: 15 }}>{fmtPeriod(r.period_start, r.period_end)}</div>
+                  <div className="mono" style={{ fontSize: 11, color: 'var(--t3)' }}>enviado {fmtDay(r.created_at, false)}</div>
                 </div>
-                {r.wins && (
-                  <div style={{ marginTop: 10, fontSize: 14, lineHeight: 1.45, color: 'var(--t2)', display: 'flex', gap: 8 }}>
-                    <span style={{ color: 'var(--ok)', fontWeight: 600 }}><Mark m="★" size={13} /></span>
-                    <span style={{ overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{r.wins}</span>
-                  </div>
-                )}
-                <div style={{ marginTop: 8, fontSize: 14, fontWeight: 600, color: 'var(--ac)' }}>Ver relatório  →</div>
+                <div className="evo-num" style={{ fontSize: 18, marginTop: 0 }}>{fmtBRL(r.revenue)}</div>
+                <div className="mono" style={{ fontSize: 12, color: 'var(--t2)' }}>
+                  {r.contacts} contatos · {r.proposals} prop. · {r.closed} fech.
+                </div>
+                <div style={{ fontSize: 14, color: 'var(--t2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>{r.wins || '—'}</div>
+                <div style={{ color: 'var(--t4)', display: 'flex', justifyContent: 'flex-end' }}>
+                  <Mark m="›" size={18} />
+                </div>
               </Link>
             ))}
           </div>
@@ -82,94 +78,122 @@ export function Relatorios() {
 }
 
 
-/** Conquistas e dificuldades de cada quinzena, para o aluno ver a própria evolução. */
+/** Conquistas e dificuldades de cada quinzena, numa linha do tempo horizontal (da mais antiga para a mais recente). */
 function Journey({ reps }: { reps: Report[] }) {
-  const items = reps.filter((r) => r.wins || r.struggles).slice(0, 8);
+  const items = reps.filter((r) => r.wins || r.struggles).slice(0, 12).reverse();
+  const scroller = useRef<HTMLDivElement>(null);
+  // Começa mostrando a quinzena mais recente (fim da linha).
+  useEffect(() => {
+    const el = scroller.current;
+    if (el) el.scrollLeft = el.scrollWidth;
+  }, [items.length]);
   if (!items.length) return null;
   return (
-    <div className="card" style={{ padding: '20px 20px 6px' }}>
-      <div className="h-card">Conquistas e dificuldades</div>
-      <div style={{ fontSize: 15, color: 'var(--t3)', marginTop: 2, marginBottom: 14 }}>O que marcou cada quinzena, da mais recente para a mais antiga.</div>
-      {items.map((r, i) => (
-        <div key={r.id} style={{ display: 'flex', gap: 14 }}>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-            <div style={{ width: 12, height: 12, borderRadius: '50%', background: i === 0 ? 'var(--ac)' : 'color-mix(in oklab, var(--ac) 35%, #fff)', marginTop: 5, flex: 'none' }} />
-            <div style={{ width: 2, flex: 1, background: i === items.length - 1 ? 'transparent' : '#DCDFE3', margin: '4px 0' }} />
-          </div>
-          <div style={{ flex: 1, minWidth: 0, paddingBottom: 18 }}>
-            <div className="between" style={{ alignItems: 'baseline', gap: 8 }}>
-              <div style={{ fontWeight: 600, fontSize: 15 }}>{fmtPeriod(r.period_start, r.period_end)}</div>
-              <div style={{ fontSize: 13, color: 'var(--t3)', whiteSpace: 'nowrap' }}>{fmtBRL(r.revenue)}</div>
-            </div>
-            {r.wins && (
-              <div style={{ display: 'flex', gap: 8, marginTop: 6, fontSize: 14, lineHeight: 1.45 }}>
-                <span style={{ color: 'var(--ok)', fontWeight: 600, flex: 'none' }}><Mark m="★" size={13} /></span>
-                <span>{r.wins}</span>
-              </div>
-            )}
-            {r.struggles && (
-              <div style={{ display: 'flex', gap: 8, marginTop: 4, fontSize: 14, lineHeight: 1.45, color: 'var(--t2)' }}>
-                <span style={{ color: 'var(--warn)', fontWeight: 600, flex: 'none', width: 12, textAlign: 'center' }}><Mark m="!" size={12} /></span>
-                <span>{r.struggles}</span>
-              </div>
-            )}
-            <Link to={`/relatorios/${r.id}`} style={{ display: 'inline-block', marginTop: 6, fontSize: 13, fontWeight: 600 }}>
-              Ver relatório →
-            </Link>
-          </div>
+    <div className="card" style={{ padding: '22px 0 8px' }}>
+      <div className="between" style={{ alignItems: 'baseline', padding: '0 22px', flexWrap: 'wrap' }}>
+        <div>
+          <div className="h-card">Conquistas e dificuldades</div>
+          <div style={{ fontSize: 14, color: 'var(--t3)', marginTop: 2 }}>O que marcou cada quinzena, da mais antiga para a mais recente.</div>
         </div>
-      ))}
+        <div className="row" style={{ gap: 8 }}>
+          <span className="label">{items.length} quinzenas</span>
+          <button className="btn btn-secondary btn-sm" style={{ width: 36, padding: 0 }} aria-label="Quinzenas anteriores" onClick={() => scroller.current?.scrollBy({ left: -300, behavior: 'smooth' })}>
+            <Mark m="←" size={15} />
+          </button>
+          <button className="btn btn-secondary btn-sm" style={{ width: 36, padding: 0 }} aria-label="Quinzenas seguintes" onClick={() => scroller.current?.scrollBy({ left: 300, behavior: 'smooth' })}>
+            <Mark m="→" size={15} />
+          </button>
+        </div>
+      </div>
+      <div ref={scroller} className="timeline-h" tabIndex={0} aria-label="Linha do tempo de conquistas e dificuldades">
+        {items.map((r, i) => {
+          const last = i === items.length - 1;
+          return (
+            <div key={r.id} className={'tl-col' + (last ? ' now' : '')}>
+              <div className="tl-rail">
+                <span className="tl-dot" />
+              </div>
+              <div className="between" style={{ alignItems: 'baseline', gap: 8 }}>
+                <div className="label" style={{ color: last ? 'var(--t)' : undefined }}>{fmtPeriod(r.period_start, r.period_end)}</div>
+                <div className="mono" style={{ fontSize: 12, color: 'var(--t3)' }}>{fmtBRL(r.revenue)}</div>
+              </div>
+              {r.wins && (
+                <div className="tl-item">
+                  <span style={{ color: 'var(--ok)' }}><Mark m="★" size={13} /></span>
+                  <span>{r.wins}</span>
+                </div>
+              )}
+              {r.struggles && (
+                <div className="tl-item" style={{ color: 'var(--t2)' }}>
+                  <span style={{ color: 'var(--warn)' }}><Mark m="!" size={13} /></span>
+                  <span>{r.struggles}</span>
+                </div>
+              )}
+              <Link to={`/relatorios/${r.id}`} className="link" style={{ marginTop: 'auto', paddingTop: 10, fontSize: 13 }}>
+                Ver relatório <Mark m="→" size={13} />
+              </Link>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
 
 function Evolution({ reps }: { reps: Report[] }) {
-  const chrono = [...reps].reverse().slice(-8);
+  const chrono = [...reps].reverse().slice(-12);
   const max = Math.max(...chrono.map((r) => r.revenue), 1);
   const last = reps[0]!, prev = reps[1];
   const delta = prev && prev.revenue > 0 ? Math.round(((last.revenue - prev.revenue) / prev.revenue) * 100) : null;
   const total = reps.reduce((a, r) => a + r.revenue, 0);
   const avg = total / reps.length;
   const closed = reps.reduce((a, r) => a + r.closed, 0);
+  const stats: [string, string][] = [
+    ['Última quinzena', fmtBRL(last.revenue)],
+    ['Total registrado', fmtBRL(total)],
+    ['Média por quinzena', fmtBRL(avg)],
+    ['Propostas fechadas', String(closed)],
+  ];
 
   return (
-    <div className="card stack" style={{ gap: 18 }}>
-      <div className="between" style={{ alignItems: 'baseline', flexWrap: 'wrap' }}>
-        <div className="h-card">Sua evolução</div>
-        {delta !== null && (
-          <span className="chip" style={{ background: delta >= 0 ? 'var(--ok-bg)' : 'var(--err-bg)', color: delta >= 0 ? 'var(--ok-t)' : 'var(--err-t)' }}>
-            {delta >= 0 ? '↑' : '↓'} {Math.abs(delta)}% vs. quinzena anterior
-          </span>
-        )}
-      </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 10 }}>
-        {[
-          ['Total registrado', fmtBRL(total)],
-          ['Média por quinzena', fmtBRL(avg)],
-          ['Propostas fechadas', String(closed)],
-        ].map(([l, v]) => (
-          <div key={l} style={{ background: 'var(--alt)', borderRadius: 8, padding: '12px 14px', minWidth: 0 }}>
-            <div style={{ fontSize: 12, color: 'var(--t3)', fontWeight: 600 }}>{l}</div>
-            <div style={{ fontWeight: 600, fontSize: 18, marginTop: 2, whiteSpace: 'nowrap' }}>{v}</div>
-          </div>
-        ))}
+    <div className="card evo">
+      <div className="evo-stats">
+        <div className="between" style={{ alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+          <div className="h-card">Sua evolução</div>
+          {delta !== null && (
+            <span className="chip" style={{ background: delta >= 0 ? 'var(--ok-bg)' : 'var(--err-bg)', color: delta >= 0 ? 'var(--ok-t)' : 'var(--err-t)' }}>
+              {delta >= 0 ? '↑' : '↓'} {Math.abs(delta)}%
+            </span>
+          )}
+        </div>
+        <div className="evo-grid">
+          {stats.map(([l, v]) => (
+            <div key={l}>
+              <div className="label">{l}</div>
+              <div className="evo-num">{v}</div>
+            </div>
+          ))}
+        </div>
+        {delta !== null && <div style={{ fontSize: 13, color: 'var(--t3)' }}>Variação da última quinzena em relação à anterior.</div>}
       </div>
       {chrono.length > 1 && (
-        <div role="img" aria-label={'Faturamento por quinzena: ' + chrono.map((r) => `${fmtPeriod(r.period_start, r.period_end)} ${fmtBRL(r.revenue)}`).join(', ')}>
-          <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8, height: 140 }}>
+        <div className="evo-chart" role="img" aria-label={'Faturamento por quinzena: ' + chrono.map((r) => `${fmtPeriod(r.period_start, r.period_end)} ${fmtBRL(r.revenue)}`).join(', ')}>
+          <div className="evo-bars">
             {chrono.map((r, i) => {
               const isLast = i === chrono.length - 1;
               return (
-                <div key={r.id} style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', height: '100%', gap: 4 }}>
-                  <div style={{ fontSize: 11, fontWeight: 600, color: isLast ? 'var(--ac)' : 'var(--t3)', whiteSpace: 'nowrap' }}>{r.revenue >= 1000 ? (r.revenue / 1000).toFixed(1).replace('.', ',') + 'k' : r.revenue}</div>
-                  <div style={{ width: '100%', maxWidth: 48, height: Math.max(4, (r.revenue / max) * 110), borderRadius: '6px 6px 2px 2px', background: isLast ? 'var(--ac)' : 'color-mix(in oklab, var(--ac) 35%, #fff)' }} />
+                <div key={r.id} className="evo-col">
+                  <div className="mono" style={{ fontSize: 11, color: isLast ? 'var(--t)' : 'var(--t3)', whiteSpace: 'nowrap' }}>
+                    {r.revenue >= 1000 ? (r.revenue / 1000).toFixed(1).replace('.', ',') + 'k' : r.revenue}
+                  </div>
+                  <div className={'evo-bar' + (isLast ? ' now' : '')} style={{ height: `${Math.max(3, (r.revenue / max) * 100)}%` }} />
                 </div>
               );
             })}
           </div>
-          <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
+          <div style={{ display: 'flex', gap: 10, marginTop: 8 }}>
             {chrono.map((r) => (
-              <div key={r.id} style={{ flex: 1, minWidth: 0, textAlign: 'center', fontSize: 11, color: 'var(--t3)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              <div key={r.id} className="mono" style={{ flex: 1, minWidth: 0, textAlign: 'center', fontSize: 10, color: 'var(--t3)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {fmtDay(r.period_start + 'T12:00:00Z', false)}
               </div>
             ))}

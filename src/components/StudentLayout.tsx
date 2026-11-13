@@ -1,4 +1,4 @@
-import { BarChart3, ChevronRight, FileText, House, MoreHorizontal, Trophy, type LucideIcon } from 'lucide-react';
+import { BarChart3, CalendarDays, ChevronRight, FileText, House, LogOut, MessageSquareText, MoreHorizontal, Siren, Trophy, UserRound, type LucideIcon } from 'lucide-react';
 import { useState } from 'react';
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth, useProfile } from '../lib/auth';
@@ -6,15 +6,20 @@ import { useDocs } from '../lib/data';
 import { initials } from '../lib/format';
 import { useIsMobile } from '../lib/useIsMobile';
 
-const NAV: [string, string][] = [
-  ['/', 'Início'],
-  ['/gamificacao', 'Gamificação'],
-  ['/relatorios', 'Relatórios'],
-  ['/documentos', 'Documentos'],
-  ['/sessoes', 'Sessões'],
-  ['/calendario', 'Calendário'],
-  ['/feedback', 'Feedback'],
-  ['/perfil', 'Perfil'],
+/** Menu lateral (computador), em dois grupos: o dia a dia e a mentoria. */
+const NAV: [string, string, LucideIcon][][] = [
+  [
+    ['/', 'Início', House],
+    ['/documentos', 'Documentos', FileText],
+    ['/relatorios', 'Relatórios', BarChart3],
+    ['/gamificacao', 'Gamificação', Trophy],
+  ],
+  [
+    ['/sessoes', 'Sessões', Siren],
+    ['/calendario', 'Calendário', CalendarDays],
+    ['/feedback', 'Feedback', MessageSquareText],
+    ['/perfil', 'Perfil', UserRound],
+  ],
 ];
 const TABS: [string, string, LucideIcon][] = [
   ['/', 'Início', House],
@@ -63,7 +68,7 @@ export default function StudentLayout() {
   };
 
   return (
-    <div className={'app' + (mobile && !inNova ? ' has-tabbar' : '')}>
+    <div className={'app' + (mobile && !inNova ? ' has-tabbar' : '') + (mobile ? '' : ' with-sidebar')}>
       {mobile ? (
         <header className="mheader">
           <Logo />
@@ -72,24 +77,40 @@ export default function StudentLayout() {
           </Link>
         </header>
       ) : (
-        <header className="topbar">
-          <Logo />
-          <nav className="topnav">
-            {NAV.map(([to, label]) => (
-              <NavLink key={to} to={to} end={to === '/'} className={({ isActive }) => (isActive ? 'active' : '')}>
-                {label}
-                {to === '/documentos' && badge > 0 && <span className="badge">{badge}</span>}
-              </NavLink>
+        <aside className="sidebar">
+          <div style={{ padding: '4px 10px 0' }}>
+            <Logo />
+          </div>
+          <nav className="sidenav" aria-label="Menu principal">
+            {NAV.map((group, gi) => (
+              <div key={gi} className="sidenav-group">
+                <div className="label sidenav-title">{gi === 0 ? 'Painel' : 'Mentoria'}</div>
+                {group.map(([to, label, Icon]) => (
+                  <NavLink key={to} to={to} end={to === '/'} className={({ isActive }) => (isActive ? 'active' : '')}>
+                    <Icon size={17} strokeWidth={1.8} aria-hidden />
+                    <span style={{ flex: 1 }}>{label}</span>
+                    {to === '/documentos' && badge > 0 && <span className="badge">{badge}</span>}
+                  </NavLink>
+                ))}
+              </div>
             ))}
           </nav>
-          <div style={{ fontSize: 15, fontWeight: 500, whiteSpace: 'nowrap', flex: 'none' }}>{profile.full_name}</div>
-          <button className="btn-out-light" onClick={logout}>
-            Sair
-          </button>
-        </header>
+          <div className="sidebar-user">
+            <Link to="/perfil" className="avatar-btn" style={{ width: 34, height: 34 }} aria-label="Meu perfil">
+              {initials(profile.full_name)}
+            </Link>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 14, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{profile.full_name}</div>
+              <div className="mono" style={{ fontSize: 11, color: 'var(--t3)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{profile.group_name}</div>
+            </div>
+            <button className="rv-x" onClick={logout} aria-label="Sair" title="Sair">
+              <LogOut size={17} aria-hidden />
+            </button>
+          </div>
+        </aside>
       )}
 
-      <main style={{ flex: 1 }}>
+      <main style={{ flex: 1, minWidth: 0 }}>
         <Outlet />
       </main>
 
