@@ -2,7 +2,7 @@ import { BarChart3, CalendarDays, ChevronRight, FileText, House, LogOut, Message
 import { useState } from 'react';
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth, useProfile } from '../lib/auth';
-import { useDocs } from '../lib/data';
+import { useDocs, useGami } from '../lib/data';
 import { initials } from '../lib/format';
 import { useIsMobile } from '../lib/useIsMobile';
 
@@ -49,11 +49,39 @@ export function Logo({ to = '/' }: { to?: string }) {
   );
 }
 
+/** Bloco de nível no menu lateral: nível atual, barra até o próximo e qual é o próximo. */
+function LevelWidget({ g }: { g: ReturnType<typeof useGami> }) {
+  const cur = g.current!;
+  const next = g.levels.find((l) => l.n === cur.n + 1);
+  const pct = g.xpMax ? (g.xpLevel / g.xpMax) * 100 : 0;
+  const ghost = g.xpMax ? (g.xpStarted / g.xpMax) * 100 : 0;
+  const left = g.tasksTotal - g.tasksDone;
+  return (
+    <Link to="/gamificacao" className="level-widget" aria-label={`Nível ${cur.n}, ${cur.name}. ${g.xpLevel} de ${g.xpMax} XP.`}>
+      <div className="between" style={{ alignItems: 'baseline' }}>
+        <span className="label" style={{ color: 'var(--gold)' }}>Nível {cur.n} de {g.levels.length}</span>
+        <span className="mono" style={{ fontSize: 11, color: '#A9AFB9' }}>{Math.round(pct)}%</span>
+      </div>
+      <div style={{ fontWeight: 600, fontSize: 18, letterSpacing: '-.02em', marginTop: 4 }}>{cur.name}</div>
+      <div className="track" style={{ marginTop: 10 }}>
+        <i style={{ width: pct + '%' }} />
+        <i className="ghost" style={{ width: ghost + '%' }} />
+      </div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, marginTop: 8, fontSize: 12, color: '#A9AFB9' }}>
+        <span className="mono">{g.xpLevel}/{g.xpMax} XP</span>
+        <span>{next ? <>Próximo: <b style={{ color: '#fff', fontWeight: 600 }}>{next.name}</b></> : 'Último nível'}</span>
+      </div>
+      {left > 0 && <div style={{ fontSize: 12, color: '#A9AFB9', marginTop: 4 }}>{left === 1 ? 'Falta 1 tarefa' : `Faltam ${left} tarefas`}</div>}
+    </Link>
+  );
+}
+
 export default function StudentLayout() {
   const mobile = useIsMobile();
   const profile = useProfile();
   const { signOut } = useAuth();
   const { unseen } = useDocs();
+  const gami = useGami();
   const nav = useNavigate();
   const { pathname } = useLocation();
   const [more, setMore] = useState(false);
@@ -95,6 +123,7 @@ export default function StudentLayout() {
               </div>
             ))}
           </nav>
+          {gami.current && <LevelWidget g={gami} />}
           <div className="sidebar-user">
             <Link to="/perfil" className="avatar-btn" style={{ width: 34, height: 34 }} aria-label="Meu perfil">
               {initials(profile.full_name)}
