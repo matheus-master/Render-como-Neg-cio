@@ -126,11 +126,15 @@ function Journey({ reps }: { reps: Report[] }) {
             const last = i === items.length - 1;
             return (
               <div key={r.id} className={'tl-col' + (last ? ' now' : ' past')}>
-                <div className="tl-node">
+                <div className="tl-head" aria-hidden={false}>
                   <span className="tl-dot" />
-                  <span className="tl-when">{last ? 'Agora · ' : ''}{fmtPeriod(r.period_start, r.period_end)}</span>
+                  <span className="tl-line" />
+                  <span className="tl-pin" />
+                  <span className="tl-when">
+                    {last && <b>Agora</b>}
+                    {fmtPeriod(r.period_start, r.period_end)}
+                  </span>
                 </div>
-                <div className="tl-stem" aria-hidden />
                 <div className="tl-card">
                   <div className="tl-rev">{fmtBRL(r.revenue)}</div>
                   {r.wins && (

@@ -316,24 +316,27 @@ a.rep-row:hover { text-decoration: none; background: var(--alt); }
 .timeline-h:focus-visible { outline-offset: -2px; }
 .tl-track { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(205px, 1fr); }
 .tl-col { display: flex; flex-direction: column; padding: 0 7px; }
-/* Trilho: cada coluna desenha sua metade da linha, para ela ser contínua de ponto a ponto */
-.tl-node { position: relative; height: 40px; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; }
-.tl-node::before { content: ''; position: absolute; top: 7px; left: -7px; right: -7px; height: 2px; background: var(--alt3); }
-.tl-col:first-child .tl-node::before { left: 50%; }
-.tl-col:last-child .tl-node::before { right: 50%; }
-.tl-col.past .tl-node::before { background: color-mix(in oklab, var(--ink) 55%, var(--alt3)); }
-.tl-dot { position: relative; z-index: 1; width: 16px; height: 16px; border-radius: 50%; background: #fff; border: 2px solid color-mix(in oklab, var(--ink) 55%, var(--alt3)); }
+/* Trilho horizontal: cada coluna desenha sua parte, para a linha ser contínua de ponto a ponto */
+.tl-head { position: relative; height: 64px; }
+.tl-head::before { content: ''; position: absolute; top: 7px; left: -7px; right: -7px; height: 2px; background: var(--alt3); }
+.tl-col:first-child .tl-head::before { left: 50%; }
+.tl-col:last-child .tl-head::before { right: 50%; }
+.tl-col.past .tl-head::before { background: color-mix(in oklab, var(--ink) 55%, var(--alt3)); }
+/* Ponto no trilho */
+.tl-dot { position: absolute; z-index: 1; top: 0; left: 50%; margin-left: -8px; width: 16px; height: 16px; border-radius: 50%; background: #fff; border: 2px solid color-mix(in oklab, var(--ink) 55%, var(--alt3)); transition: border-color .15s; }
 .tl-col.now .tl-dot { background: var(--gold); border-color: var(--ink); box-shadow: 0 0 0 5px rgba(242,183,31,.22); }
-.tl-when { margin-top: 8px; position: relative; z-index: 1; font-family: var(--mono); font-size: 11px; letter-spacing: .04em; text-transform: uppercase; color: var(--t3); white-space: nowrap; }
-.tl-col.now .tl-when { color: var(--t); font-weight: 600; }
-/* Haste que liga a data ao cartão */
-.tl-stem { position: relative; height: 26px; display: flex; justify-content: center; }
-.tl-stem::before { content: ''; width: 2px; border-radius: 1px; height: 100%; background: var(--b-dash); transition: background .15s; }
-.tl-stem::after { content: ''; position: absolute; bottom: -4px; left: 50%; width: 8px; height: 8px; margin-left: -4px; border-radius: 50%; background: #fff; border: 2px solid var(--b-dash); transition: background .15s; }
-.tl-col.now .tl-stem::before, .tl-col:hover .tl-stem::before { background: var(--ink); }
-.tl-col.now .tl-stem::after, .tl-col:hover .tl-stem::after { border-color: var(--ink); }
-.tl-col:hover .tl-dot { border-color: var(--ink); }
-.tl-col:hover .tl-when { color: var(--t); }
+/* Linha vertical contínua: do ponto até o pino no topo do cartão */
+.tl-line { position: absolute; top: 16px; bottom: 4px; left: 50%; width: 2px; margin-left: -1px; background: var(--b-dash); transition: background .15s; }
+.tl-pin { position: absolute; z-index: 1; bottom: -4px; left: 50%; margin-left: -4px; width: 8px; height: 8px; border-radius: 50%; background: #fff; border: 2px solid var(--b-dash); transition: border-color .15s; }
+.tl-col.now .tl-line, .tl-col:hover .tl-line { background: var(--ink); }
+.tl-col.now .tl-pin, .tl-col:hover .tl-pin, .tl-col:hover .tl-dot { border-color: var(--ink); }
+/* Data ao lado esquerdo da linha vertical */
+.tl-when {
+  position: absolute; top: 24px; right: calc(50% + 10px); max-width: calc(50% - 14px);
+  text-align: right; font-family: var(--mono); font-size: 11px; line-height: 1.35; letter-spacing: .04em; text-transform: uppercase; color: var(--t3);
+}
+.tl-when b { display: block; font-weight: 600; color: var(--t); }
+.tl-col.now .tl-when, .tl-col:hover .tl-when { color: var(--t); }
 .tl-col.past:hover .tl-card { border-color: var(--b-btn); background: #fff; }
 .tl-card { flex: 1; margin-top: 0; display: flex; flex-direction: column; gap: 10px; padding: 14px 14px 12px; border-radius: 12px; background: var(--alt); border: 1px solid var(--b-div); transition: border-color .15s, background .15s; }
 .tl-col.now .tl-card { background: #fff; border-color: var(--ink); box-shadow: 0 10px 24px -14px rgba(14,17,22,.35); }
