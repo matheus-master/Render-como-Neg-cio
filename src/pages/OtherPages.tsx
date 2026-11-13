@@ -1,6 +1,7 @@
 import { PasswordFields, passwordOk } from '../components/PasswordFields';
 import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
+import { Pencil } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Chip, ErrorState, PageHead, PageSkeleton, Mark } from '../components/ui';
 import { useAuth, useProfile } from '../lib/auth';
@@ -507,16 +508,29 @@ export function Perfil() {
   const toast = useToast();
   const nav = useNavigate();
   const [form, setForm] = useState({ full_name: profile.full_name, studio: profile.studio, city: profile.city, whatsapp: profile.whatsapp, instagram: profile.instagram });
+  // Começa em leitura quando o perfil já tem dados; em edição se ainda está vazio.
+  const [editing, setEditing] = useState(!profile.studio && !profile.city && !profile.whatsapp && !profile.instagram);
+  const [savingData, setSavingData] = useState(false);
   const [pass, setPass] = useState('');
   const [confirm, setConfirm] = useState('');
   const [notify, setNotify] = useState(profile.email_notify);
   useEffect(() => setNotify(profile.email_notify), [profile.email_notify]);
 
   const save = async () => {
-    const { error } = await supabase.from('profiles').update(form).eq('id', profile.id);
+    if (!form.full_name.trim()) return toast('O nome completo não pode ficar vazio.');
+    setSavingData(true);
+    const clean = Object.fromEntries(Object.entries(form).map(([k, v]) => [k, v.trim()])) as typeof form;
+    const { error } = await supabase.from('profiles').update(clean).eq('id', profile.id);
+    setSavingData(false);
     if (error) return toast('Não deu para salvar. Tente de novo.');
+    setForm(clean);
     reloadProfile();
+    setEditing(false);
     toast('Dados salvos.');
+  };
+  const cancel = () => {
+    setForm({ full_name: profile.full_name, studio: profile.studio, city: profile.city, whatsapp: profile.whatsapp, instagram: profile.instagram });
+    setEditing(false);
   };
   const savePass = async () => {
     if (!passwordOk(pass, confirm)) return;
@@ -549,16 +563,46 @@ export function Perfil() {
       <PageHead title="Meu perfil" sub={profile.email} />
       <div className="grid-300">
         <div className="card stack" style={{ gap: 14 }}>
-          <div className="h-card">Dados</div>
-          {fields.map(([k, label, ph]) => (
-            <label key={k} className="field">
-              <span>{label}</span>
-              <input className="input md" placeholder={ph} value={form[k]} onChange={(e) => setForm({ ...form, [k]: e.target.value })} />
-            </label>
-          ))}
-          <button className="btn btn-primary btn-md" onClick={save}>
-            Salvar
-          </button>
+          <div className="between" style={{ alignItems: 'center' }}>
+            <div className="h-card">Dados</div>
+            {!editing && (
+              <button className="btn btn-secondary btn-sm" onClick={() => setEditing(true)}>
+                <Pencil size={14} aria-hidden />
+                Editar dados
+              </button>
+            )}
+          </div>
+          {editing ? (
+            <>
+              {fields.map(([k, label, ph]) => (
+                <label key={k} className="field">
+                  <span>{label}</span>
+                  <input className="input md" placeholder={ph} value={form[k]} onChange={(e) => setForm({ ...form, [k]: e.target.value })} />
+                </label>
+              ))}
+              <div style={{ display: 'grid', gridTemplateColumns: profile.full_name ? '1fr 2fr' : '1fr', gap: 10 }}>
+                {profile.full_name && (
+                  <button className="btn btn-secondary btn-md" onClick={cancel} disabled={savingData}>
+                    Cancelar
+                  </button>
+                )}
+                <button className="btn btn-primary btn-md" onClick={save} disabled={savingData}>
+                  {savingData ? 'Salvando…' : 'Salvar'}
+                </button>
+              </div>
+            </>
+          ) : (
+            <dl style={{ margin: 0, display: 'flex', flexDirection: 'column' }}>
+              {fields.map(([k, label]) => (
+                <div key={k} className="between divrow" style={{ padding: '11px 0', alignItems: 'baseline', gap: 16 }}>
+                  <dt className="label" style={{ flex: 'none' }}>{label}</dt>
+                  <dd style={{ margin: 0, fontSize: 15, fontWeight: 500, textAlign: 'right', overflowWrap: 'anywhere', color: profile[k] ? 'var(--t)' : 'var(--t4)' }}>
+                    {profile[k] || 'Não informado'}
+                  </dd>
+                </div>
+              ))}
+            </dl>
+          )}
         </div>
         <div className="card stack" style={{ gap: 14 }}>
           <div className="h-card">Trocar senha</div>
