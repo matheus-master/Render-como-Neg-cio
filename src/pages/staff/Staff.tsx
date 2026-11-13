@@ -271,7 +271,7 @@ function ReviewScreen({ item, refetch }: { item: ReviewItem; refetch: () => unkn
     try {
       await apiPost(`/api/submissions/${item.id}/release`, { draft: fbNow });
       qc.invalidateQueries({ queryKey: ['queue'] });
-      toast(`Devolutiva liberada. ${student} recebe um e-mail.`);
+      toast(`Devolutiva liberada. ${student} já pode ver no portal.`);
       nav('/equipe');
     } catch {
       setReleaseErr(true);
@@ -425,7 +425,7 @@ function ReviewScreen({ item, refetch }: { item: ReviewItem; refetch: () => unkn
               )}
               <div className="row" style={{ padding: '14px 28px', flexWrap: 'wrap' }}>
                 <div style={{ fontSize: 14, color: 'var(--t3)', flex: 1, minWidth: 200 }}>
-                  {saved ? `Rascunho salvo. ${student} ainda não vê nada.` : `Ao liberar, ${student} recebe um e-mail com a devolutiva assinada por você.`}
+                  {saved ? `Rascunho salvo. ${student} ainda não vê nada.` : `Ao liberar, ${student} vê a devolutiva assinada por você.`}
                 </div>
                 <button className="btn btn-secondary" onClick={() => saveDraft()}>Salvar rascunho</button>
                 <button className="btn btn-primary" style={{ padding: '0 22px' }} disabled={busy} onClick={approve}>
