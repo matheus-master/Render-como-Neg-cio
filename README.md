@@ -7,7 +7,7 @@ Portal do aluno da Render como Negócio, com o módulo de **análise de materiai
 | Parte | Onde roda | O que faz |
 |---|---|---|
 | Banco, login, arquivos | **Supabase** | Tabelas, regras de acesso (RLS), storage dos PDFs |
-| Site (React + Vite) | **Cloudflare Worker** (assets) | Telas do aluno e da equipe |
+| Site (React + Vite) | **Cloudflare Worker** (embutido no código pelo `scripts/embed-assets.mjs`) | Telas do aluno e da equipe |
 | API, fila da IA, tarefa agendada | **Cloudflare Worker** | `/api/*`, consumidor da fila `rcn-analysis`, cron a cada 5 min |
 | IA | **Claude Opus 5.5** (API da Anthropic) | Lê o material e escreve o rascunho em JSON |
 | E-mail | **Resend** (opcional) | Aviso de devolutiva liberada |
@@ -58,12 +58,6 @@ npx wrangler login
 npx wrangler queues create rcn-analysis
 ```
 ```bash
-npx wrangler secret put SUPABASE_URL
-```
-```bash
-npx wrangler secret put SUPABASE_ANON_KEY
-```
-```bash
 npx wrangler secret put SUPABASE_SERVICE_ROLE_KEY
 ```
 ```bash
@@ -72,7 +66,7 @@ npx wrangler secret put ANTHROPIC_API_KEY
 ```bash
 npx wrangler secret put RESEND_API_KEY
 ```
-Edite `PORTAL_URL` e `EMAIL_FROM` em `wrangler.jsonc`. Crie o `.env` a partir do `.env.example` com a URL e a anon key do Supabase. Depois:
+`SUPABASE_URL`, a chave publicável (`SUPABASE_ANON_KEY`) e `PORTAL_URL` ficam em `wrangler.jsonc` (não são secretas). Edite `EMAIL_FROM` quando tiver o domínio no Resend. Crie o `.env` a partir do `.env.example` com a URL e a anon key do Supabase. Depois:
 ```bash
 npm run deploy
 ```

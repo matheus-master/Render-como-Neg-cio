@@ -3,6 +3,7 @@ import { markFailed, processSubmission } from './analyze';
 import { notifyReleased } from './email';
 import { PermanentError, type AnalysisMessage, type Env } from './env';
 import { fetchLink } from './material';
+import { serveStatic } from './static';
 import { adminClient, getCaller, userClient } from './supabase';
 
 /** Depois disso em "analise", o envio vai para revisão sem rascunho (a equipe assume). */
@@ -15,7 +16,7 @@ const json = (body: unknown, status = 200) =>
 export default {
   async fetch(req: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(req.url);
-    if (!url.pathname.startsWith('/api/')) return env.ASSETS.fetch(req);
+    if (!url.pathname.startsWith('/api/')) return serveStatic(req);
     try {
       return await api(req, url, env, ctx);
     } catch (e) {

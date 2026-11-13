@@ -1,5 +1,4 @@
 export interface Env {
-  ASSETS: Fetcher;
   ANALYSIS_QUEUE: Queue<AnalysisMessage>;
   SUPABASE_URL: string;
   SUPABASE_ANON_KEY: string;

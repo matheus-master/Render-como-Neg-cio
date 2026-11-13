@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "vite build && node scripts/embed-assets.mjs && tsc -b",
     "typecheck": "tsc -b",
     "worker:dev": "wrangler dev",
     "deploy": "npm run build && wrangler deploy"
