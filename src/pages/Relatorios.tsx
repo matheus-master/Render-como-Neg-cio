@@ -130,6 +130,7 @@ function Journey({ reps }: { reps: Report[] }) {
                   <span className="tl-dot" />
                   <span className="tl-when">{last ? 'Agora · ' : ''}{fmtPeriod(r.period_start, r.period_end)}</span>
                 </div>
+                <div className="tl-stem" aria-hidden />
                 <div className="tl-card">
                   <div className="tl-rev">{fmtBRL(r.revenue)}</div>
                   {r.wins && (
