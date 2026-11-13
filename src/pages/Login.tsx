@@ -1,3 +1,4 @@
+import { PasswordFields, passwordOk } from '../components/PasswordFields';
 import { Mark } from '../components/ui';
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
@@ -116,6 +117,7 @@ export function FirstAccess() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [pass, setPass] = useState('');
+  const [confirm, setConfirm] = useState('');
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -133,7 +135,7 @@ export function FirstAccess() {
     return () => clearTimeout(t);
   }, [code]);
 
-  const ok = !!(group && name.trim() && email.trim() && pass.length >= 8);
+  const ok = !!(group && name.trim() && email.trim() && passwordOk(pass, confirm));
 
   const create = async () => {
     if (!ok || busy) return;
@@ -184,10 +186,7 @@ export function FirstAccess() {
         <span>E-mail</span>
         <input className="input" type="email" placeholder="voce@seustudio.com.br" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} />
       </label>
-      <label className="field">
-        <span>Criar senha</span>
-        <input className="input" type="password" placeholder="Mínimo de 8 caracteres" autoComplete="new-password" value={pass} onChange={(e) => setPass(e.target.value)} />
-      </label>
+      <PasswordFields pass={pass} setPass={setPass} confirm={confirm} setConfirm={setConfirm} label="Senha" />
       <button className="btn btn-primary btn-lg" disabled={!ok || busy} onClick={create}>
         {busy ? 'Criando…' : 'Criar acesso'}
       </button>
@@ -199,6 +198,7 @@ export function NewPassword() {
   const nav = useNavigate();
   const toast = useToast();
   const [pass, setPass] = useState('');
+  const [confirm, setConfirm] = useState('');
   const save = async () => {
     const { error } = await supabase.auth.updateUser({ password: pass });
     if (error) return toast('Link expirado. Peça um novo em "Esqueci minha senha".');
@@ -209,11 +209,8 @@ export function NewPassword() {
     <AuthShell>
       <BigLogo />
       <h1 style={{ fontWeight: 600, fontSize: 28 }}>Nova senha</h1>
-      <label className="field">
-        <span>Nova senha</span>
-        <input className="input" type="password" placeholder="Mínimo de 8 caracteres" value={pass} onChange={(e) => setPass(e.target.value)} />
-      </label>
-      <button className="btn btn-primary btn-lg" disabled={pass.length < 8} onClick={save}>
+      <PasswordFields pass={pass} setPass={setPass} confirm={confirm} setConfirm={setConfirm} />
+      <button className="btn btn-primary btn-lg" disabled={!passwordOk(pass, confirm)} onClick={save}>
         Salvar senha
       </button>
     </AuthShell>

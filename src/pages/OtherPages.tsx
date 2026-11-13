@@ -1,3 +1,4 @@
+import { PasswordFields, passwordOk } from '../components/PasswordFields';
 import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -507,6 +508,7 @@ export function Perfil() {
   const nav = useNavigate();
   const [form, setForm] = useState({ full_name: profile.full_name, studio: profile.studio, city: profile.city, whatsapp: profile.whatsapp, instagram: profile.instagram });
   const [pass, setPass] = useState('');
+  const [confirm, setConfirm] = useState('');
   const [notify, setNotify] = useState(profile.email_notify);
   useEffect(() => setNotify(profile.email_notify), [profile.email_notify]);
 
@@ -517,10 +519,11 @@ export function Perfil() {
     toast('Dados salvos.');
   };
   const savePass = async () => {
-    if (pass.length < 8) return;
+    if (!passwordOk(pass, confirm)) return;
     const { error } = await supabase.auth.updateUser({ password: pass });
     if (error) return toast('Não deu para trocar a senha. Tente de novo.');
     setPass('');
+    setConfirm('');
     toast('Senha alterada.');
   };
   const toggleNotify = async () => {
@@ -559,11 +562,8 @@ export function Perfil() {
         </div>
         <div className="card stack" style={{ gap: 14 }}>
           <div className="h-card">Trocar senha</div>
-          <label className="field">
-            <span>Nova senha</span>
-            <input className="input md" type="password" autoComplete="new-password" placeholder="Mínimo de 8 caracteres" value={pass} onChange={(e) => setPass(e.target.value)} />
-          </label>
-          <button className="btn btn-primary btn-md" disabled={pass.length < 8} onClick={savePass}>
+          <PasswordFields pass={pass} setPass={setPass} confirm={confirm} setConfirm={setConfirm} size="md" />
+          <button className="btn btn-primary btn-md" disabled={!passwordOk(pass, confirm)} onClick={savePass}>
             Alterar senha
           </button>
           <div style={{ fontSize: 14, lineHeight: 1.5, color: 'var(--t3)' }}>
