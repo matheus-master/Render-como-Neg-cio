@@ -1,3 +1,4 @@
+import { BarChart3, ChevronRight, FileText, House, MoreHorizontal, Trophy, type LucideIcon } from 'lucide-react';
 import { useState } from 'react';
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth, useProfile } from '../lib/auth';
@@ -15,11 +16,11 @@ const NAV: [string, string][] = [
   ['/feedback', 'Feedback'],
   ['/perfil', 'Perfil'],
 ];
-const TABS: [string, string, string][] = [
-  ['/', 'Início', '⌂'],
-  ['/documentos', 'Documentos', '▤'],
-  ['/gamificacao', 'Gamificação', '★'],
-  ['/relatorios', 'Relatórios', '▥'],
+const TABS: [string, string, LucideIcon][] = [
+  ['/', 'Início', House],
+  ['/documentos', 'Documentos', FileText],
+  ['/gamificacao', 'Gamificação', Trophy],
+  ['/relatorios', 'Relatórios', BarChart3],
 ];
 const MORE: [string, string][] = [
   ['/sessoes', 'Sessões'],
@@ -31,9 +32,14 @@ const MORE: [string, string][] = [
 export function Logo({ to = '/' }: { to?: string }) {
   return (
     <Link to={to} className="logo" aria-label="Render como Negócio · Início">
-      Render<small>como</small>
-      <br />
-      Negócio
+      <span className="logo-mark" aria-hidden>
+        <i />
+      </span>
+      <span>
+        Render<small>como</small>
+        <br />
+        Negócio
+      </span>
     </Link>
   );
 }
@@ -89,17 +95,19 @@ export default function StudentLayout() {
 
       {mobile && !inNova && (
         <nav className="tabbar">
-          {TABS.map(([to, label, icon]) => (
+          {TABS.map(([to, label, Icon]) => (
             <Link key={to} to={to} className={isOn(to) && !more ? 'on' : ''}>
-              <span className="ico" style={{ fontSize: 18, lineHeight: 1 }}>
-                {icon}
+              <span className="ico">
+                <Icon size={20} strokeWidth={isOn(to) && !more ? 2.2 : 1.7} aria-hidden />
                 {to === '/documentos' && badge > 0 && <span className="dot">{badge}</span>}
               </span>
               {label}
             </Link>
           ))}
           <button className={inMore || more ? 'on' : ''} onClick={() => setMore(true)}>
-            <span className="ico" style={{ fontSize: 18, lineHeight: 1 }}>•••</span>
+            <span className="ico">
+              <MoreHorizontal size={20} strokeWidth={1.7} aria-hidden />
+            </span>
             Mais
           </button>
         </nav>
@@ -112,12 +120,16 @@ export default function StudentLayout() {
             {MORE.map(([to, label]) => (
               <Link key={to} to={to} onClick={() => setMore(false)}>
                 {label}
-                <span className="chev">›</span>
+                <span className="chev">
+                  <ChevronRight size={18} aria-hidden />
+                </span>
               </Link>
             ))}
             <button onClick={logout}>
               Sair
-              <span className="chev">›</span>
+              <span className="chev">
+                  <ChevronRight size={18} aria-hidden />
+                </span>
             </button>
           </div>
         </div>

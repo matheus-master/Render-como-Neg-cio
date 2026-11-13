@@ -2,7 +2,8 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useState } from 'react';
 import { Link, Outlet, useNavigate, useParams } from 'react-router-dom';
 import { forbiddenHits, SLOTS, VERDICTS, type Feedback, type Verdict } from '../../../shared/domain';
-import { ErrorState, VerdictChip } from '../../components/ui';
+import { Chip, ErrorState, VerdictChip, Mark } from '../../components/ui';
+import { Logo } from '../../components/StudentLayout';
 import { useAuth, useProfile } from '../../lib/auth';
 import { useQueue, useReviewItem, type QueueRow, type ReviewItem } from '../../lib/data';
 import { firstName, fmtDue, fmtDueRel, fmtLongToday, fmtSent, fmtTime, initials } from '../../lib/format';
@@ -20,12 +21,8 @@ export function StaffLayout() {
   return (
     <div className="app">
       <header className="topbar staff-top">
-        <Link to="/equipe" className="logo">
-          Render<small>como</small>
-          <br />
-          Negócio
-        </Link>
-        <div className="label" style={{ color: 'var(--gold)', whiteSpace: 'nowrap' }}>Equipe</div>
+        <Logo to="/equipe" />
+        <span className="chip" style={{ background: 'var(--ink)', color: 'var(--gold)' }}>Equipe</span>
         <nav className="topnav">
           <Link to="/equipe" className="active">
             Fila de revisão
@@ -33,10 +30,10 @@ export function StaffLayout() {
           </Link>
         </nav>
         <div className="row" style={{ gap: 10, whiteSpace: 'nowrap' }}>
-          <div style={{ width: 34, height: 34, borderRadius: '50%', background: 'rgba(255,255,255,.14)', display: 'grid', placeItems: 'center', fontWeight: 700, fontSize: 13 }}>{initials(profile.full_name)}</div>
+          <div className="avatar-btn" style={{ width: 34, height: 34 }}>{initials(profile.full_name)}</div>
           <div style={{ fontSize: 14 }}>
             <div style={{ fontWeight: 600 }}>{firstName(profile.full_name)}</div>
-            <div style={{ fontSize: 12, color: '#C9D3E6' }}>Equipe</div>
+            <div style={{ fontSize: 12, color: 'var(--t3)' }}>Equipe</div>
           </div>
           <button className="btn-out-light" style={{ marginLeft: 8 }} onClick={async () => { await signOut(); nav('/login'); }}>
             Sair
@@ -76,7 +73,7 @@ export function Fila() {
           <div style={{ fontSize: 15, color: 'var(--t3)', marginTop: 6 }}>{fmtLongToday()}</div>
         </div>
         <div className="row card tight" style={{ gap: 16, padding: '14px 20px' }}>
-          <div style={{ fontWeight: 700, fontSize: 40, lineHeight: 1, color: 'var(--ac)' }}>{pendCount}</div>
+          <div style={{ fontWeight: 600, fontSize: 40, lineHeight: 1, color: 'var(--ac)' }}>{pendCount}</div>
           <div>
             <div style={{ fontWeight: 600, fontSize: 15 }}>devolutiva{pendCount === 1 ? '' : 's'} pendente{pendCount === 1 ? '' : 's'}</div>
             {todayDue.length > 0 && (
@@ -104,7 +101,7 @@ export function Fila() {
       {q.isError ? (
         <ErrorState onRetry={q.refetch} />
       ) : (
-        <div className="card" style={{ padding: 0, borderRadius: 14, overflowX: 'auto' }}>
+        <div className="card" style={{ padding: 0, borderRadius: 10, overflowX: 'auto' }}>
           <div style={{ minWidth: 980, fontSize: 15 }}>
             <div className="fila-grid fila-head">
               <div>Aluno</div>
@@ -157,11 +154,11 @@ export function Fila() {
                     {k === 'lib' ? (
                       <VerdictChip v={r.fb.verdict!} />
                     ) : k === 'draft' ? (
-                      <span className="chip" style={{ background: 'var(--alt3)', color: 'var(--t2)' }}>✎ Rascunho salvo · {firstName(r.fb.saver?.full_name || '')}</span>
+                      <Chip tone="ink">Rascunho · {firstName(r.fb.saver?.full_name || '')}</Chip>
                     ) : k === 'wait' ? (
-                      <span className="chip chip-soft">● Aguardando revisão</span>
+                      <Chip tone="soft">Aguardando revisão</Chip>
                     ) : (
-                      <span className="chip" style={{ color: 'var(--t3)', padding: '5px 0' }}>◌ Análise em andamento</span>
+                      <Chip live style={{ border: 0, paddingLeft: 0 }}>Análise em andamento</Chip>
                     )}
                   </div>
                   <div>
@@ -176,7 +173,7 @@ export function Fila() {
         </div>
       )}
       {!q.isLoading && !q.isError && list.length === 0 && (
-        <div className="dashed" style={{ borderRadius: 14, padding: 28, fontSize: 15, color: 'var(--t3)' }}>
+        <div className="dashed" style={{ borderRadius: 10, padding: 28, fontSize: 15, color: 'var(--t3)' }}>
           {tab === 'pend' && grp === 'Todos' ? 'Tudo em dia. Nenhuma devolutiva esperando revisão.' : 'Nada por aqui com esse filtro.'}
         </div>
       )}
@@ -208,7 +205,7 @@ const toFeedback = (d: Draft): Feedback => ({
 export function Revisao() {
   const { id } = useParams();
   const q = useReviewItem(id);
-  if (q.isLoading) return <div style={{ padding: 40 }}><div className="skel" style={{ height: 400, borderRadius: 16 }} /></div>;
+  if (q.isLoading) return <div style={{ padding: 40 }}><div className="skel" style={{ height: 400, borderRadius: 12 }} /></div>;
   if (q.isError || !q.data) return <div className="staff-wrap"><ErrorState onRetry={q.refetch} /></div>;
   return <ReviewScreen key={q.data.id} item={q.data} refetch={q.refetch} />;
 }
@@ -299,7 +296,7 @@ function ReviewScreen({ item, refetch }: { item: ReviewItem; refetch: () => unkn
   return (
     <>
       <div className="row" style={{ background: '#fff', borderBottom: '1px solid var(--b-card)', gap: 14, padding: '14px 28px', flexWrap: 'wrap' }}>
-        <Link to="/equipe" className="link">‹ Fila</Link>
+        <Link to="/equipe" className="link"><Mark m="←" size={14} /> Fila</Link>
         <div style={{ width: 1, height: 24, background: 'var(--b-card)' }} />
         <div className="av">{initials(item.student.full_name)}</div>
         <div style={{ minWidth: 0 }}>
@@ -345,8 +342,8 @@ function ReviewScreen({ item, refetch }: { item: ReviewItem; refetch: () => unkn
                     {(['ok', 'aj', 're'] as const).map((k) => {
                       const x = VERDICTS[k], on = draft.verdict === k;
                       return (
-                        <button key={k} aria-pressed={on} onClick={() => upd((d) => { d.verdict = k; })} style={{ height: 48, borderRadius: 12, display: 'flex', gap: 8, alignItems: 'center', justifyContent: 'center', fontWeight: 600, fontSize: 15, background: on ? x.bg : '#fff', color: on ? x.fg : 'var(--t2)', border: on ? '2px solid ' + x.strong : '1px solid var(--b-input)' }}>
-                          <span>{x.mark}</span>
+                        <button key={k} aria-pressed={on} onClick={() => upd((d) => { d.verdict = k; })} style={{ height: 48, borderRadius: 8, display: 'flex', gap: 8, alignItems: 'center', justifyContent: 'center', fontWeight: 600, fontSize: 15, background: on ? x.bg : '#fff', color: on ? x.fg : 'var(--t2)', border: on ? '2px solid ' + x.strong : '1px solid var(--b-input)' }}>
+                          <span><Mark m={x.mark} size={18} /></span>
                           {x.label}
                         </button>
                       );
@@ -362,9 +359,9 @@ function ReviewScreen({ item, refetch }: { item: ReviewItem; refetch: () => unkn
                   </div>
                   {draft.strong.map((v, i) => (
                     <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
-                      <span style={{ color: 'var(--ok)', fontWeight: 700, paddingTop: 10 }}>✓</span>
+                      <span style={{ color: 'var(--ok)', fontWeight: 600, paddingTop: 10 }}><Mark m="✓" size={13} /></span>
                       <Field value={v} onChange={(val) => upd((d) => { d.strong[i] = val; })} />
-                      <button className="rv-x" aria-label="Remover" onClick={() => upd((d) => { d.strong.splice(i, 1); })}>×</button>
+                      <button className="rv-x" aria-label="Remover" onClick={() => upd((d) => { d.strong.splice(i, 1); })}><Mark m="×" size={18} /></button>
                     </div>
                   ))}
                 </div>
@@ -376,9 +373,9 @@ function ReviewScreen({ item, refetch }: { item: ReviewItem; refetch: () => unkn
                   </div>
                   {draft.pts.length === 0 && <div style={{ fontSize: 14, color: 'var(--t3)' }}>Nenhum ponto a ajustar.</div>}
                   {draft.pts.map((p, i) => (
-                    <div key={i} style={{ background: '#fff', border: '1px solid var(--b-input)', borderRadius: 12, padding: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    <div key={i} style={{ background: '#fff', border: '1px solid var(--b-input)', borderRadius: 8, padding: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
                       <div className="row" style={{ gap: 8 }}>
-                        <div style={{ width: 24, height: 24, borderRadius: '50%', background: 'var(--warn-bg)', color: 'var(--warn-t)', display: 'grid', placeItems: 'center', fontSize: 13, fontWeight: 700, flex: 'none' }}>{i + 1}</div>
+                        <div style={{ width: 24, height: 24, borderRadius: '50%', background: 'var(--warn-bg)', color: 'var(--warn-t)', display: 'grid', placeItems: 'center', fontSize: 13, fontWeight: 600, flex: 'none' }}>{i + 1}</div>
                         <input
                           className={'rv-field' + (forbiddenHits(p.t).length ? ' hit' : '')}
                           style={{ height: 40, fontWeight: 600, padding: '0 12px' }}
@@ -386,10 +383,10 @@ function ReviewScreen({ item, refetch }: { item: ReviewItem; refetch: () => unkn
                           value={p.t}
                           onChange={(e) => { const val = e.target.value; upd((d) => { d.pts[i]!.t = val; }); }}
                         />
-                        <button className="rv-x" aria-label="Remover ponto" onClick={() => upd((d) => { d.pts.splice(i, 1); })}>×</button>
+                        <button className="rv-x" aria-label="Remover ponto" onClick={() => upd((d) => { d.pts.splice(i, 1); })}><Mark m="×" size={18} /></button>
                       </div>
                       <Field value={p.d} min={56} placeholder="O que foi observado no material" onChange={(val) => upd((d) => { d.pts[i]!.d = val; })} />
-                      <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--ac)' }}>Sugestão ao aluno</div>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--ac)' }}>Sugestão ao aluno</div>
                       <Field value={p.s} min={56} placeholder="sugiro…" onChange={(val) => upd((d) => { d.pts[i]!.s = val; })} />
                     </div>
                   ))}
@@ -409,7 +406,7 @@ function ReviewScreen({ item, refetch }: { item: ReviewItem; refetch: () => unkn
             <div style={{ position: 'sticky', bottom: 0, background: '#fff', borderTop: '1px solid var(--b-card)' }}>
               {found.length > 0 && (
                 <div className="row" style={{ gap: 10, padding: '10px 28px', borderBottom: '1px solid var(--b-div)', fontSize: 14, lineHeight: 1.4, color: '#5C3F00', background: '#FFF9EA' }}>
-                  <span style={{ width: 18, height: 18, borderRadius: '50%', background: '#B07800', color: '#fff', display: 'grid', placeItems: 'center', fontSize: 11, fontWeight: 700, flex: 'none' }}>!</span>
+                  <span style={{ width: 18, height: 18, borderRadius: '50%', background: '#B07800', color: '#fff', display: 'grid', placeItems: 'center', fontSize: 11, fontWeight: 600, flex: 'none' }}><Mark m="!" size={12} /></span>
                   <span style={{ flex: 1 }}>
                     {nFields === 1 ? '1 trecho menciona ' : `${nFields} trechos mencionam `}
                     {words}. Prefira falar direto com o aluno, sem citar modelos ou critérios internos.
@@ -418,7 +415,7 @@ function ReviewScreen({ item, refetch }: { item: ReviewItem; refetch: () => unkn
               )}
               {releaseErr && (
                 <div className="alert-err" style={{ borderRadius: 0, padding: '10px 28px' }}>
-                  <div className="ico-circle ico-err">!</div>
+                  <div className="ico-circle ico-err"><Mark m="!" size={12} /></div>
                   <div style={{ fontSize: 14, color: 'var(--err-t)', fontWeight: 600 }}>A devolutiva não foi liberada. Suas edições estão salvas como rascunho.</div>
                 </div>
               )}
@@ -471,7 +468,7 @@ function Material({ item, student }: { item: ReviewItem; student: string }) {
         )}
       </div>
       {item.note?.trim() && (
-        <div style={{ background: '#FFF8E6', border: '1px solid #EAD9AE', borderRadius: 12, padding: '12px 14px', fontSize: 14, lineHeight: 1.45 }}>
+        <div style={{ background: '#FFF8E6', border: '1px solid #EAD9AE', borderRadius: 8, padding: '12px 14px', fontSize: 14, lineHeight: 1.45 }}>
           <span style={{ fontWeight: 600 }}>Observação de {student}:</span> {item.note}
         </div>
       )}

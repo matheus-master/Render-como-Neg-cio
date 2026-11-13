@@ -2,7 +2,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
 import { Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { isSlot, MAX_UPLOAD_BYTES, MIN_TEXT_CHARS, SLOT_ORDER, SLOTS } from '../../shared/domain';
-import { BackLink, ErrorState, extOf, FileIcon, PageSkeleton } from '../components/ui';
+import { BackLink, ErrorState, extOf, FileIcon, PageSkeleton, Mark } from '../components/ui';
 import { useAuth } from '../lib/auth';
 import { useDocs } from '../lib/data';
 import { fmtMB } from '../lib/format';
@@ -119,7 +119,7 @@ export default function NovaAnalise() {
     <div className="page" style={{ paddingBottom: 0 }}>
       <div className="flow" style={{ gap: 24 }}>
         <BackLink to="/documentos">Meus documentos</BackLink>
-        <h1 style={{ fontWeight: 700, fontSize: 28, marginTop: -12 }}>Nova análise</h1>
+        <h1 style={{ fontWeight: 600, fontSize: 28, marginTop: -12 }}>Nova análise</h1>
 
         {!slot ? (
           <div className="stack" style={{ gap: 10 }}>
@@ -130,7 +130,7 @@ export default function NovaAnalise() {
                   <div style={{ fontWeight: 600, fontSize: 16 }}>{SLOTS[s].title}</div>
                   <div style={{ fontSize: 14, lineHeight: 1.4, color: 'var(--t3)' }}>{SLOTS[s].desc}</div>
                 </div>
-                <div style={{ fontSize: 20, color: 'var(--t4)' }}>›</div>
+                <div style={{ fontSize: 20, color: 'var(--t4)' }}><Mark m="›" size={18} /></div>
               </button>
             ))}
           </div>
@@ -162,8 +162,8 @@ export default function NovaAnalise() {
               <input ref={input} type="file" accept={ACCEPT} hidden onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) pickFile(f); }} />
 
               {mode === 'file' && file.st === 'none' && (
-                <button onClick={() => input.current?.click()} className="upload-zone" style={{ borderRadius: 14, background: '#fff', padding: '26px 16px', gap: 4, alignItems: 'center' }}>
-                  <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'var(--ac-soft)', color: 'var(--ac)', display: 'grid', placeItems: 'center', fontSize: 22, fontWeight: 600, marginBottom: 6 }}>↑</div>
+                <button onClick={() => input.current?.click()} className="upload-zone" style={{ borderRadius: 10, background: '#fff', padding: '26px 16px', gap: 4, alignItems: 'center' }}>
+                  <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'var(--ac-soft)', color: 'var(--ac)', display: 'grid', placeItems: 'center', fontSize: 22, fontWeight: 600, marginBottom: 6 }}><Mark m="↑" size={20} /></div>
                   <div style={{ fontWeight: 600, fontSize: 16 }}>Toque para escolher o arquivo</div>
                   <div style={{ fontSize: 14, color: 'var(--t3)' }}>PDF ou Word (.docx), até 50 MB</div>
                 </button>
@@ -177,7 +177,7 @@ export default function NovaAnalise() {
                         <div style={{ fontWeight: 600, fontSize: 15, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{file.name}</div>
                         <div style={{ fontSize: 14, color: 'var(--t3)' }}>Enviando… {file.pct}%</div>
                       </div>
-                      <button onClick={clearFile} aria-label="Cancelar envio" style={{ width: 44, height: 44, display: 'grid', placeItems: 'center', fontSize: 20, color: 'var(--t3)' }}>×</button>
+                      <button onClick={clearFile} aria-label="Cancelar envio" style={{ width: 44, height: 44, display: 'grid', placeItems: 'center', fontSize: 20, color: 'var(--t3)' }}><Mark m="×" size={18} /></button>
                     </div>
                     <div style={{ height: 8, borderRadius: 4, background: 'var(--alt3)', overflow: 'hidden' }}>
                       <div style={{ width: file.pct + '%', height: '100%', borderRadius: 4, background: 'var(--ac)', transition: 'width .13s linear' }} />
@@ -191,15 +191,15 @@ export default function NovaAnalise() {
                   <FileIcon ext={extOf(file.name)} />
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontWeight: 600, fontSize: 15, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{file.name}</div>
-                    <div style={{ fontSize: 14, color: 'var(--ok)' }}>✓ Arquivo pronto · {fmtMB(file.size)}</div>
+                    <div style={{ fontSize: 14, color: 'var(--ok)' }}><Mark m="✓" size={13} /> Arquivo pronto · {fmtMB(file.size)}</div>
                   </div>
-                  <button onClick={clearFile} aria-label="Remover arquivo" style={{ width: 44, height: 44, display: 'grid', placeItems: 'center', fontSize: 20, color: 'var(--t3)' }}>×</button>
+                  <button onClick={clearFile} aria-label="Remover arquivo" style={{ width: 44, height: 44, display: 'grid', placeItems: 'center', fontSize: 20, color: 'var(--t3)' }}><Mark m="×" size={18} /></button>
                 </div>
               )}
               {mode === 'file' && file.st === 'invalid' && (
-                <div style={{ border: '1.5px solid var(--err)', borderRadius: 14, background: '#fff', padding: 16, display: 'flex', flexDirection: 'column', gap: 14 }}>
+                <div style={{ border: '1.5px solid var(--err)', borderRadius: 10, background: '#fff', padding: 16, display: 'flex', flexDirection: 'column', gap: 14 }}>
                   <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-                    <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--err-bg)', color: 'var(--err)', display: 'grid', placeItems: 'center', fontWeight: 700, flex: 'none' }}>!</div>
+                    <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--err-bg)', color: 'var(--err)', display: 'grid', placeItems: 'center', fontWeight: 600, flex: 'none' }}><Mark m="!" size={12} /></div>
                     <div>
                       <div style={{ fontWeight: 600, fontSize: 16, color: 'var(--err-t)' }}>Não conseguimos abrir este arquivo</div>
                       <div style={{ fontSize: 15, lineHeight: 1.45, color: 'var(--t2)', marginTop: 2 }}>{file.reason}</div>
@@ -249,7 +249,7 @@ export default function NovaAnalise() {
             <div style={{ position: 'sticky', bottom: 0, background: 'var(--bg)', padding: '12px 0 calc(16px + env(safe-area-inset-bottom))', display: 'flex', flexDirection: 'column', gap: 8, borderTop: '1px solid var(--b-card)' }}>
               {sendErr && (
                 <div className="alert-err">
-                  <div className="ico-circle ico-err">!</div>
+                  <div className="ico-circle ico-err"><Mark m="!" size={12} /></div>
                   <div style={{ fontSize: 14, lineHeight: 1.45, color: 'var(--t2)' }}>
                     <span style={{ fontWeight: 600, color: 'var(--err-t)' }}>O envio não foi concluído.</span> A conexão caiu. Seu material e sua observação continuam aqui.
                   </div>

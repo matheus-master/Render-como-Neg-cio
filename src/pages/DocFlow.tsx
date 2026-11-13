@@ -1,7 +1,7 @@
 import { Fragment, useEffect, useState } from 'react';
 import { Link, Navigate, useParams } from 'react-router-dom';
 import { isSlot, SLOTS, VERDICTS, type Feedback, type Slot } from '../../shared/domain';
-import { BackLink, CheckIcon, ErrorState, extOf, FileIcon, PageSkeleton, VerdictChip, VersionChip } from '../components/ui';
+import { BackLink, CheckIcon, ErrorState, extOf, FileIcon, PageSkeleton, VerdictChip, VersionChip, Mark } from '../components/ui';
 import { useProfile } from '../lib/auth';
 import { useDocs, useGami, useMarkSeen, useSetChecks, type Version } from '../lib/data';
 import { firstName, fmtDay, fmtDue, initials } from '../lib/format';
@@ -75,7 +75,7 @@ export function Status() {
       <BackLink to="/documentos">Meus documentos</BackLink>
       <div className="stack" style={{ gap: 8 }}>
         {stage === 1 && (
-          <div style={{ display: 'inline-flex', alignSelf: 'flex-start', gap: 6, alignItems: 'center', background: 'var(--ok-bg)', color: 'var(--ok-t)', fontWeight: 600, fontSize: 14, padding: '6px 10px', borderRadius: 8 }}>✓ Recebemos seu material</div>
+          <div style={{ display: 'inline-flex', alignSelf: 'flex-start', gap: 6, alignItems: 'center', background: 'var(--ok-bg)', color: 'var(--ok-t)', fontWeight: 600, fontSize: 14, padding: '6px 10px', borderRadius: 8 }}><Mark m="✓" size={13} /> Recebemos seu material</div>
         )}
         <div className="h-flow">{title}</div>
         <div style={{ fontSize: 16, lineHeight: 1.5, color: 'var(--t2)' }}>{sub}</div>
@@ -87,8 +87,8 @@ export function Status() {
           return (
             <div key={label} style={{ display: 'flex', gap: 14 }}>
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                <div style={{ width: 28, height: 28, borderRadius: '50%', flex: 'none', display: 'grid', placeItems: 'center', color: '#fff', fontSize: 14, fontWeight: 700, background: done ? 'var(--ok)' : cur ? 'var(--ac)' : '#fff', border: done || cur ? 'none' : '2px solid var(--b-btn)' }}>
-                  {done ? '✓' : cur ? <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#fff' }} /> : ''}
+                <div style={{ width: 28, height: 28, borderRadius: '50%', flex: 'none', display: 'grid', placeItems: 'center', color: '#fff', fontSize: 14, fontWeight: 600, background: done ? 'var(--ok)' : cur ? 'var(--ac)' : '#fff', border: done || cur ? 'none' : '2px solid var(--b-btn)' }}>
+                  {done ? <Mark m="✓" /> : cur ? <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#fff' }} /> : ''}
                 </div>
                 <div style={{ width: 2, flex: 1, margin: '4px 0', background: i === 2 ? 'transparent' : done ? 'var(--ok)' : '#DCDFE3' }} />
               </div>
@@ -133,7 +133,7 @@ export function Status() {
           Ver devolutiva
         </Link>
       )}
-      <Link to="/" className="btn btn-secondary btn-md btn-block" style={{ borderRadius: 14 }}>
+      <Link to="/" className="btn btn-secondary btn-md btn-block" style={{ borderRadius: 10 }}>
         Voltar ao início
       </Link>
     </Shell>
@@ -185,12 +185,17 @@ export function Devolutiva() {
         </div>
       </div>
 
-      <div style={{ background: v.bg, color: v.fg, borderRadius: 16, padding: 18, display: 'flex', gap: 14, alignItems: 'flex-start' }}>
-        <div style={{ width: 40, height: 40, borderRadius: '50%', background: v.strong, color: '#fff', display: 'grid', placeItems: 'center', fontSize: 22, fontWeight: 700, flex: 'none' }}>{v.mark}</div>
-        <div>
-          <div style={{ fontSize: 13, fontWeight: 600, letterSpacing: '.06em', textTransform: 'uppercase' }}>Veredito</div>
-          <div style={{ fontWeight: 700, fontSize: 24 }}>{v.label}</div>
-          <div style={{ fontSize: 15, lineHeight: 1.45, marginTop: 4 }}>{fb.sum}</div>
+      <div className="card" style={{ padding: 0, display: 'flex', overflow: 'hidden' }}>
+        <div style={{ width: 4, background: v.strong, flex: 'none' }} />
+        <div style={{ padding: '20px 20px 22px', display: 'flex', gap: 16, alignItems: 'flex-start' }}>
+          <div style={{ width: 40, height: 40, borderRadius: 8, background: v.bg, color: v.strong, display: 'grid', placeItems: 'center', flex: 'none' }}>
+            <Mark m={v.mark} size={20} />
+          </div>
+          <div>
+            <div className="label">Veredito</div>
+            <div style={{ fontWeight: 600, fontSize: 28, letterSpacing: '-.03em', lineHeight: 1.1, marginTop: 4, color: v.strong }}>{v.label}</div>
+            <div style={{ fontSize: 15, lineHeight: 1.5, marginTop: 8, color: 'var(--t2)' }}>{fb.sum}</div>
+          </div>
         </div>
       </div>
 
@@ -203,10 +208,10 @@ export function Devolutiva() {
             {(['ok', 'aj', 're'] as const).map((k) => {
               const x = VERDICTS[k];
               return (
-                <div key={k} className="row" style={{ gap: 10, background: x.bg, borderRadius: 12, padding: '10px 12px' }}>
+                <div key={k} className="row" style={{ gap: 10, background: x.bg, borderRadius: 8, padding: '10px 12px' }}>
                   <CheckIcon bg={x.strong} fg="#fff" mark={x.mark} size={26} />
                   <div style={{ fontSize: 14, color: x.fg }}>
-                    <span style={{ fontWeight: 700 }}>{x.label}:</span> {x.meaning}
+                    <span style={{ fontWeight: 600 }}>{x.label}:</span> {x.meaning}
                   </div>
                 </div>
               );
@@ -216,10 +221,10 @@ export function Devolutiva() {
       </div>
 
       {fb.verdict === 'ok' && SLOTS[slot].task && (
-        <Link to="/gamificacao" style={{ background: 'var(--ac)', color: '#fff', borderRadius: 14, padding: '14px 16px', display: 'flex', gap: 12, alignItems: 'center', textDecoration: 'none' }}>
-          <div style={{ background: 'var(--gold)', color: 'var(--t)', fontWeight: 800, fontSize: 14, padding: '6px 10px', borderRadius: 8, flex: 'none' }}>+{task?.xp ?? 100} XP</div>
+        <Link to="/gamificacao" className="hero" style={{ padding: '14px 16px', display: 'flex', gap: 12, alignItems: 'center', textDecoration: 'none' }}>
+          <div style={{ background: 'var(--gold)', color: 'var(--t)', fontWeight: 600, fontSize: 14, padding: '6px 10px', borderRadius: 8, flex: 'none' }}>+{task?.xp ?? 100} XP</div>
           <div style={{ fontSize: 15, lineHeight: 1.4, flex: 1 }}>Tarefa concluída na Gamificação: {task?.title ?? SLOTS[slot].task}</div>
-          <div style={{ fontSize: 18 }}>›</div>
+          <div style={{ fontSize: 18 }}><Mark m="›" size={18} /></div>
         </Link>
       )}
 
@@ -249,8 +254,8 @@ export function Devolutiva() {
                   {p.d && <div style={{ fontSize: 15, lineHeight: 1.45, color: 'var(--t2)', marginTop: 2 }}>{p.d}</div>}
                 </div>
                 {p.s && (
-                  <div style={{ background: 'var(--ac-soft)', borderRadius: 10, padding: '10px 12px', fontSize: 15, lineHeight: 1.45 }}>
-                    <span style={{ fontWeight: 700, color: 'var(--ac)' }}>Sugestão:</span> {p.s}
+                  <div style={{ borderLeft: '2px solid var(--ac)', background: 'var(--alt)', borderRadius: '0 6px 6px 0', padding: '10px 14px', fontSize: 15, lineHeight: 1.5 }}>
+                    <span style={{ fontWeight: 600, color: 'var(--ac)' }}>Sugestão:</span> {p.s}
                   </div>
                 )}
               </div>
@@ -270,7 +275,7 @@ export function Devolutiva() {
           <div className="card list">
             {fb.steps.map((label, i) => (
               <button key={i} role="checkbox" aria-checked={checks[i]} onClick={() => toggle(i)} className="row divrow" style={{ minHeight: 56, width: '100%' }}>
-                <div className={'check-box' + (checks[i] ? ' on' : '')}>{checks[i] ? '✓' : ''}</div>
+                <div className={'check-box' + (checks[i] ? ' on' : '')}>{checks[i] ? <Mark m="✓" /> : ''}</div>
                 <div style={{ fontSize: 15, lineHeight: 1.4, color: checks[i] ? 'var(--t3)' : 'var(--t)', textDecoration: checks[i] ? 'line-through' : 'none' }}>{label}</div>
               </button>
             ))}
@@ -279,10 +284,10 @@ export function Devolutiva() {
       )}
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(200px,1fr))', gap: 10 }}>
-        <Link to={`/documentos/nova?slot=${slot}`} className="btn btn-primary" style={{ height: 54, borderRadius: 14, fontSize: 16 }}>
+        <Link to={`/documentos/nova?slot=${slot}`} className="btn btn-primary" style={{ height: 54, borderRadius: 10, fontSize: 16 }}>
           Enviar nova versão
         </Link>
-        <Link to={`/documentos/${slot}/historico`} className="btn btn-secondary" style={{ height: 54, borderRadius: 14, fontSize: 16 }}>
+        <Link to={`/documentos/${slot}/historico`} className="btn btn-secondary" style={{ height: 54, borderRadius: 10, fontSize: 16 }}>
           Histórico e comparação
         </Link>
       </div>
@@ -387,7 +392,7 @@ export function Historico() {
         </div>
       ) : (
         d.versions.length > 0 && (
-          <div style={{ fontSize: 15, lineHeight: 1.5, color: 'var(--t3)', background: '#fff', border: '1px dashed var(--b-dash)', borderRadius: 14, padding: 18, textAlign: 'center' }}>
+          <div style={{ fontSize: 15, lineHeight: 1.5, color: 'var(--t3)', background: '#fff', border: '1px dashed var(--b-dash)', borderRadius: 10, padding: 18, textAlign: 'center' }}>
             A comparação aparece quando houver duas versões com devolutiva.
           </div>
         )

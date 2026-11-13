@@ -1,7 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ErrorState, PageHead, PageSkeleton } from '../components/ui';
+import { Chip, ErrorState, PageHead, PageSkeleton, Mark } from '../components/ui';
 import { useAuth, useProfile } from '../lib/auth';
 import { useGami, useRedButton, type Level, type Task, useSetting, useSurvey, useSetTaskStatus } from '../lib/data';
 import { fmtDate, fmtDay } from '../lib/format';
@@ -51,7 +51,7 @@ export function Gamificacao() {
           return (
             <button key={l.n} role="tab" aria-selected={on} onClick={() => setSel(l.n)} style={{ padding: '12px 14px', fontSize: 15, fontWeight: on ? 700 : 500, whiteSpace: 'nowrap', color: on ? 'var(--ac)' : 'var(--t3)', borderBottom: on ? '3px solid var(--ac)' : '3px solid transparent', marginBottom: -1 }}>
               {l.n}. {l.name}
-              {l.n === cur?.n ? ' ★' : ''}
+              {l.n === cur?.n ? <span style={{ marginLeft: 6, display: 'inline-flex', color: 'var(--gold)' }}><Mark m="★" size={12} /></span> : null}
             </button>
           );
         })}
@@ -67,11 +67,11 @@ export function Gamificacao() {
       ) : (
         <>
           {nextTask && !isPast && (
-            <div style={{ background: 'var(--ac)', color: '#fff', borderRadius: 18, padding: '20px 22px', display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>
+            <div className="hero" style={{ padding: '20px 22px', display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>
               <div style={{ flex: '1 1 260px', minWidth: 0 }}>
                 <div className="label" style={{ color: 'var(--gold)' }}>Seu próximo passo</div>
-                <div style={{ fontWeight: 700, fontSize: 20, marginTop: 6 }}>{nextTask.title}</div>
-                <div style={{ fontSize: 14, color: '#D5DCEA', marginTop: 4 }}>
+                <div style={{ fontWeight: 600, fontSize: 20, marginTop: 6 }}>{nextTask.title}</div>
+                <div style={{ fontSize: 14, color: '#A9AFB9', marginTop: 4 }}>
                   {left === 1 ? 'Última tarefa' : `Faltam ${left} tarefas`}
                   {next ? ` para chegar a ${next.name}` : ' para fechar este nível'}
                   {started > 0 ? ` · ${started} em andamento` : ''}
@@ -82,9 +82,9 @@ export function Gamificacao() {
                   {states[nextIdx]!.kind === 'pendente' ? 'Enviar documento' : 'Ver documento'}
                 </button>
               ) : states[nextIdx]!.kind === 'pendente' ? (
-                <button className="btn btn-gold" onClick={() => set(nextTask.id, 'andamento')}>▶ Começar agora</button>
+                <button className="btn btn-gold" onClick={() => set(nextTask.id, 'andamento')}><Mark m="▶" size={12} /> Começar agora</button>
               ) : (
-                <button className="btn btn-gold" onClick={() => set(nextTask.id, 'feita')}>✓ Marcar como feita</button>
+                <button className="btn btn-gold" onClick={() => set(nextTask.id, 'feita')}><Mark m="✓" size={13} /> Marcar como feita</button>
               )}
             </div>
           )}
@@ -92,7 +92,7 @@ export function Gamificacao() {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(200px,1fr))', gap: 14 }}>
             <div className="card">
               <div className="label">XP neste nível</div>
-              <div style={{ fontWeight: 700, fontSize: 28, marginTop: 8 }}>
+              <div style={{ fontWeight: 600, fontSize: 28, marginTop: 8 }}>
                 {xpDone} <span style={{ fontSize: 15, color: 'var(--t3)', fontWeight: 600 }}>/ {xpMax}</span>
               </div>
               <div style={{ height: 8, borderRadius: 4, background: 'var(--alt3)', overflow: 'hidden', marginTop: 10, display: 'flex' }}>
@@ -103,7 +103,7 @@ export function Gamificacao() {
             </div>
             <div className="card">
               <div className="label">Tarefas principais</div>
-              <div style={{ fontWeight: 700, fontSize: 28, marginTop: 8 }}>
+              <div style={{ fontWeight: 600, fontSize: 28, marginTop: 8 }}>
                 {done} <span style={{ fontSize: 15, color: 'var(--t3)', fontWeight: 600 }}>/ {tasks.length}</span>
               </div>
               <div style={{ fontSize: 14, color: 'var(--t3)', marginTop: 4 }}>
@@ -112,7 +112,7 @@ export function Gamificacao() {
             </div>
             <div className="card">
               <div className="label">XP total conquistado</div>
-              <div style={{ fontWeight: 700, fontSize: 28, marginTop: 8 }}>{g.xpTotal}</div>
+              <div style={{ fontWeight: 600, fontSize: 28, marginTop: 8 }}>{g.xpTotal}</div>
               <div style={{ fontSize: 14, color: 'var(--t3)', marginTop: 4 }}>Somando todos os níveis</div>
             </div>
           </div>
@@ -128,7 +128,7 @@ export function Gamificacao() {
               const going = st.kind === 'andamento';
               return (
                 <div key={t.id} className="row" style={{ padding: '14px 0', borderTop: '1px solid var(--b-div)', alignItems: 'center', background: going ? 'linear-gradient(90deg, var(--ac-soft), transparent 70%)' : undefined, margin: going ? '0 -20px' : undefined, paddingLeft: going ? 20 : 0, paddingRight: going ? 20 : 0 }}>
-                  <div style={{ width: 22, fontWeight: 700, color: going ? 'var(--ac)' : 'var(--t4)', flex: 'none' }}>{i + 1}</div>
+                  <div style={{ width: 22, fontWeight: 600, color: going ? 'var(--ac)' : 'var(--t4)', flex: 'none' }}>{i + 1}</div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontWeight: 600, fontSize: 15, color: on ? 'var(--t3)' : 'var(--t)', textDecoration: on ? 'line-through' : 'none' }}>{t.title}</div>
                     <div style={{ fontSize: 13, lineHeight: 1.4, color: 'var(--t3)' }}>
@@ -136,15 +136,15 @@ export function Gamificacao() {
                       {t.category ? ' · ' + t.category : ''}
                     </div>
                     <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', marginTop: 6 }}>
-                      {going && <span className="chip chip-soft" style={{ fontSize: 12, padding: '3px 8px' }}>● Em andamento</span>}
-                      {on && <span className="chip" style={{ fontSize: 12, padding: '3px 8px', background: 'var(--ok-bg)', color: 'var(--ok-t)' }}>✓ Feita</span>}
+                      {going && <Chip tone="soft" live>Em andamento</Chip>}
+                      {on && <Chip tone="ok">Feita</Chip>}
                       {t.auto_slot ? (
                         <button onClick={() => nav(st.href!)} style={{ fontSize: 12, fontWeight: 600, color: 'var(--ac)' }}>
-                          {st.note} ›
+                          {st.note} →
                         </button>
                       ) : st.kind === 'pendente' ? (
                         <button onClick={() => set(t.id, 'andamento')} style={{ fontSize: 12, fontWeight: 600, color: 'var(--ac)', border: '1px solid var(--ac)', borderRadius: 8, padding: '3px 8px' }}>
-                          ▶ Começar
+                          <Mark m="▶" size={12} /> Começar
                         </button>
                       ) : going ? (
                         <button onClick={() => set(t.id, 'pendente')} style={{ fontSize: 12, fontWeight: 600, color: 'var(--t3)' }}>
@@ -153,16 +153,16 @@ export function Gamificacao() {
                       ) : null}
                     </div>
                   </div>
-                  <div style={{ fontWeight: 700, fontSize: 14, whiteSpace: 'nowrap', color: going ? 'var(--ac)' : undefined }}>+{t.xp} XP</div>
+                  <div style={{ fontWeight: 600, fontSize: 14, whiteSpace: 'nowrap', color: going ? 'var(--ac)' : undefined }}>+{t.xp} XP</div>
                   <button
                     role="checkbox"
                     aria-checked={on}
                     aria-label={on ? 'Desmarcar ' + t.title : 'Marcar como feita: ' + t.title}
                     disabled={!!t.auto_slot}
                     onClick={() => set(t.id, on ? 'andamento' : 'feita')}
-                    style={{ width: 28, height: 28, borderRadius: 8, flex: 'none', display: 'grid', placeItems: 'center', color: '#fff', fontSize: 15, fontWeight: 700, background: on ? 'var(--ok)' : going ? 'var(--ac-soft)' : '#fff', border: on ? 'none' : going ? '2px solid var(--ac)' : '2px solid var(--b-dash)', cursor: t.auto_slot ? 'default' : 'pointer' }}
+                    style={{ width: 28, height: 28, borderRadius: 8, flex: 'none', display: 'grid', placeItems: 'center', color: '#fff', fontSize: 15, fontWeight: 600, background: on ? 'var(--ok)' : going ? 'var(--ac-soft)' : '#fff', border: on ? 'none' : going ? '2px solid var(--ac)' : '2px solid var(--b-dash)', cursor: t.auto_slot ? 'default' : 'pointer' }}
                   >
-                    {on ? '✓' : going ? <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--ac)' }} /> : ''}
+                    {on ? <Mark m="✓" /> : going ? <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--ac)' }} /> : ''}
                   </button>
                 </div>
               );
@@ -181,7 +181,7 @@ type Gami = ReturnType<typeof useGami>;
 function TaskRowStatic({ n, t, mode, date }: { n: number; t: Task; mode: 'done' | 'missed' | 'locked'; date?: string | null }) {
   return (
     <div className="row" style={{ padding: '14px 0', borderTop: '1px solid var(--b-div)' }}>
-      <div style={{ width: 22, fontWeight: 700, color: 'var(--t4)', flex: 'none' }}>{n}</div>
+      <div style={{ width: 22, fontWeight: 600, color: 'var(--t4)', flex: 'none' }}>{n}</div>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontWeight: 600, fontSize: 15, color: mode === 'locked' ? 'var(--t3)' : 'var(--t)' }}>{t.title}</div>
         <div style={{ fontSize: 13, lineHeight: 1.4, color: 'var(--t3)' }}>
@@ -190,12 +190,12 @@ function TaskRowStatic({ n, t, mode, date }: { n: number; t: Task; mode: 'done' 
           {date ? ' · concluída em ' + fmtDay(date, false) : ''}
         </div>
       </div>
-      <div style={{ fontWeight: 700, fontSize: 14, whiteSpace: 'nowrap', color: mode === 'locked' ? 'var(--t4)' : undefined }}>+{t.xp} XP</div>
+      <div style={{ fontWeight: 600, fontSize: 14, whiteSpace: 'nowrap', color: mode === 'locked' ? 'var(--t4)' : undefined }}>+{t.xp} XP</div>
       <div
         aria-label={mode === 'done' ? 'Feita' : mode === 'locked' ? 'Bloqueada' : 'Não feita'}
-        style={{ width: 28, height: 28, borderRadius: 8, flex: 'none', display: 'grid', placeItems: 'center', fontSize: 14, fontWeight: 700, color: mode === 'done' ? '#fff' : 'var(--t4)', background: mode === 'done' ? 'var(--ok)' : 'var(--alt2)' }}
+        style={{ width: 28, height: 28, borderRadius: 8, flex: 'none', display: 'grid', placeItems: 'center', fontSize: 14, fontWeight: 600, color: mode === 'done' ? '#fff' : 'var(--t4)', background: mode === 'done' ? 'var(--ok)' : 'var(--alt2)' }}
       >
-        {mode === 'done' ? '✓' : mode === 'locked' ? '🔒' : ''}
+        {mode === 'done' ? <Mark m="✓" /> : mode === 'locked' ? <Mark m="🔒" /> : ''}
       </div>
     </div>
   );
@@ -207,11 +207,11 @@ function LevelPast({ lvl, tasks, g }: { lvl: Level; tasks: Task[]; g: Gami }) {
   const last = dates[dates.length - 1];
   return (
     <>
-      <div style={{ background: 'var(--ok-bg)', color: '#0F4A2C', borderRadius: 18, padding: '20px 22px', display: 'flex', gap: 16, alignItems: 'center' }}>
-        <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'var(--ok)', color: '#fff', display: 'grid', placeItems: 'center', fontSize: 22, fontWeight: 700, flex: 'none' }}>✓</div>
+      <div style={{ background: 'var(--ok-bg)', color: '#0F4A2C', borderRadius: 12, padding: '20px 22px', display: 'flex', gap: 16, alignItems: 'center' }}>
+        <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'var(--ok)', color: '#fff', display: 'grid', placeItems: 'center', fontSize: 22, fontWeight: 600, flex: 'none' }}><Mark m="✓" size={13} /></div>
         <div>
           <div className="label" style={{ color: 'var(--ok-t)' }}>Nível concluído</div>
-          <div style={{ fontWeight: 700, fontSize: 22 }}>{lvl.name}</div>
+          <div style={{ fontWeight: 600, fontSize: 22 }}>{lvl.name}</div>
           <div style={{ fontSize: 15, marginTop: 2 }}>
             {tasks.length ? `${xp} XP conquistados` : 'Etapa vencida'}
             {last ? ` · concluído em ${fmtDay(last, false)}` : ''}
@@ -242,11 +242,11 @@ function LevelFuture({ lvl, unlockAfter, tasks }: { lvl: Level; unlockAfter: str
   const xp = tasks.reduce((a, t) => a + t.xp, 0);
   return (
     <>
-      <div style={{ background: '#fff', border: '1.5px dashed var(--b-dash)', borderRadius: 18, padding: '20px 22px', display: 'flex', gap: 16, alignItems: 'center' }}>
-        <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'var(--alt2)', display: 'grid', placeItems: 'center', fontSize: 20, flex: 'none' }}>🔒</div>
+      <div style={{ background: '#fff', border: '1.5px dashed var(--b-dash)', borderRadius: 12, padding: '20px 22px', display: 'flex', gap: 16, alignItems: 'center' }}>
+        <div style={{ width: 44, height: 44, borderRadius: 8, background: 'var(--alt2)', display: 'grid', placeItems: 'center', fontSize: 20, flex: 'none' }}>🔒</div>
         <div style={{ minWidth: 0 }}>
           <div className="label">O que você vai conquistar</div>
-          <div style={{ fontWeight: 700, fontSize: 22 }}>Nível {lvl.n} · {lvl.name}</div>
+          <div style={{ fontWeight: 600, fontSize: 22 }}>Nível {lvl.n} · {lvl.name}</div>
           <div style={{ fontSize: 15, color: 'var(--t2)', marginTop: 2 }}>
             {[lvl.tagline, lvl.goal ? `Meta de faturamento: ${lvl.goal}` : null, xp ? `${xp} XP disponíveis` : null].filter(Boolean).join(' · ') || 'Próxima etapa da sua jornada.'}
           </div>
@@ -287,7 +287,7 @@ function Achievements({ g }: { g: Gami }) {
         {items.map(({ t, at, lvl }, i) => (
           <div key={t.id} style={{ display: 'flex', gap: 14 }}>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-              <div style={{ width: 26, height: 26, borderRadius: '50%', background: 'var(--ok)', color: '#fff', display: 'grid', placeItems: 'center', fontSize: 13, fontWeight: 700, flex: 'none' }}>✓</div>
+              <div style={{ width: 26, height: 26, borderRadius: '50%', background: 'var(--ok)', color: '#fff', display: 'grid', placeItems: 'center', fontSize: 13, fontWeight: 600, flex: 'none' }}><Mark m="✓" size={13} /></div>
               <div style={{ width: 2, flex: 1, background: i === items.length - 1 ? 'transparent' : '#DCDFE3', margin: '4px 0' }} />
             </div>
             <div style={{ paddingBottom: 16, flex: 1, minWidth: 0 }}>
@@ -296,7 +296,7 @@ function Achievements({ g }: { g: Gami }) {
                 {[lvl ? `Nível ${lvl.n} · ${lvl.name}` : null, at ? fmtDay(at) : null].filter(Boolean).join(' · ')}
               </div>
             </div>
-            <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--ok)', whiteSpace: 'nowrap' }}>+{t.xp} XP</div>
+            <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--ok)', whiteSpace: 'nowrap' }}>+{t.xp} XP</div>
           </div>
         ))}
       </div>
@@ -348,21 +348,21 @@ export function Sessoes() {
               </button>
             )}
             {used && (
-              <div style={{ background: 'var(--err-bg)', borderRadius: 12, padding: '12px 14px', fontSize: 15, lineHeight: 1.45, color: '#7A1A14' }}>
+              <div style={{ background: 'var(--err-bg)', borderRadius: 8, padding: '12px 14px', fontSize: 15, lineHeight: 1.45, color: '#7A1A14' }}>
                 Acionado {fmtDay(red.data!.used_at)}. A Taty entra em contato pelo WhatsApp em até 1 dia útil.
               </div>
             )}
           </div>
         </div>
       )}
-      <div style={{ fontWeight: 700, fontSize: 20, marginTop: 6 }}>Plano de ação</div>
+      <div style={{ fontWeight: 600, fontSize: 20, marginTop: 6 }}>Plano de ação</div>
       <div className="dashed" style={{ padding: '28px 20px', fontSize: 15, color: 'var(--t3)' }}>
         Seu plano de ação aparece aqui depois da sessão de direcionamento.
       </div>
       {confirm && (
         <div className="modal-backdrop" onClick={() => setConfirm(false)}>
           <div className="modal" role="alertdialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
-            <div style={{ fontWeight: 700, fontSize: 20, lineHeight: 1.25 }}>Acionar o Botão Vermelho?</div>
+            <div style={{ fontWeight: 600, fontSize: 20, lineHeight: 1.25 }}>Acionar o Botão Vermelho?</div>
             <div style={{ fontSize: 15, lineHeight: 1.5, color: 'var(--t2)' }}>Ele só pode ser usado uma vez. A Taty recebe o aviso e marca uma sessão de emergência com você.</div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginTop: 6 }}>
               <button className="btn btn-secondary" style={{ height: 50 }} onClick={() => setConfirm(false)}>
@@ -387,9 +387,9 @@ export function Calendario() {
   return (
     <div className="page">
       <PageHead title="Calendário" sub="Aulas ao vivo, Laboratórios RCN, Mão na Massa e datas importantes da mentoria." />
-      <div style={{ background: 'var(--ac)', color: '#fff', borderRadius: 18, padding: '40px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, textAlign: 'center' }}>
-        <div style={{ fontWeight: 800, fontSize: 26 }}>Calendário do mês</div>
-        <div style={{ fontSize: 15, lineHeight: 1.5, color: '#D5DCEA', maxWidth: 460 }}>Confira as aulas ao vivo, Laboratórios RCN, Mão na Massa e todas as datas do mês.</div>
+      <div className="hero" style={{ padding: '40px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, textAlign: 'center' }}>
+        <div style={{ fontWeight: 600, fontSize: 26 }}>Calendário do mês</div>
+        <div style={{ fontSize: 15, lineHeight: 1.5, color: '#A9AFB9', maxWidth: 460 }}>Confira as aulas ao vivo, Laboratórios RCN, Mão na Massa e todas as datas do mês.</div>
         <a href={url.data || '#'} target="_blank" rel="noreferrer" className="btn btn-gold btn-md" style={{ marginTop: 10, padding: '0 24px' }}>
           Abrir calendário ↗
         </a>
@@ -407,7 +407,7 @@ function Scale({ v, set }: { v: number | null; set: (n: number) => void }) {
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(44px,1fr))', gap: 6, maxWidth: 560 }} role="radiogroup">
       {Array.from({ length: 11 }, (_, n) => (
-        <button key={n} role="radio" aria-checked={v === n} onClick={() => set(n)} style={{ height: 44, borderRadius: 10, display: 'grid', placeItems: 'center', fontWeight: 600, fontSize: 15, textAlign: 'center', background: v === n ? 'var(--ac)' : '#fff', color: v === n ? '#fff' : 'var(--t)', border: v === n ? 'none' : '1px solid var(--b-input)' }}>
+        <button key={n} role="radio" aria-checked={v === n} onClick={() => set(n)} style={{ height: 44, borderRadius: 8, display: 'grid', placeItems: 'center', fontWeight: 600, fontSize: 15, textAlign: 'center', background: v === n ? 'var(--ac)' : '#fff', color: v === n ? '#fff' : 'var(--t)', border: v === n ? 'none' : '1px solid var(--b-input)' }}>
           {n}
         </button>
       ))}
@@ -455,8 +455,8 @@ export function FeedbackMentoria() {
         <ErrorState onRetry={survey.refetch} />
       ) : survey.data ? (
         <div className="card" style={{ padding: '32px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, textAlign: 'center' }}>
-          <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'var(--ok-bg)', color: 'var(--ok)', display: 'grid', placeItems: 'center', fontSize: 22, fontWeight: 700 }}>✓</div>
-          <div style={{ fontWeight: 700, fontSize: 20 }}>Obrigado pelas respostas</div>
+          <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'var(--ok-bg)', color: 'var(--ok)', display: 'grid', placeItems: 'center', fontSize: 22, fontWeight: 600 }}><Mark m="✓" size={13} /></div>
+          <div style={{ fontWeight: 600, fontSize: 20 }}>Obrigado pelas respostas</div>
           <div style={{ fontSize: 15, color: 'var(--t2)' }}>A equipe lê cada uma delas.</div>
         </div>
       ) : (

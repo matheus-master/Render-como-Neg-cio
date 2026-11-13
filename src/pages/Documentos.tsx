@@ -2,7 +2,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { MAX_UPLOAD_BYTES, SLOT_ORDER, SLOTS } from '../../shared/domain';
-import { DocChip, ErrorState, extOf, FileIcon, PageHead, PageSkeleton, VersionChip } from '../components/ui';
+import { Chip, DocChip, ErrorState, extOf, FileIcon, PageHead, PageSkeleton, VersionChip, Mark } from '../components/ui';
 import { useAuth } from '../lib/auth';
 import { useDocs, useStudentFiles, type StudentFile } from '../lib/data';
 import { fmtDay, fmtDueShort } from '../lib/format';
@@ -53,12 +53,12 @@ function ListTab({ docs }: { docs: ReturnType<typeof useDocs>['docs'] }) {
               </div>
               {d.status === 'none' && (
                 <button className="upload-zone" onClick={() => nav(`/documentos/nova?slot=${s}`)}>
-                  <div style={{ fontWeight: 600, fontSize: 15, color: 'var(--ac)' }}>↑ Enviar para análise</div>
+                  <div style={{ fontWeight: 600, fontSize: 15, color: 'var(--ac)' }}><Mark m="↑" size={14} /> Enviar para análise</div>
                   <div style={{ fontSize: 13, color: 'var(--t3)' }}>PDF, Word, link ou texto</div>
                 </button>
               )}
               {(d.status === 'analise' || d.status === 'revisao') && (
-                <Link to={`/documentos/${s}/status`} style={{ background: 'var(--alt)', borderRadius: 12, padding: 14, display: 'flex', flexDirection: 'column', gap: 10, textDecoration: 'none' }}>
+                <Link to={`/documentos/${s}/status`} style={{ background: 'var(--alt)', borderRadius: 8, padding: 14, display: 'flex', flexDirection: 'column', gap: 10, textDecoration: 'none' }}>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 4 }}>
                     <div style={seg(true, stage === 1)} />
                     <div style={seg(stage >= 2, stage === 2)} />
@@ -68,7 +68,7 @@ function ListTab({ docs }: { docs: ReturnType<typeof useDocs>['docs'] }) {
                     <span style={{ color: 'var(--t2)' }}>
                       {d.status === 'analise' ? 'Em análise · leva poucos minutos' : 'Em revisão pela equipe · até ' + fmtDueShort(d.latest!.due_at)}
                     </span>
-                    <span style={{ fontWeight: 600, color: 'var(--ac)', whiteSpace: 'nowrap' }}>Acompanhar ›</span>
+                    <span style={{ fontWeight: 600, color: 'var(--ac)', whiteSpace: 'nowrap' }}>Acompanhar  →</span>
                   </div>
                 </Link>
               )}
@@ -135,11 +135,11 @@ function OtherFiles() {
           <div key={kind} className="card" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             <div className="between" style={{ alignItems: 'center' }}>
               <div className="h-card">{title}</div>
-              {f ? <span className="chip" style={{ background: 'var(--ok-bg)', color: '#0F4A2C' }}>✓ Enviado</span> : <span className="chip chip-none">Ainda não enviado</span>}
+              {f ? <Chip tone="ok">Enviado</Chip> : <Chip>Não enviado</Chip>}
             </div>
             <input type="file" hidden ref={(el) => { inputs.current[kind] = el; }} onChange={(e) => { const file = e.target.files?.[0]; e.target.value = ''; if (file) upload(kind, file); }} />
             {f && (
-              <div className="row" style={{ background: 'var(--alt)', borderRadius: 12, padding: 12 }}>
+              <div className="row" style={{ background: 'var(--alt)', borderRadius: 8, padding: 12 }}>
                 <FileIcon ext={extOf(f.file_name, 'ARQ')} small />
                 <div style={{ minWidth: 0, flex: 1 }}>
                   <div style={{ fontWeight: 600, fontSize: 14, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.file_name}</div>
@@ -148,7 +148,7 @@ function OtherFiles() {
               </div>
             )}
             <button className="upload-zone" style={{ padding: '16px 14px' }} disabled={!!busy} onClick={() => inputs.current[kind]?.click()}>
-              <div style={{ fontWeight: 600, fontSize: 15, color: 'var(--t2)' }}>{busy === kind ? `Enviando… ${pct}%` : f ? '↑ Enviar outro arquivo' : '↑ Toque para enviar'}</div>
+              <div style={{ fontWeight: 600, fontSize: 15, color: 'var(--t2)' }}>{busy === kind ? `Enviando… ${pct}%` : f ? 'Enviar outro arquivo' : 'Toque para enviar'}</div>
               <div style={{ fontSize: 13, color: 'var(--t3)' }}>Qualquer formato · até 50 MB</div>
             </button>
           </div>

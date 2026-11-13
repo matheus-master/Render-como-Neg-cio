@@ -1,7 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
-import { BackLink, ErrorState, PageHead } from '../components/ui';
+import { BackLink, ErrorState, PageHead, Mark } from '../components/ui';
 import { useReports, type Report } from '../lib/data';
 import { fmtBRL, fmtDay, fmtPeriod } from '../lib/format';
 import { supabase } from '../lib/supabase';
@@ -23,7 +23,7 @@ export function Relatorios() {
         sub="Seu histórico de evolução, quinzena a quinzena."
         right={
           <Link to="/relatorios/novo" className="btn btn-primary">
-            <span className="plus">+</span>Novo relatório
+            <span className="plus"><Mark m="+" size={16} /></span>Novo relatório
           </Link>
         }
       />
@@ -53,12 +53,12 @@ export function Relatorios() {
               <Link key={r.id} to={`/relatorios/${r.id}`} className="divrow" style={{ display: 'block', padding: '18px 0', color: 'inherit', textDecoration: 'none' }}>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(150px,1fr))', gap: '8px 16px', alignItems: 'center' }}>
                   <div>
-                    <div style={{ fontWeight: 700, fontSize: 16 }}>{fmtPeriod(r.period_start, r.period_end)}</div>
+                    <div style={{ fontWeight: 600, fontSize: 16 }}>{fmtPeriod(r.period_start, r.period_end)}</div>
                     <div style={{ fontSize: 13, color: 'var(--t3)' }}>Enviado {fmtDay(r.created_at, false)}</div>
                   </div>
                   <div>
                     <div style={{ fontSize: 13, color: 'var(--t3)' }}>Faturamento</div>
-                    <div style={{ fontWeight: 700, fontSize: 18 }}>{fmtBRL(r.revenue)}</div>
+                    <div style={{ fontWeight: 600, fontSize: 18 }}>{fmtBRL(r.revenue)}</div>
                   </div>
                   <div>
                     <div style={{ fontSize: 13, color: 'var(--t3)' }}>Prospecção</div>
@@ -67,11 +67,11 @@ export function Relatorios() {
                 </div>
                 {r.wins && (
                   <div style={{ marginTop: 10, fontSize: 14, lineHeight: 1.45, color: 'var(--t2)', display: 'flex', gap: 8 }}>
-                    <span style={{ color: 'var(--ok)', fontWeight: 700 }}>★</span>
+                    <span style={{ color: 'var(--ok)', fontWeight: 600 }}><Mark m="★" size={13} /></span>
                     <span style={{ overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{r.wins}</span>
                   </div>
                 )}
-                <div style={{ marginTop: 8, fontSize: 14, fontWeight: 600, color: 'var(--ac)' }}>Ver relatório ›</div>
+                <div style={{ marginTop: 8, fontSize: 14, fontWeight: 600, color: 'var(--ac)' }}>Ver relatório  →</div>
               </Link>
             ))}
           </div>
@@ -98,23 +98,23 @@ function Journey({ reps }: { reps: Report[] }) {
           </div>
           <div style={{ flex: 1, minWidth: 0, paddingBottom: 18 }}>
             <div className="between" style={{ alignItems: 'baseline', gap: 8 }}>
-              <div style={{ fontWeight: 700, fontSize: 15 }}>{fmtPeriod(r.period_start, r.period_end)}</div>
+              <div style={{ fontWeight: 600, fontSize: 15 }}>{fmtPeriod(r.period_start, r.period_end)}</div>
               <div style={{ fontSize: 13, color: 'var(--t3)', whiteSpace: 'nowrap' }}>{fmtBRL(r.revenue)}</div>
             </div>
             {r.wins && (
               <div style={{ display: 'flex', gap: 8, marginTop: 6, fontSize: 14, lineHeight: 1.45 }}>
-                <span style={{ color: 'var(--ok)', fontWeight: 700, flex: 'none' }}>★</span>
+                <span style={{ color: 'var(--ok)', fontWeight: 600, flex: 'none' }}><Mark m="★" size={13} /></span>
                 <span>{r.wins}</span>
               </div>
             )}
             {r.struggles && (
               <div style={{ display: 'flex', gap: 8, marginTop: 4, fontSize: 14, lineHeight: 1.45, color: 'var(--t2)' }}>
-                <span style={{ color: 'var(--warn)', fontWeight: 700, flex: 'none', width: 12, textAlign: 'center' }}>!</span>
+                <span style={{ color: 'var(--warn)', fontWeight: 600, flex: 'none', width: 12, textAlign: 'center' }}><Mark m="!" size={12} /></span>
                 <span>{r.struggles}</span>
               </div>
             )}
             <Link to={`/relatorios/${r.id}`} style={{ display: 'inline-block', marginTop: 6, fontSize: 13, fontWeight: 600 }}>
-              Ver relatório ›
+              Ver relatório →
             </Link>
           </div>
         </div>
@@ -148,9 +148,9 @@ function Evolution({ reps }: { reps: Report[] }) {
           ['Média por quinzena', fmtBRL(avg)],
           ['Propostas fechadas', String(closed)],
         ].map(([l, v]) => (
-          <div key={l} style={{ background: 'var(--alt)', borderRadius: 12, padding: '12px 14px', minWidth: 0 }}>
+          <div key={l} style={{ background: 'var(--alt)', borderRadius: 8, padding: '12px 14px', minWidth: 0 }}>
             <div style={{ fontSize: 12, color: 'var(--t3)', fontWeight: 600 }}>{l}</div>
-            <div style={{ fontWeight: 700, fontSize: 18, marginTop: 2, whiteSpace: 'nowrap' }}>{v}</div>
+            <div style={{ fontWeight: 600, fontSize: 18, marginTop: 2, whiteSpace: 'nowrap' }}>{v}</div>
           </div>
         ))}
       </div>
@@ -161,7 +161,7 @@ function Evolution({ reps }: { reps: Report[] }) {
               const isLast = i === chrono.length - 1;
               return (
                 <div key={r.id} style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', height: '100%', gap: 4 }}>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: isLast ? 'var(--ac)' : 'var(--t3)', whiteSpace: 'nowrap' }}>{r.revenue >= 1000 ? (r.revenue / 1000).toFixed(1).replace('.', ',') + 'k' : r.revenue}</div>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: isLast ? 'var(--ac)' : 'var(--t3)', whiteSpace: 'nowrap' }}>{r.revenue >= 1000 ? (r.revenue / 1000).toFixed(1).replace('.', ',') + 'k' : r.revenue}</div>
                   <div style={{ width: '100%', maxWidth: 48, height: Math.max(4, (r.revenue / max) * 110), borderRadius: '6px 6px 2px 2px', background: isLast ? 'var(--ac)' : 'color-mix(in oklab, var(--ac) 35%, #fff)' }} />
                 </div>
               );
@@ -197,8 +197,8 @@ export function RelatorioDetalhe() {
   const Text = ({ icon, color, title, body }: { icon: string; color: string; title: string; body: string }) => (
     <div className="card stack" style={{ gap: 8 }}>
       <div className="row" style={{ gap: 10 }}>
-        <div style={{ width: 28, height: 28, borderRadius: '50%', background: color, color: '#fff', display: 'grid', placeItems: 'center', fontSize: 14, fontWeight: 700, flex: 'none' }}>{icon}</div>
-        <div style={{ fontWeight: 700, fontSize: 16 }}>{title}</div>
+        <div style={{ width: 28, height: 28, borderRadius: 8, background: color, color: '#fff', display: 'grid', placeItems: 'center', flex: 'none' }}><Mark m={icon} size={15} /></div>
+        <div style={{ fontWeight: 600, fontSize: 16 }}>{title}</div>
       </div>
       <div style={{ fontSize: 15, lineHeight: 1.55, color: body ? 'var(--t)' : 'var(--t3)', whiteSpace: 'pre-wrap' }}>{body || 'Não preenchido neste relatório.'}</div>
     </div>
@@ -216,7 +216,7 @@ export function RelatorioDetalhe() {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0,1fr))', gap: 10 }}>
           <div className="card" style={{ padding: 16 }}>
             <div className="label">Faturamento</div>
-            <div style={{ fontWeight: 700, fontSize: 24, marginTop: 6 }}>{fmtBRL(r.revenue)}</div>
+            <div style={{ fontWeight: 600, fontSize: 24, marginTop: 6 }}>{fmtBRL(r.revenue)}</div>
             {delta !== null && (
               <div style={{ fontSize: 13, fontWeight: 600, marginTop: 2, color: delta >= 0 ? 'var(--ok-t)' : 'var(--err-t)' }}>
                 {delta >= 0 ? '↑' : '↓'} {Math.abs(delta)}% vs. anterior
@@ -306,7 +306,7 @@ export function NovoRelatorio() {
     <div className="page">
       <div className="flow">
         <BackLink to="/relatorios">Relatórios</BackLink>
-        <h1 style={{ fontWeight: 700, fontSize: 28, marginTop: -12 }}>Relatório quinzenal</h1>
+        <h1 style={{ fontWeight: 600, fontSize: 28, marginTop: -12 }}>Relatório quinzenal</h1>
 
         <div className="card stack" style={{ gap: 14 }}>
           <div className="h-card">Período e números</div>

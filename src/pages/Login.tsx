@@ -1,3 +1,4 @@
+import { Mark } from '../components/ui';
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
@@ -14,7 +15,7 @@ function AuthShell({ children }: { children: React.ReactNode }) {
 }
 
 const BigLogo = () => (
-  <div style={{ fontWeight: 800, fontSize: 26, lineHeight: 0.95, letterSpacing: '-.02em', color: 'var(--ac)' }}>
+  <div style={{ fontWeight: 600, fontSize: 26, lineHeight: 0.95, letterSpacing: '-.02em', color: 'var(--ac)' }}>
     Render<span style={{ fontSize: 14, fontWeight: 600, marginLeft: 3 }}>como</span>
     <br />
     Negócio
@@ -24,7 +25,7 @@ const BigLogo = () => (
 function ErrAlert({ children }: { children: React.ReactNode }) {
   return (
     <div className="alert-err" style={{ alignItems: 'center' }}>
-      <div className="ico-circle ico-err">!</div>
+      <div className="ico-circle ico-err"><Mark m="!" size={12} /></div>
       <div style={{ fontSize: 15, color: 'var(--err-t)', fontWeight: 600 }}>{children}</div>
     </div>
   );
@@ -65,7 +66,7 @@ export function Login() {
     <AuthShell>
       <BigLogo />
       <div>
-        <h1 style={{ fontWeight: 700, fontSize: 28, lineHeight: 1.15 }}>Bem-vindo de volta</h1>
+        <h1 style={{ fontWeight: 600, fontSize: 28, lineHeight: 1.15 }}>Bem-vindo de volta</h1>
         <div style={{ fontSize: 15, lineHeight: 1.5, color: 'var(--t3)', marginTop: 6 }}>Entre para ver seus materiais, devolutivas e progresso.</div>
       </div>
       {err && <ErrAlert>{err}</ErrAlert>}
@@ -98,7 +99,7 @@ export function Login() {
       </button>
       <div style={{ borderTop: '1px solid var(--b-card)', paddingTop: 20, display: 'flex', flexDirection: 'column', gap: 10, textAlign: 'center' }}>
         <div style={{ fontSize: 15, color: 'var(--t2)' }}>Primeiro acesso?</div>
-        <Link to="/primeiro-acesso" className="btn btn-secondary btn-md btn-block" style={{ borderRadius: 14 }}>
+        <Link to="/primeiro-acesso" className="btn btn-secondary btn-md btn-block" style={{ borderRadius: 10 }}>
           Entrar com o código da turma
         </Link>
       </div>
@@ -155,10 +156,10 @@ export function FirstAccess() {
   return (
     <AuthShell>
       <Link to="/login" className="back" style={{ marginBottom: -4 }}>
-        ‹ Já tenho conta
+        <Mark m="←" size={14} /> Já tenho conta
       </Link>
       <div>
-        <h1 style={{ fontWeight: 700, fontSize: 28, lineHeight: 1.15 }}>Primeiro acesso</h1>
+        <h1 style={{ fontWeight: 600, fontSize: 28, lineHeight: 1.15 }}>Primeiro acesso</h1>
         <div style={{ fontSize: 15, lineHeight: 1.5, color: 'var(--t3)', marginTop: 6 }}>Use o código que a equipe RCN enviou para você.</div>
       </div>
       {err && <ErrAlert>{err}</ErrAlert>}
@@ -172,7 +173,7 @@ export function FirstAccess() {
           autoCapitalize="characters"
           onChange={(e) => setCode(e.target.value.toUpperCase())}
         />
-        {group && <div className="ok-text">✓ Grupo {group}</div>}
+        {group && <div className="ok-text"><Mark m="✓" size={13} /> Grupo {group}</div>}
         {codeErr && <div className="err-text">! Código não encontrado. Confira com a equipe RCN.</div>}
       </label>
       <label className="field">
@@ -207,7 +208,7 @@ export function NewPassword() {
   return (
     <AuthShell>
       <BigLogo />
-      <h1 style={{ fontWeight: 700, fontSize: 28 }}>Nova senha</h1>
+      <h1 style={{ fontWeight: 600, fontSize: 28 }}>Nova senha</h1>
       <label className="field">
         <span>Nova senha</span>
         <input className="input" type="password" placeholder="Mínimo de 8 caracteres" value={pass} onChange={(e) => setPass(e.target.value)} />
