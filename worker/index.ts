@@ -2,6 +2,7 @@ import type { Feedback } from '../shared/domain';
 import { markFailed, processSubmission } from './analyze';
 import { notifyReleased } from './email';
 import { PermanentError, type AnalysisMessage, type Env } from './env';
+import { demoIcs, parseIcs } from './calendar';
 import { fetchLink } from './material';
 import { serveStatic } from './static';
 import { adminClient, getCaller, hasServiceKey, userClient } from './supabase';
@@ -73,6 +74,31 @@ async function enqueue(env: Env, submissionId: string) {
 
 async function api(req: Request, url: URL, env: Env, ctx: ExecutionContext): Promise<Response> {
   if (url.pathname === '/api/health') return json({ ok: true });
+
+  // GET /api/calendar · eventos da agenda da mentoria (lidos do endereço iCal do Google Agenda)
+  if (url.pathname === '/api/calendar' && req.method === 'GET') {
+    const caller = await getCaller(env, req);
+    if (!caller) return json({ error: 'Sessão expirada. Entre de novo.' }, 401);
+    const { data } = await userClient(env, caller.jwt).from('settings').select('key, value').in('key', ['calendar_ics_url', 'calendar_url']);
+    const cfg = Object.fromEntries((data || []).map((r) => [r.key, r.value]));
+    const ics = (cfg.calendar_ics_url || '').trim();
+    if (!ics) return json({ configured: false, events: [], calendarUrl: cfg.calendar_url || null });
+    const now = new Date();
+    const from = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1));
+    const to = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 5, 1));
+    // Cache de 10 minutos para não buscar a agenda a cada visita.
+    const cache = caches.default;
+    const key = new Request('https://cache.rcn/calendar?' + encodeURIComponent(ics));
+    let body = ics === 'demo' ? demoIcs() : await (await cache.match(key))?.text();
+    if (!body) {
+      const r = await fetch(ics.replace(/^webcal:/i, 'https:'), { headers: { 'User-Agent': 'PortalRCN/1.0' } });
+      if (!r.ok) return json({ configured: true, error: 'Não foi possível ler a agenda agora.', events: [], calendarUrl: cfg.calendar_url || null }, 502);
+      body = await r.text();
+      ctx.waitUntil(cache.put(key, new Response(body, { headers: { 'Cache-Control': 'max-age=600' } })));
+    }
+    return json({ configured: true, events: parseIcs(body, from, to), calendarUrl: cfg.calendar_url || null });
+  }
+
   if (req.method !== 'POST') return json({ error: 'Método não permitido' }, 405);
 
   const caller = await getCaller(env, req);

@@ -21,3 +21,12 @@ export async function apiPost<T = unknown>(path: string, body?: unknown): Promis
   if (!res.ok) throw new Error(out.error || 'Erro ' + res.status);
   return out;
 }
+
+/** GET na API do Worker com o JWT da sessão. */
+export async function apiGet<T = unknown>(path: string): Promise<T> {
+  const { data } = await supabase.auth.getSession();
+  const res = await fetch(path, { headers: { Authorization: `Bearer ${data.session?.access_token ?? ''}` } });
+  const out = (await res.json().catch(() => ({}))) as T & { error?: string };
+  if (!res.ok && !(out as { configured?: boolean }).configured) throw new Error(out.error || 'Erro ' + res.status);
+  return out;
+}

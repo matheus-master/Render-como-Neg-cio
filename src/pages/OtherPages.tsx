@@ -5,7 +5,7 @@ import { Pencil } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Chip, ErrorState, PageHead, PageSkeleton, Mark } from '../components/ui';
 import { useAuth, useProfile } from '../lib/auth';
-import { useGami, useRedButton, type Level, type Task, useSetting, useSurvey, useSetTaskStatus } from '../lib/data';
+import { useGami, useRedButton, type Level, type Task, useSurvey, useSetTaskStatus } from '../lib/data';
 import { fmtDate, fmtDay } from '../lib/format';
 import { supabase } from '../lib/supabase';
 import { useToast } from '../lib/toast';
@@ -377,25 +377,6 @@ export function Sessoes() {
           </div>
         </div>
       )}
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------
-// Calendário
-// ---------------------------------------------------------------------
-export function Calendario() {
-  const url = useSetting('calendar_url');
-  return (
-    <div className="page">
-      <PageHead title="Calendário" sub="Aulas ao vivo, Laboratórios RCN, Mão na Massa e datas importantes da mentoria." />
-      <div className="hero" style={{ padding: '40px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, textAlign: 'center' }}>
-        <div style={{ fontWeight: 600, fontSize: 26 }}>Calendário do mês</div>
-        <div style={{ fontSize: 15, lineHeight: 1.5, color: '#A9AFB9', maxWidth: 460 }}>Confira as aulas ao vivo, Laboratórios RCN, Mão na Massa e todas as datas do mês.</div>
-        <a href={url.data || '#'} target="_blank" rel="noreferrer" className="btn btn-gold btn-md" style={{ marginTop: 10, padding: '0 24px' }}>
-          Abrir calendário ↗
-        </a>
-      </div>
     </div>
   );
 }
