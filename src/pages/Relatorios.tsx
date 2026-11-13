@@ -61,8 +61,8 @@ export function Relatorios() {
                   <div className="mono" style={{ fontSize: 11, color: 'var(--t3)' }}>enviado {fmtDay(r.created_at, false)}</div>
                 </div>
                 <div className="evo-num" style={{ fontSize: 18, marginTop: 0 }}>{fmtBRL(r.revenue)}</div>
-                <div className="mono" style={{ fontSize: 12, color: 'var(--t2)' }}>
-                  {r.contacts} contatos · {r.proposals} prop. · {r.closed} fech.
+                <div className="mono" style={{ fontSize: 12, color: 'var(--t2)', whiteSpace: 'nowrap' }}>
+                  {r.contacts} cont. · {r.proposals} prop. · {r.closed} fech.
                 </div>
                 <div style={{ fontSize: 14, color: 'var(--t2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>{r.wins || '—'}</div>
                 <div style={{ color: 'var(--t4)', display: 'flex', justifyContent: 'flex-end' }}>
@@ -82,59 +82,76 @@ export function Relatorios() {
 function Journey({ reps }: { reps: Report[] }) {
   const items = reps.filter((r) => r.wins || r.struggles).slice(0, 12).reverse();
   const scroller = useRef<HTMLDivElement>(null);
-  // Começa mostrando a quinzena mais recente (fim da linha).
+  const [overflow, setOverflow] = useState(false);
+  // Se não couber tudo, começa mostrando a quinzena mais recente e liga as setas.
   useEffect(() => {
     const el = scroller.current;
-    if (el) el.scrollLeft = el.scrollWidth;
+    if (!el) return;
+    const check = () => {
+      const o = el.scrollWidth > el.clientWidth + 2;
+      setOverflow(o);
+      if (o) el.scrollLeft = el.scrollWidth;
+    };
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
   }, [items.length]);
   if (!items.length) return null;
+  const step = (dir: number) => scroller.current?.scrollBy({ left: dir * 260, behavior: 'smooth' });
+
   return (
-    <div className="card" style={{ padding: '22px 0 8px' }}>
-      <div className="between" style={{ alignItems: 'baseline', padding: '0 22px', flexWrap: 'wrap' }}>
+    <div className="card" style={{ padding: '22px 0 4px' }}>
+      <div className="between" style={{ alignItems: 'center', padding: '0 22px 10px', flexWrap: 'wrap' }}>
         <div>
           <div className="h-card">Conquistas e dificuldades</div>
           <div style={{ fontSize: 14, color: 'var(--t3)', marginTop: 2 }}>O que marcou cada quinzena, da mais antiga para a mais recente.</div>
         </div>
         <div className="row" style={{ gap: 8 }}>
           <span className="label">{items.length} quinzenas</span>
-          <button className="btn btn-secondary btn-sm" style={{ width: 36, padding: 0 }} aria-label="Quinzenas anteriores" onClick={() => scroller.current?.scrollBy({ left: -300, behavior: 'smooth' })}>
-            <Mark m="←" size={15} />
-          </button>
-          <button className="btn btn-secondary btn-sm" style={{ width: 36, padding: 0 }} aria-label="Quinzenas seguintes" onClick={() => scroller.current?.scrollBy({ left: 300, behavior: 'smooth' })}>
-            <Mark m="→" size={15} />
-          </button>
+          {overflow && (
+            <>
+              <button className="btn btn-secondary btn-sm" style={{ width: 34, padding: 0 }} aria-label="Quinzenas anteriores" onClick={() => step(-1)}>
+                <Mark m="←" size={15} />
+              </button>
+              <button className="btn btn-secondary btn-sm" style={{ width: 34, padding: 0 }} aria-label="Quinzenas seguintes" onClick={() => step(1)}>
+                <Mark m="→" size={15} />
+              </button>
+            </>
+          )}
         </div>
       </div>
-      <div ref={scroller} className="timeline-h" tabIndex={0} aria-label="Linha do tempo de conquistas e dificuldades">
-        {items.map((r, i) => {
-          const last = i === items.length - 1;
-          return (
-            <div key={r.id} className={'tl-col' + (last ? ' now' : '')}>
-              <div className="tl-rail">
-                <span className="tl-dot" />
-              </div>
-              <div className="between" style={{ alignItems: 'baseline', gap: 8 }}>
-                <div className="label" style={{ color: last ? 'var(--t)' : undefined }}>{fmtPeriod(r.period_start, r.period_end)}</div>
-                <div className="mono" style={{ fontSize: 12, color: 'var(--t3)' }}>{fmtBRL(r.revenue)}</div>
-              </div>
-              {r.wins && (
-                <div className="tl-item">
-                  <span style={{ color: 'var(--ok)' }}><Mark m="★" size={13} /></span>
-                  <span>{r.wins}</span>
+      <div ref={scroller} className="timeline-h" tabIndex={overflow ? 0 : -1} aria-label="Linha do tempo de conquistas e dificuldades">
+        <div className="tl-track">
+          {items.map((r, i) => {
+            const last = i === items.length - 1;
+            return (
+              <div key={r.id} className={'tl-col' + (last ? ' now' : ' past')}>
+                <div className="tl-node">
+                  <span className="tl-dot" />
+                  <span className="tl-when">{last ? 'Agora · ' : ''}{fmtPeriod(r.period_start, r.period_end)}</span>
                 </div>
-              )}
-              {r.struggles && (
-                <div className="tl-item" style={{ color: 'var(--t2)' }}>
-                  <span style={{ color: 'var(--warn)' }}><Mark m="!" size={13} /></span>
-                  <span>{r.struggles}</span>
+                <div className="tl-card">
+                  <div className="tl-rev">{fmtBRL(r.revenue)}</div>
+                  {r.wins && (
+                    <div className="tl-item">
+                      <span style={{ color: 'var(--ok)' }}><Mark m="★" size={13} /></span>
+                      <span>{r.wins}</span>
+                    </div>
+                  )}
+                  {r.struggles && (
+                    <div className="tl-item" style={{ color: 'var(--t2)' }}>
+                      <span style={{ color: 'var(--warn)' }}><Mark m="!" size={13} /></span>
+                      <span>{r.struggles}</span>
+                    </div>
+                  )}
+                  <Link to={`/relatorios/${r.id}`} className="link" style={{ marginTop: 'auto', paddingTop: 6, fontSize: 13 }}>
+                    Ver relatório <Mark m="→" size={13} />
+                  </Link>
                 </div>
-              )}
-              <Link to={`/relatorios/${r.id}`} className="link" style={{ marginTop: 'auto', paddingTop: 10, fontSize: 13 }}>
-                Ver relatório <Mark m="→" size={13} />
-              </Link>
-            </div>
-          );
-        })}
+              </div>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
