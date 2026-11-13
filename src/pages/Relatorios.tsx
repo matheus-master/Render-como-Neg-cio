@@ -47,6 +47,7 @@ export function Relatorios() {
       ) : (
         <>
           <Evolution reps={reps} />
+          <Journey reps={reps} />
           <div className="card" style={{ padding: '4px 20px' }}>
             {reps.map((r) => (
               <Link key={r.id} to={`/relatorios/${r.id}`} className="divrow" style={{ display: 'block', padding: '18px 0', color: 'inherit', textDecoration: 'none' }}>
@@ -76,6 +77,48 @@ export function Relatorios() {
           </div>
         </>
       )}
+    </div>
+  );
+}
+
+
+/** Conquistas e dificuldades de cada quinzena, para o aluno ver a própria evolução. */
+function Journey({ reps }: { reps: Report[] }) {
+  const items = reps.filter((r) => r.wins || r.struggles).slice(0, 8);
+  if (!items.length) return null;
+  return (
+    <div className="card" style={{ padding: '20px 20px 6px' }}>
+      <div className="h-card">Conquistas e dificuldades</div>
+      <div style={{ fontSize: 15, color: 'var(--t3)', marginTop: 2, marginBottom: 14 }}>O que marcou cada quinzena, da mais recente para a mais antiga.</div>
+      {items.map((r, i) => (
+        <div key={r.id} style={{ display: 'flex', gap: 14 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            <div style={{ width: 12, height: 12, borderRadius: '50%', background: i === 0 ? 'var(--ac)' : 'color-mix(in oklab, var(--ac) 35%, #fff)', marginTop: 5, flex: 'none' }} />
+            <div style={{ width: 2, flex: 1, background: i === items.length - 1 ? 'transparent' : '#DCDFE3', margin: '4px 0' }} />
+          </div>
+          <div style={{ flex: 1, minWidth: 0, paddingBottom: 18 }}>
+            <div className="between" style={{ alignItems: 'baseline', gap: 8 }}>
+              <div style={{ fontWeight: 700, fontSize: 15 }}>{fmtPeriod(r.period_start, r.period_end)}</div>
+              <div style={{ fontSize: 13, color: 'var(--t3)', whiteSpace: 'nowrap' }}>{fmtBRL(r.revenue)}</div>
+            </div>
+            {r.wins && (
+              <div style={{ display: 'flex', gap: 8, marginTop: 6, fontSize: 14, lineHeight: 1.45 }}>
+                <span style={{ color: 'var(--ok)', fontWeight: 700, flex: 'none' }}>★</span>
+                <span>{r.wins}</span>
+              </div>
+            )}
+            {r.struggles && (
+              <div style={{ display: 'flex', gap: 8, marginTop: 4, fontSize: 14, lineHeight: 1.45, color: 'var(--t2)' }}>
+                <span style={{ color: 'var(--warn)', fontWeight: 700, flex: 'none', width: 12, textAlign: 'center' }}>!</span>
+                <span>{r.struggles}</span>
+              </div>
+            )}
+            <Link to={`/relatorios/${r.id}`} style={{ display: 'inline-block', marginTop: 6, fontSize: 13, fontWeight: 600 }}>
+              Ver relatório ›
+            </Link>
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
