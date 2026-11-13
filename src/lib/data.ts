@@ -125,7 +125,7 @@ export function useSetChecks() {
 // Gamificação
 // ---------------------------------------------------------------------
 export interface Level { n: number; name: string; tagline: string | null; goal: string | null }
-export interface TaskMark { task_id: number; status: 'andamento' | 'feita' }
+export interface TaskMark { task_id: number; status: 'andamento' | 'feita'; updated_at?: string }
 /** href: para onde leva a tarefa automática (documento ligado a ela). */
 export type TaskState = { kind: 'pendente' | 'feita' | 'andamento'; note?: string; href?: string };
 export interface Task { id: number; level: number; position: number; title: string; description: string; category: string; xp: number; auto_slot: Slot | null }
@@ -138,7 +138,7 @@ export function useGami() {
     queryKey: ['task_completions', uid],
     enabled: !!uid,
     queryFn: async (): Promise<TaskMark[]> => {
-      const r = await supabase.from('task_completions').select('task_id, status');
+      const r = await supabase.from('task_completions').select('task_id, status, updated_at');
       // Antes da migração 20261113 a coluna status não existe: tudo que está lá conta como feito.
       if (r.error) return (unwrap(await supabase.from('task_completions').select('task_id')) as { task_id: number }[]).map((x) => ({ task_id: x.task_id, status: 'feita' }));
       return r.data as TaskMark[];
@@ -174,7 +174,14 @@ export function useGami() {
   const xpLevel = curTasks.filter(isDone).reduce((a, t) => a + t.xp, 0);
   const xpTotal = ts.filter(isDone).reduce((a, t) => a + t.xp, 0);
   const curStarted = curTasks.filter((t) => stateOf(t).kind === 'andamento');
+  /** Quando a tarefa foi concluída (data da devolutiva aprovada, nas automáticas). */
+  const doneAt = (t: Task): string | null => {
+    if (!isDone(t)) return null;
+    if (t.auto_slot) return docs[t.auto_slot].latest?.feedback?.released_at ?? null;
+    return comp.data?.find((m) => m.task_id === t.id)?.updated_at ?? null;
+  };
   return {
+    doneAt,
     stateOf,
     tasksStarted: curStarted.length,
     xpStarted: curStarted.reduce((a, t) => a + t.xp, 0),

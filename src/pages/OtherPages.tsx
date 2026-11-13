@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { BackLink, ErrorState, PageHead, PageSkeleton } from '../components/ui';
 import { useAuth, useProfile } from '../lib/auth';
-import { useGami, useRedButton, useReports, useSetting, useSurvey, useSetTaskStatus } from '../lib/data';
+import { useGami, useRedButton, type Level, type Task, useReports, useSetting, useSurvey, useSetTaskStatus } from '../lib/data';
 import { fmtBRL, fmtDate, fmtDay, fmtPeriod } from '../lib/format';
 import { supabase } from '../lib/supabase';
 import { useToast } from '../lib/toast';
@@ -56,13 +56,13 @@ export function Gamificacao() {
           );
         })}
       </div>
-      {isFuture ? (
-        <div className="card" style={{ padding: 28, textAlign: 'center', fontSize: 15, lineHeight: 1.5, color: 'var(--t2)' }}>
-          Este nível abre quando você concluir as tarefas principais do {cur!.name}.
-        </div>
+      {isFuture && lvl ? (
+        <LevelFuture lvl={lvl} unlockAfter={g.levels.find((l) => l.n === shown - 1)?.name ?? cur!.name} tasks={tasks} />
+      ) : isPast && lvl ? (
+        <LevelPast lvl={lvl} tasks={tasks} g={g} />
       ) : tasks.length === 0 ? (
         <div className="card" style={{ padding: 28, textAlign: 'center', fontSize: 15, lineHeight: 1.5, color: 'var(--t2)' }}>
-          {isPast ? `${lvl?.name} concluído.` : 'As tarefas deste nível ainda não foram cadastradas pela equipe.'}
+          As tarefas deste nível ainda não foram cadastradas pela equipe.
         </div>
       ) : (
         <>
@@ -168,8 +168,138 @@ export function Gamificacao() {
               );
             })}
           </div>
+          <Achievements g={g} />
         </>
       )}
+    </div>
+  );
+}
+
+
+type Gami = ReturnType<typeof useGami>;
+
+function TaskRowStatic({ n, t, mode, date }: { n: number; t: Task; mode: 'done' | 'missed' | 'locked'; date?: string | null }) {
+  return (
+    <div className="row" style={{ padding: '14px 0', borderTop: '1px solid var(--b-div)' }}>
+      <div style={{ width: 22, fontWeight: 700, color: 'var(--t4)', flex: 'none' }}>{n}</div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontWeight: 600, fontSize: 15, color: mode === 'locked' ? 'var(--t3)' : 'var(--t)' }}>{t.title}</div>
+        <div style={{ fontSize: 13, lineHeight: 1.4, color: 'var(--t3)' }}>
+          {t.description}
+          {t.category ? ' · ' + t.category : ''}
+          {date ? ' · concluída em ' + fmtDay(date, false) : ''}
+        </div>
+      </div>
+      <div style={{ fontWeight: 700, fontSize: 14, whiteSpace: 'nowrap', color: mode === 'locked' ? 'var(--t4)' : undefined }}>+{t.xp} XP</div>
+      <div
+        aria-label={mode === 'done' ? 'Feita' : mode === 'locked' ? 'Bloqueada' : 'Não feita'}
+        style={{ width: 28, height: 28, borderRadius: 8, flex: 'none', display: 'grid', placeItems: 'center', fontSize: 14, fontWeight: 700, color: mode === 'done' ? '#fff' : 'var(--t4)', background: mode === 'done' ? 'var(--ok)' : 'var(--alt2)' }}
+      >
+        {mode === 'done' ? '✓' : mode === 'locked' ? '🔒' : ''}
+      </div>
+    </div>
+  );
+}
+
+function LevelPast({ lvl, tasks, g }: { lvl: Level; tasks: Task[]; g: Gami }) {
+  const xp = tasks.filter(g.isDone).reduce((a, t) => a + t.xp, 0);
+  const dates = tasks.map(g.doneAt).filter(Boolean).sort() as string[];
+  const last = dates[dates.length - 1];
+  return (
+    <>
+      <div style={{ background: 'var(--ok-bg)', color: '#0F4A2C', borderRadius: 18, padding: '20px 22px', display: 'flex', gap: 16, alignItems: 'center' }}>
+        <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'var(--ok)', color: '#fff', display: 'grid', placeItems: 'center', fontSize: 22, fontWeight: 700, flex: 'none' }}>✓</div>
+        <div>
+          <div className="label" style={{ color: 'var(--ok-t)' }}>Nível concluído</div>
+          <div style={{ fontWeight: 700, fontSize: 22 }}>{lvl.name}</div>
+          <div style={{ fontSize: 15, marginTop: 2 }}>
+            {tasks.length ? `${xp} XP conquistados` : 'Etapa vencida'}
+            {last ? ` · concluído em ${fmtDay(last, false)}` : ''}
+            {lvl.tagline ? ` · ${lvl.tagline}` : ''}
+          </div>
+        </div>
+      </div>
+      {tasks.length > 0 ? (
+        <div className="card" style={{ padding: '20px 20px 6px' }}>
+          <div className="h-card">O que você fez neste nível</div>
+          <div style={{ fontSize: 15, color: 'var(--t3)', marginTop: 2, marginBottom: 8 }}>
+            {tasks.filter(g.isDone).length} de {tasks.length} tarefas principais
+          </div>
+          {tasks.map((t, i) => (
+            <TaskRowStatic key={t.id} n={i + 1} t={t} mode={g.isDone(t) ? 'done' : 'missed'} date={g.doneAt(t)} />
+          ))}
+        </div>
+      ) : (
+        <div className="card" style={{ padding: 22, fontSize: 15, lineHeight: 1.5, color: 'var(--t2)' }}>
+          As tarefas deste nível ainda não foram cadastradas no portal. Quando a equipe cadastrar, o que você fez aparece aqui.
+        </div>
+      )}
+    </>
+  );
+}
+
+function LevelFuture({ lvl, unlockAfter, tasks }: { lvl: Level; unlockAfter: string; tasks: Task[] }) {
+  const xp = tasks.reduce((a, t) => a + t.xp, 0);
+  return (
+    <>
+      <div style={{ background: '#fff', border: '1.5px dashed var(--b-dash)', borderRadius: 18, padding: '20px 22px', display: 'flex', gap: 16, alignItems: 'center' }}>
+        <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'var(--alt2)', display: 'grid', placeItems: 'center', fontSize: 20, flex: 'none' }}>🔒</div>
+        <div style={{ minWidth: 0 }}>
+          <div className="label">O que você vai conquistar</div>
+          <div style={{ fontWeight: 700, fontSize: 22 }}>Nível {lvl.n} · {lvl.name}</div>
+          <div style={{ fontSize: 15, color: 'var(--t2)', marginTop: 2 }}>
+            {[lvl.tagline, lvl.goal ? `Meta de faturamento: ${lvl.goal}` : null, xp ? `${xp} XP disponíveis` : null].filter(Boolean).join(' · ') || 'Próxima etapa da sua jornada.'}
+          </div>
+          <div style={{ fontSize: 14, color: 'var(--t3)', marginTop: 6 }}>Abre quando você concluir as tarefas principais do {unlockAfter}.</div>
+        </div>
+      </div>
+      {tasks.length > 0 ? (
+        <div className="card" style={{ padding: '20px 20px 6px' }}>
+          <div className="h-card">Tarefas deste nível</div>
+          <div style={{ fontSize: 15, color: 'var(--t3)', marginTop: 2, marginBottom: 8 }}>Uma prévia do que vem pela frente.</div>
+          {tasks.map((t, i) => (
+            <TaskRowStatic key={t.id} n={i + 1} t={t} mode="locked" />
+          ))}
+        </div>
+      ) : (
+        <div className="card" style={{ padding: 22, fontSize: 15, lineHeight: 1.5, color: 'var(--t2)' }}>
+          As tarefas deste nível serão liberadas pela equipe.
+        </div>
+      )}
+    </>
+  );
+}
+
+/** Linha do tempo do que o aluno já concluiu, em todos os níveis. */
+function Achievements({ g }: { g: Gami }) {
+  const items = g.tasks
+    .filter(g.isDone)
+    .map((t) => ({ t, at: g.doneAt(t), lvl: g.levels.find((l) => l.n === t.level) }))
+    .sort((a, b) => (b.at || '').localeCompare(a.at || ''));
+  if (!items.length) return null;
+  return (
+    <div className="card" style={{ padding: '20px 20px 6px' }}>
+      <div className="between" style={{ alignItems: 'baseline' }}>
+        <div className="h-card">Suas conquistas</div>
+        <div style={{ fontSize: 14, color: 'var(--t3)' }}>{g.xpTotal} XP no total</div>
+      </div>
+      <div style={{ marginTop: 10 }}>
+        {items.map(({ t, at, lvl }, i) => (
+          <div key={t.id} style={{ display: 'flex', gap: 14 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+              <div style={{ width: 26, height: 26, borderRadius: '50%', background: 'var(--ok)', color: '#fff', display: 'grid', placeItems: 'center', fontSize: 13, fontWeight: 700, flex: 'none' }}>✓</div>
+              <div style={{ width: 2, flex: 1, background: i === items.length - 1 ? 'transparent' : '#DCDFE3', margin: '4px 0' }} />
+            </div>
+            <div style={{ paddingBottom: 16, flex: 1, minWidth: 0 }}>
+              <div style={{ fontWeight: 600, fontSize: 15 }}>{t.title}</div>
+              <div style={{ fontSize: 13, color: 'var(--t3)' }}>
+                {[lvl ? `Nível ${lvl.n} · ${lvl.name}` : null, at ? fmtDay(at) : null].filter(Boolean).join(' · ')}
+              </div>
+            </div>
+            <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--ok)', whiteSpace: 'nowrap' }}>+{t.xp} XP</div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
