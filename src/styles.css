@@ -87,7 +87,7 @@ svg.lucide { flex: none; }
 .sidenav a.active svg { color: var(--gold); }
 .sidebar-user { display: flex; align-items: center; gap: 10px; padding: 10px; border-radius: 12px; background: var(--alt); }
 /* Com o menu lateral, o conteúdo ocupa a largura toda */
-.with-sidebar .page { max-width: 1520px; padding: 42px 44px 72px 36px; margin: 0; }
+.with-sidebar .page { max-width: none; padding: 42px 44px 72px 36px; margin: 0; }
 
 /* Barra superior clara, com linha fina */
 .topbar {
@@ -278,6 +278,14 @@ a.card:hover, a.card-link:hover { text-decoration: none; border-color: var(--b-b
 .rv-x:hover { color: var(--t); }
 .add { font-size: 13px; font-weight: 500; color: var(--ac); display: inline-flex; align-items: center; gap: 4px; }
 .paper { background: #fff; border-radius: var(--r-sm); border: 1px solid var(--line); padding: 40px 44px; font-size: 15px; line-height: 1.6; color: #2A2D33; white-space: pre-wrap; overflow-wrap: anywhere; }
+
+/* ---------- Início: números e materiais lado a lado em telas largas ---------- */
+.home-split { display: flex; flex-direction: column; gap: 12px; }
+.home-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+@media (min-width: 1200px) {
+  .home-split { display: grid; grid-template-columns: minmax(300px, 1fr) 2fr; gap: 16px; align-items: stretch; }
+  .home-stats { grid-template-columns: 1fr; align-content: start; }
+}
 
 /* ---------- Relatórios: evolução e linha do tempo horizontal ---------- */
 .evo { display: grid; grid-template-columns: minmax(260px, 340px) 1fr; gap: 32px; padding: 24px; }

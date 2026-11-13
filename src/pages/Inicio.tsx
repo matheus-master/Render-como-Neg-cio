@@ -130,7 +130,8 @@ export default function Inicio() {
         </Link>
       )}
 
-      <div className="grid-auto">
+      <div className="home-split">
+      <div className="home-stats">
         <Link to="/relatorios" className="card" style={{ color: 'inherit', textDecoration: 'none' }}>
           <div className="label">Último relatório</div>
           <div style={{ fontWeight: 600, fontSize: 26, marginTop: 8 }}>{last ? fmtBRL(last.revenue) : '—'}</div>
@@ -169,6 +170,7 @@ export default function Inicio() {
             </button>
           );
         })}
+      </div>
       </div>
     </div>
   );
