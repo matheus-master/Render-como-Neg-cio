@@ -12,9 +12,11 @@ export interface Submission {
   version: number;
   status: SubmissionStatus;
   source_kind: 'file' | 'link' | 'text';
+  file_path: string | null;
   file_name: string | null;
   file_size: number | null;
   link_url: string | null;
+  pasted_text: string | null;
   note: string | null;
   due_at: string;
   created_at: string;
@@ -58,7 +60,7 @@ export function useDocs() {
       unwrap(
         await supabase
           .from('submissions')
-          .select('id, slot, version, status, source_kind, file_name, file_size, link_url, note, due_at, created_at')
+          .select('id, slot, version, status, source_kind, file_path, file_name, file_size, link_url, pasted_text, note, due_at, created_at')
           .eq('student_id', uid!)
           .order('version'),
       ) as Submission[],

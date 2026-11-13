@@ -1,9 +1,10 @@
 import { Fragment, useEffect, useState } from 'react';
 import { Link, Navigate, useParams } from 'react-router-dom';
 import { isSlot, SLOTS, VERDICTS, type Feedback, type Slot } from '../../shared/domain';
-import { BackLink, CheckIcon, ErrorState, extOf, FileIcon, PageSkeleton, VerdictChip, VersionChip, Mark } from '../components/ui';
+import { BackLink, CheckIcon, ErrorState, PageSkeleton, VerdictChip, VersionChip, Mark } from '../components/ui';
+import { MaterialPreview } from '../components/MaterialPreview';
 import { useProfile } from '../lib/auth';
-import { useDocs, useGami, useMarkSeen, useSetChecks, type Version } from '../lib/data';
+import { useDocs, useGami, useMarkSeen, useSetChecks } from '../lib/data';
 import { firstName, fmtDay, fmtDue, initials } from '../lib/format';
 
 /** Tempo típico da análise (para a barra de progresso) e a partir de quando avisamos que está demorando. */
@@ -34,7 +35,6 @@ function useNow(active: boolean) {
   return now;
 }
 
-const sourceExt = (v: Version) => (v.source_kind === 'file' ? extOf(v.file_name) : v.source_kind === 'link' ? 'LINK' : 'TXT');
 
 // ---------------------------------------------------------------------
 // Status do envio
@@ -106,15 +106,7 @@ export function Status() {
         })}
       </div>
 
-      <div className="card tight row" style={{ padding: '14px 16px' }}>
-        <FileIcon ext={sourceExt(lv)} />
-        <div>
-          <div style={{ fontWeight: 600, fontSize: 15 }}>{SLOTS[slot].title}</div>
-          <div style={{ fontSize: 14, color: 'var(--t3)' }}>
-            Versão {lv.version} · enviada {fmtDay(lv.created_at)}
-          </div>
-        </div>
-      </div>
+      <MaterialPreview v={lv} title={SLOTS[slot].title} />
 
       {slow && (
         <div className="card tight" style={{ borderColor: '#D3D6DB', display: 'flex', gap: 14 }}>
@@ -172,7 +164,9 @@ export function Devolutiva() {
   const toggle = (i: number) => setChecks.mutate({ submissionId: fbRow.submission_id, checks: checks.map((c, j) => (j === i ? !c : c)) });
 
   return (
-    <Shell wide>
+    <div className="page">
+      <div className="dev-split">
+        <div className="flow wide dev-main">
       <BackLink to="/documentos">Meus documentos</BackLink>
       <div className="stack" style={{ gap: 4, marginTop: -10 }}>
         <div className="h-flow">{SLOTS[slot].title}</div>
@@ -283,6 +277,10 @@ export function Devolutiva() {
         </div>
       )}
 
+      <div className="dev-inline-doc">
+        <MaterialPreview v={lv} title={SLOTS[slot].title} />
+      </div>
+
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(200px,1fr))', gap: 10 }}>
         <Link to={`/documentos/nova?slot=${slot}`} className="btn btn-primary" style={{ height: 54, borderRadius: 10, fontSize: 16 }}>
           Enviar nova versão
@@ -291,7 +289,12 @@ export function Devolutiva() {
           Histórico e comparação
         </Link>
       </div>
-    </Shell>
+        </div>
+        <aside className="dev-doc">
+          <MaterialPreview v={lv} title={SLOTS[slot].title} defaultOpen />
+        </aside>
+      </div>
+    </div>
   );
 }
 
