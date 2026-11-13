@@ -170,7 +170,7 @@ function Evolution({ reps }: { reps: Report[] }) {
           <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
             {chrono.map((r) => (
               <div key={r.id} style={{ flex: 1, minWidth: 0, textAlign: 'center', fontSize: 11, color: 'var(--t3)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                {fmtPeriod(r.period_start, r.period_end)}
+                {fmtDay(r.period_start + 'T12:00:00Z', false)}
               </div>
             ))}
           </div>
