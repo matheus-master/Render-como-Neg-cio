@@ -165,6 +165,7 @@ export function Fila() {
                     {k === 'draft' && <button className="btn btn-primary btn-sm btn-block" onClick={open}>Continuar</button>}
                     {k === 'wait' && <button className="btn btn-outline btn-sm btn-block" onClick={open}>Revisar</button>}
                     {k === 'lib' && <button className="btn btn-outline btn-sm btn-block" onClick={open}>Ver</button>}
+                    {k === 'run' && <button className="btn btn-secondary btn-sm btn-block" onClick={open}>Abrir</button>}
                   </div>
                 </div>
               );
@@ -324,6 +325,9 @@ function ReviewScreen({ item, refetch }: { item: ReviewItem; refetch: () => unkn
                 <div className="spinner" />
                 <div style={{ fontWeight: 600, fontSize: 16 }}>Gerando o rascunho da devolutiva…</div>
                 <div style={{ fontSize: 15, color: 'var(--t3)' }}>Leva de 2 a 5 minutos. Você já pode ler o material ao lado.</div>
+                <button className="btn btn-secondary btn-sm" style={{ marginTop: 6 }} onClick={() => { setScratch(true); setDraft(EMPTY); }}>
+                  Não esperar: escrever do zero
+                </button>
               </div>
             ) : failed ? (
               <div className="card stack" style={{ gap: 12, padding: 24 }}>

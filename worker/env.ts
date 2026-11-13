@@ -2,7 +2,8 @@ export interface Env {
   ANALYSIS_QUEUE: Queue<AnalysisMessage>;
   SUPABASE_URL: string;
   SUPABASE_ANON_KEY: string;
-  SUPABASE_SERVICE_ROLE_KEY: string;
+  /** Opcional até ligar a análise automática. */
+  SUPABASE_SERVICE_ROLE_KEY?: string;
   ANTHROPIC_API_KEY: string;
   PORTAL_URL: string;
   /** Opcional: sem ele, o e-mail de devolutiva liberada não é enviado. */

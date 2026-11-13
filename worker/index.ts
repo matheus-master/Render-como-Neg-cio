@@ -4,7 +4,7 @@ import { notifyReleased } from './email';
 import { PermanentError, type AnalysisMessage, type Env } from './env';
 import { fetchLink } from './material';
 import { serveStatic } from './static';
-import { adminClient, getCaller, userClient } from './supabase';
+import { adminClient, getCaller, hasServiceKey, userClient } from './supabase';
 
 /** Depois disso em "analise", o envio vai para revisão sem rascunho (a equipe assume). */
 const ANALYSIS_TIMEOUT_MIN = 15;
@@ -46,6 +46,7 @@ export default {
   },
 
   async scheduled(_ctrl: ScheduledController, env: Env): Promise<void> {
+    if (!hasServiceKey(env)) return;
     const supa = adminClient(env);
     // 1) Envios que nunca entraram na fila (o app caiu entre o insert e o pedido de análise).
     const { data: orphan } = await supa
@@ -88,13 +89,13 @@ async function api(req: Request, url: URL, env: Env, ctx: ExecutionContext): Pro
   const m = url.pathname.match(/^\/api\/submissions\/([0-9a-f-]{36})\/(analyze|release)$/);
   if (!m) return json({ error: 'Não encontrado' }, 404);
   const [, id, action] = m;
-  const supa = adminClient(env);
-  const { data: sub } = await supa.from('submissions').select('id, student_id, status, feedbacks(ai_status)').eq('id', id).single();
-  if (!sub) return json({ error: 'Envio não encontrado' }, 404);
-  const fb = sub.feedbacks as unknown as { ai_status: string };
 
   // POST /api/submissions/:id/analyze  · aluno (logo após enviar) ou equipe ("Gerar de novo")
   if (action === 'analyze') {
+    if (!hasServiceKey(env)) return json({ error: 'A análise automática ainda não está ligada. A equipe faz a devolutiva.' }, 503);
+    const { data: sub } = await adminClient(env).from('submissions').select('id, student_id, status, feedbacks(ai_status)').eq('id', id).single();
+    if (!sub) return json({ error: 'Envio não encontrado' }, 404);
+    const fb = sub.feedbacks as unknown as { ai_status: string };
     const isOwner = sub.student_id === caller.id;
     if (caller.role !== 'staff') {
       if (!isOwner) return json({ error: 'Sem permissão' }, 403);
@@ -122,6 +123,6 @@ async function api(req: Request, url: URL, env: Env, ctx: ExecutionContext): Pro
   // RPC com o JWT de quem revisou: auth.uid() vira reviewer_id (a devolutiva sai assinada por essa pessoa).
   const { error } = await userClient(env, caller.jwt).rpc('release_feedback', { p_submission: id, p_draft: clean });
   if (error) return json({ error: error.message }, 400);
-  ctx.waitUntil(notifyReleased(env, id).catch((e) => console.error('email', e)));
+  if (hasServiceKey(env)) ctx.waitUntil(notifyReleased(env, id).catch((e) => console.error('email', e)));
   return json({ ok: true });
 }
