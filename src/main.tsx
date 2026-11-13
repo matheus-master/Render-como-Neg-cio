@@ -11,7 +11,8 @@ import Documentos from './pages/Documentos';
 import Inicio from './pages/Inicio';
 import { FirstAccess, Login, NewPassword } from './pages/Login';
 import NovaAnalise from './pages/NovaAnalise';
-import { Calendario, FeedbackMentoria, Gamificacao, NovoRelatorio, Perfil, Relatorios, Sessoes } from './pages/OtherPages';
+import { Calendario, FeedbackMentoria, Gamificacao, Perfil, Sessoes } from './pages/OtherPages';
+import { NovoRelatorio, RelatorioDetalhe, Relatorios } from './pages/Relatorios';
 import { Fila, Revisao, StaffLayout } from './pages/staff/Staff';
 import './styles.css';
 
@@ -57,6 +58,7 @@ function App() {
         <Route path="gamificacao" element={<Gamificacao />} />
         <Route path="relatorios" element={<Relatorios />} />
         <Route path="relatorios/novo" element={<NovoRelatorio />} />
+        <Route path="relatorios/:id" element={<RelatorioDetalhe />} />
         <Route path="sessoes" element={<Sessoes />} />
         <Route path="calendario" element={<Calendario />} />
         <Route path="feedback" element={<FeedbackMentoria />} />

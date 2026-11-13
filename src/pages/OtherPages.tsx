@@ -1,10 +1,10 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { BackLink, ErrorState, PageHead, PageSkeleton } from '../components/ui';
+import { useNavigate } from 'react-router-dom';
+import { ErrorState, PageHead, PageSkeleton } from '../components/ui';
 import { useAuth, useProfile } from '../lib/auth';
-import { useGami, useRedButton, type Level, type Task, useReports, useSetting, useSurvey, useSetTaskStatus } from '../lib/data';
-import { fmtBRL, fmtDate, fmtDay, fmtPeriod } from '../lib/format';
+import { useGami, useRedButton, type Level, type Task, useSetting, useSurvey, useSetTaskStatus } from '../lib/data';
+import { fmtDate, fmtDay } from '../lib/format';
 import { supabase } from '../lib/supabase';
 import { useToast } from '../lib/toast';
 
@@ -299,128 +299,6 @@ function Achievements({ g }: { g: Gami }) {
             <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--ok)', whiteSpace: 'nowrap' }}>+{t.xp} XP</div>
           </div>
         ))}
-      </div>
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------
-// Relatórios
-// ---------------------------------------------------------------------
-export function Relatorios() {
-  const q = useReports();
-  return (
-    <div className="page">
-      <PageHead
-        title="Relatórios quinzenais"
-        sub="Seu histórico de evolução, quinzena a quinzena."
-        right={
-          <Link to="/relatorios/novo" className="btn btn-primary">
-            <span className="plus">+</span>Novo relatório
-          </Link>
-        }
-      />
-      {q.isLoading ? (
-        <div className="skel-card" style={{ height: 180 }} />
-      ) : q.isError ? (
-        <ErrorState onRetry={q.refetch} />
-      ) : q.data!.length === 0 ? (
-        <div className="dashed" style={{ gap: 6 }}>
-          <div style={{ fontWeight: 600, fontSize: 17 }}>Nenhum relatório ainda</div>
-          <div style={{ fontSize: 15, color: 'var(--t3)', lineHeight: 1.45, maxWidth: 420 }}>A cada quinzena, registre faturamento e prospecção. Seus números aparecem aqui e no Início.</div>
-        </div>
-      ) : (
-        <div className="card" style={{ padding: '0 20px' }}>
-          {q.data!.map((r) => (
-            <div key={r.id} className="divrow" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(150px,1fr))', gap: '8px 16px', padding: '18px 0', alignItems: 'center' }}>
-              <div>
-                <div style={{ fontWeight: 700, fontSize: 16 }}>{fmtPeriod(r.period_start, r.period_end)}</div>
-                <div style={{ fontSize: 13, color: 'var(--t3)' }}>Enviado {fmtDay(r.created_at, false)}</div>
-              </div>
-              <div>
-                <div style={{ fontSize: 13, color: 'var(--t3)' }}>Faturamento</div>
-                <div style={{ fontWeight: 700, fontSize: 18 }}>{fmtBRL(r.revenue)}</div>
-              </div>
-              <div>
-                <div style={{ fontSize: 13, color: 'var(--t3)' }}>Prospecção</div>
-                <div style={{ fontSize: 15 }}>
-                  {r.contacts} contatos · {r.proposals} propostas · {r.closed} fechada{r.closed === 1 ? '' : 's'}
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-/** Quinzena anterior à data de hoje: 1–15 ou 16–fim do mês. */
-function lastFortnight(): [string, string] {
-  const now = new Date();
-  const y = now.getFullYear(), m = now.getMonth(), d = now.getDate();
-  const iso = (dt: Date) => dt.toISOString().slice(0, 10);
-  if (d > 15) return [iso(new Date(Date.UTC(y, m, 1))), iso(new Date(Date.UTC(y, m, 15)))];
-  return [iso(new Date(Date.UTC(y, m - 1, 16))), iso(new Date(Date.UTC(y, m, 0)))];
-}
-
-export function NovoRelatorio() {
-  const [a, b] = lastFortnight();
-  const [start, setStart] = useState(a);
-  const [end, setEnd] = useState(b);
-  const [revenue, setRevenue] = useState('');
-  const [contacts, setContacts] = useState('');
-  const [proposals, setProposals] = useState('');
-  const [closed, setClosed] = useState('');
-  const [busy, setBusy] = useState(false);
-  const qc = useQueryClient();
-  const nav = useNavigate();
-  const toast = useToast();
-  const num = (s: string) => Number(s.replace(/\./g, '').replace(',', '.')) || 0;
-  const ok = start && end && end >= start && revenue.trim() !== '';
-
-  const save = async () => {
-    if (!ok || busy) return;
-    setBusy(true);
-    const { error } = await supabase.from('reports').insert({ period_start: start, period_end: end, revenue: num(revenue), contacts: num(contacts), proposals: num(proposals), closed: num(closed) });
-    setBusy(false);
-    if (error) return toast('O relatório não foi enviado. Tente de novo.');
-    await qc.invalidateQueries({ queryKey: ['reports'] });
-    toast('Relatório enviado.');
-    nav('/relatorios');
-  };
-
-  const F = ({ label, v, set, ph, mode = 'numeric' }: { label: string; v: string; set: (s: string) => void; ph?: string; mode?: 'numeric' | 'decimal' }) => (
-    <label className="field">
-      <span>{label}</span>
-      <input className="input md" inputMode={mode} placeholder={ph} value={v} onChange={(e) => set(e.target.value)} />
-    </label>
-  );
-
-  return (
-    <div className="page">
-      <div className="flow">
-        <BackLink to="/relatorios">Relatórios</BackLink>
-        <h1 style={{ fontWeight: 700, fontSize: 28, marginTop: -12 }}>Relatório quinzenal</h1>
-        <div className="card stack" style={{ gap: 14 }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-            <label className="field">
-              <span>De</span>
-              <input className="input md" type="date" value={start} onChange={(e) => setStart(e.target.value)} />
-            </label>
-            <label className="field">
-              <span>Até</span>
-              <input className="input md" type="date" value={end} onChange={(e) => setEnd(e.target.value)} />
-            </label>
-          </div>
-          {F({ label: 'Faturamento na quinzena (R$)', v: revenue, set: setRevenue, ph: 'Ex.: 3.150', mode: 'decimal' })}
-          {F({ label: 'Contatos de prospecção', v: contacts, set: setContacts, ph: '0' })}
-          {F({ label: 'Propostas enviadas', v: proposals, set: setProposals, ph: '0' })}
-          {F({ label: 'Propostas fechadas', v: closed, set: setClosed, ph: '0' })}
-          <button className="btn btn-primary btn-md" disabled={!ok || busy} onClick={save}>
-            {busy ? 'Enviando…' : 'Enviar relatório'}
-          </button>
-        </div>
       </div>
     </div>
   );

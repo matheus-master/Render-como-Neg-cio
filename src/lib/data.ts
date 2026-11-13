@@ -225,7 +225,7 @@ export function useSetTaskStatus() {
 // ---------------------------------------------------------------------
 // Relatórios, sessões, pesquisa, arquivos, configurações
 // ---------------------------------------------------------------------
-export interface Report { id: string; period_start: string; period_end: string; revenue: number; contacts: number; proposals: number; closed: number; created_at: string }
+export interface Report { id: string; period_start: string; period_end: string; revenue: number; contacts: number; proposals: number; closed: number; created_at: string; wins: string; struggles: string; next_focus: string }
 
 export function useReports() {
   const uid = useUid();
