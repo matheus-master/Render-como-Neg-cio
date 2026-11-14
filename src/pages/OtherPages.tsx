@@ -1,6 +1,6 @@
 import { PasswordFields, passwordOk } from '../components/PasswordFields';
 import { useQueryClient } from '@tanstack/react-query';
-import { useEffect, useState } from 'react';
+import { Fragment, useEffect, useState } from 'react';
 import { Pencil } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Chip, ErrorState, PageHead, PageSkeleton, Mark } from '../components/ui';
@@ -26,18 +26,22 @@ export function Gamificacao() {
   const shown = sel ?? cur?.n ?? 1;
   const lvl = g.levels.find((l) => l.n === shown);
   const next = g.levels.find((l) => l.n === shown + 1);
-  const tasks = g.byLevel(shown);
+  // Principais primeiro, missões bônus no fim.
+  const tasks = [...g.byLevel(shown).filter((t) => !t.bonus), ...g.byLevel(shown).filter((t) => t.bonus)];
   const states = tasks.map((t) => g.stateOf(t));
+  const isMain = (i: number) => !tasks[i]!.bonus;
   const xpMax = tasks.reduce((a, t) => a + t.xp, 0);
   const xpDone = tasks.filter((_, i) => states[i]!.kind === 'feita').reduce((a, t) => a + t.xp, 0);
   const xpStarted = tasks.filter((_, i) => states[i]!.kind === 'andamento').reduce((a, t) => a + t.xp, 0);
-  const done = states.filter((s) => s.kind === 'feita').length;
-  const started = states.filter((s) => s.kind === 'andamento').length;
-  const left = tasks.length - done;
+  const done = states.filter((s, i) => isMain(i) && s.kind === 'feita').length;
+  const started = states.filter((s, i) => isMain(i) && s.kind === 'andamento').length;
+  const mainCount = tasks.filter((t) => !t.bonus).length;
+  const left = mainCount - done;
   const isPast = cur && shown < cur.n;
   const isFuture = cur && shown > cur.n;
   // Próximo passo: a primeira em andamento; se não houver, a primeira pendente.
-  const nextIdx = states.findIndex((s) => s.kind === 'andamento') >= 0 ? states.findIndex((s) => s.kind === 'andamento') : states.findIndex((s) => s.kind === 'pendente');
+  const firstMain = (k: string) => states.findIndex((s, i) => isMain(i) && s.kind === k);
+  const nextIdx = firstMain('andamento') >= 0 ? firstMain('andamento') : firstMain('pendente');
   const nextTask = nextIdx >= 0 ? tasks[nextIdx] : null;
 
   const set = (taskId: number, status: 'pendente' | 'andamento' | 'feita') =>
@@ -106,7 +110,7 @@ export function Gamificacao() {
             <div className="card">
               <div className="label">Tarefas principais</div>
               <div style={{ fontWeight: 600, fontSize: 28, marginTop: 8 }}>
-                {done} <span style={{ fontSize: 15, color: 'var(--t3)', fontWeight: 600 }}>/ {tasks.length}</span>
+                {done} <span style={{ fontSize: 15, color: 'var(--t3)', fontWeight: 600 }}>/ {mainCount}</span>
               </div>
               <div style={{ fontSize: 14, color: 'var(--t3)', marginTop: 4 }}>
                 {started > 0 ? `${started} em andamento` : lvl?.goal ? `Meta de faturamento: ${lvl.goal}` : 'Comece por uma tarefa'}
@@ -127,10 +131,21 @@ export function Gamificacao() {
             {tasks.map((t, i) => {
               const st = states[i]!;
               const on = st.kind === 'feita';
+              const bonusHeader = t.bonus && (i === 0 || !tasks[i - 1]!.bonus);
               const going = st.kind === 'andamento';
               return (
-                <div key={t.id} className="row" style={{ padding: '14px 0', borderTop: '1px solid var(--b-div)', alignItems: 'center', background: going ? 'linear-gradient(90deg, var(--ac-soft), transparent 70%)' : undefined, margin: going ? '0 -20px' : undefined, paddingLeft: going ? 20 : 0, paddingRight: going ? 20 : 0 }}>
-                  <div style={{ width: 22, fontWeight: 600, color: going ? 'var(--ac)' : 'var(--t4)', flex: 'none' }}>{i + 1}</div>
+                <Fragment key={t.id}>
+                {bonusHeader && (
+                  <div style={{ padding: '18px 0 8px', borderTop: '1px solid var(--b-div)' }}>
+                    <div className="row" style={{ gap: 8 }}>
+                      <span style={{ color: 'var(--gold)', display: 'flex' }}><Mark m="★" size={15} /></span>
+                      <span className="h-card" style={{ fontSize: 15 }}>Missões bônus</span>
+                    </div>
+                    <div style={{ fontSize: 13, color: 'var(--t3)', marginTop: 2 }}>Somam XP, mas não contam para subir de nível.</div>
+                  </div>
+                )}
+                <div className="row" style={{ padding: '14px 0', borderTop: '1px solid var(--b-div)', alignItems: 'center', background: going ? 'linear-gradient(90deg, var(--ac-soft), transparent 70%)' : undefined, margin: going ? '0 -20px' : undefined, paddingLeft: going ? 20 : 0, paddingRight: going ? 20 : 0 }}>
+                  <div style={{ width: 22, fontWeight: 600, color: going ? 'var(--ac)' : 'var(--t4)', flex: 'none' }}>{t.position}</div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontWeight: 600, fontSize: 15, color: on ? 'var(--t3)' : 'var(--t)', textDecoration: on ? 'line-through' : 'none' }}>{t.title}</div>
                     <div style={{ fontSize: 13, lineHeight: 1.4, color: 'var(--t3)' }}>
@@ -167,6 +182,7 @@ export function Gamificacao() {
                     {on ? <Mark m="✓" /> : going ? <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--ac)' }} /> : ''}
                   </button>
                 </div>
+                </Fragment>
               );
             })}
           </div>
@@ -189,6 +205,7 @@ function TaskRowStatic({ n, t, mode, date }: { n: number; t: Task; mode: 'done' 
         <div style={{ fontSize: 13, lineHeight: 1.4, color: 'var(--t3)' }}>
           {t.description}
           {t.category ? ' · ' + t.category : ''}
+          {t.bonus ? ' · missão bônus' : ''}
           {date ? ' · concluída em ' + fmtDay(date, false) : ''}
         </div>
       </div>
@@ -203,7 +220,8 @@ function TaskRowStatic({ n, t, mode, date }: { n: number; t: Task; mode: 'done' 
   );
 }
 
-function LevelPast({ lvl, tasks, g }: { lvl: Level; tasks: Task[]; g: Gami }) {
+function LevelPast({ lvl, tasks: raw, g }: { lvl: Level; tasks: Task[]; g: Gami }) {
+  const tasks = [...raw.filter((t) => !t.bonus), ...raw.filter((t) => t.bonus)];
   const xp = tasks.filter(g.isDone).reduce((a, t) => a + t.xp, 0);
   const dates = tasks.map(g.doneAt).filter(Boolean).sort() as string[];
   const last = dates[dates.length - 1];
@@ -225,10 +243,10 @@ function LevelPast({ lvl, tasks, g }: { lvl: Level; tasks: Task[]; g: Gami }) {
         <div className="card" style={{ padding: '20px 20px 6px' }}>
           <div className="h-card">O que você fez neste nível</div>
           <div style={{ fontSize: 15, color: 'var(--t3)', marginTop: 2, marginBottom: 8 }}>
-            {tasks.filter(g.isDone).length} de {tasks.length} tarefas principais
+            {tasks.filter((t) => !t.bonus && g.isDone(t)).length} de {tasks.filter((t) => !t.bonus).length} tarefas principais
           </div>
-          {tasks.map((t, i) => (
-            <TaskRowStatic key={t.id} n={i + 1} t={t} mode={g.isDone(t) ? 'done' : 'missed'} date={g.doneAt(t)} />
+          {tasks.map((t) => (
+            <TaskRowStatic key={t.id} n={t.position} t={t} mode={g.isDone(t) ? 'done' : 'missed'} date={g.doneAt(t)} />
           ))}
         </div>
       ) : (
@@ -240,7 +258,8 @@ function LevelPast({ lvl, tasks, g }: { lvl: Level; tasks: Task[]; g: Gami }) {
   );
 }
 
-function LevelFuture({ lvl, unlockAfter, tasks }: { lvl: Level; unlockAfter: string; tasks: Task[] }) {
+function LevelFuture({ lvl, unlockAfter, tasks: raw }: { lvl: Level; unlockAfter: string; tasks: Task[] }) {
+  const tasks = [...raw.filter((t) => !t.bonus), ...raw.filter((t) => t.bonus)];
   const xp = tasks.reduce((a, t) => a + t.xp, 0);
   return (
     <>
@@ -259,8 +278,8 @@ function LevelFuture({ lvl, unlockAfter, tasks }: { lvl: Level; unlockAfter: str
         <div className="card" style={{ padding: '20px 20px 6px' }}>
           <div className="h-card">Tarefas deste nível</div>
           <div style={{ fontSize: 15, color: 'var(--t3)', marginTop: 2, marginBottom: 8 }}>Uma prévia do que vem pela frente.</div>
-          {tasks.map((t, i) => (
-            <TaskRowStatic key={t.id} n={i + 1} t={t} mode="locked" />
+          {tasks.map((t) => (
+            <TaskRowStatic key={t.id} n={t.position} t={t} mode="locked" />
           ))}
         </div>
       ) : (
@@ -314,11 +333,13 @@ export function Sessoes() {
   const qc = useQueryClient();
   const toast = useToast();
   const [confirm, setConfirm] = useState(false);
+  const [reason, setReason] = useState('');
   const used = !!red.data;
 
   const go = async () => {
+    if (reason.trim().length < 10) return;
     setConfirm(false);
-    const { error } = await supabase.from('red_button').insert({});
+    const { error } = await supabase.from('red_button').insert({ reason: reason.trim() });
     if (error) return toast('Não deu para acionar. Tente de novo.');
     qc.invalidateQueries({ queryKey: ['red_button'] });
   };
@@ -340,7 +361,7 @@ export function Sessoes() {
           <div className="card stack" style={{ gap: 12 }}>
             <div className="between" style={{ alignItems: 'center' }}>
               <div className="h-card">Botão Vermelho</div>
-              {red.isLoading ? null : used ? <span className="chip" style={{ background: 'var(--err-bg)', color: '#7A1A14' }}>Usado</span> : <span className="chip chip-none">Disponível</span>}
+              {red.isLoading ? null : used ? <Chip tone={red.data!.staff_status === 'realizado' ? 'ok' : red.data!.staff_status === 'agendado' ? 'soft' : 'err'}>{red.data!.staff_status === 'realizado' ? 'Realizado' : red.data!.staff_status === 'agendado' ? 'Agendado' : 'Solicitado'}</Chip> : <span className="chip chip-none">Disponível</span>}
             </div>
             <div style={{ fontSize: 15, lineHeight: 1.5, color: 'var(--t2)' }}>Sessão de emergência, para usar em último caso quando você travar nas tarefas. Só pode ser usada uma vez.</div>
             {!red.isLoading && !used && (
@@ -351,7 +372,10 @@ export function Sessoes() {
             )}
             {used && (
               <div style={{ background: 'var(--err-bg)', borderRadius: 8, padding: '12px 14px', fontSize: 15, lineHeight: 1.45, color: '#7A1A14' }}>
-                Acionado {fmtDay(red.data!.used_at)}. A Taty entra em contato pelo WhatsApp em até 1 dia útil.
+                Acionado {fmtDay(red.data!.used_at)}.{' '}
+                {red.data!.staff_status === 'solicitado' ? 'A Taty entra em contato pelo WhatsApp em até 1 dia útil.' : red.data!.staff_status === 'agendado' ? 'Sessão agendada.' : 'Sessão realizada.'}
+                {red.data!.reason && <div style={{ marginTop: 8, fontSize: 14, color: 'var(--t2)' }}><b>Seu motivo:</b> {red.data!.reason}</div>}
+                {red.data!.staff_notes && <div style={{ marginTop: 6, fontSize: 14, color: 'var(--t2)' }}><b>Equipe:</b> {red.data!.staff_notes}</div>}
               </div>
             )}
           </div>
@@ -366,11 +390,15 @@ export function Sessoes() {
           <div className="modal" role="alertdialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
             <div style={{ fontWeight: 600, fontSize: 20, lineHeight: 1.25 }}>Acionar o Botão Vermelho?</div>
             <div style={{ fontSize: 15, lineHeight: 1.5, color: 'var(--t2)' }}>Ele só pode ser usado uma vez. A Taty recebe o aviso e marca uma sessão de emergência com você.</div>
+            <label className="field">
+              <span>Onde você travou?</span>
+              <textarea className="textarea" autoFocus placeholder="Conte em poucas linhas o que está te travando, para a Taty já chegar preparada." value={reason} onChange={(e) => setReason(e.target.value)} />
+            </label>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginTop: 6 }}>
               <button className="btn btn-secondary" style={{ height: 50 }} onClick={() => setConfirm(false)}>
                 Agora não
               </button>
-              <button className="btn btn-danger" style={{ height: 50 }} onClick={go}>
+              <button className="btn btn-danger" style={{ height: 50 }} onClick={go} disabled={reason.trim().length < 10}>
                 Acionar
               </button>
             </div>

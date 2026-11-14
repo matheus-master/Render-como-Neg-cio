@@ -1,7 +1,9 @@
 import { useQueryClient } from '@tanstack/react-query';
+import { Pencil } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
 import { BackLink, ErrorState, PageHead, Mark } from '../components/ui';
+import { useAuth } from '../lib/auth';
 import { useReports, type Report } from '../lib/data';
 import { fmtBRL, fmtDay, fmtPeriod } from '../lib/format';
 import { supabase } from '../lib/supabase';
@@ -62,9 +64,12 @@ export function Relatorios() {
                 </div>
                 <div className="evo-num" style={{ fontSize: 18, marginTop: 0 }}>{fmtBRL(r.revenue)}</div>
                 <div className="mono" style={{ fontSize: 12, color: 'var(--t2)', whiteSpace: 'nowrap' }}>
-                  {r.contacts} cont. · {r.proposals} prop. · {r.closed} fech.
+                  {r.contacts} cont. · {r.responses} resp. · {r.meetings} reun. · {r.closed} fech.
                 </div>
-                <div style={{ fontSize: 14, color: 'var(--t2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>{r.wins || '—'}</div>
+                <div style={{ fontSize: 14, color: 'var(--t2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>
+                  {r.staff_comment && <span className="chip chip-soft" style={{ marginRight: 8 }}>Comentado</span>}
+                  {r.executed ? r.wins || r.actions || '—' : 'Não conseguiu executar nesta quinzena'}
+                </div>
                 <div style={{ color: 'var(--t4)', display: 'flex', justifyContent: 'flex-end' }}>
                   <Mark m="›" size={18} />
                 </div>
@@ -174,7 +179,7 @@ function Evolution({ reps }: { reps: Report[] }) {
     ['Última quinzena', fmtBRL(last.revenue)],
     ['Total registrado', fmtBRL(total)],
     ['Média por quinzena', fmtBRL(avg)],
-    ['Propostas fechadas', String(closed)],
+    ['Projetos fechados', String(closed)],
   ];
 
   return (
@@ -227,8 +232,30 @@ function Evolution({ reps }: { reps: Report[] }) {
 }
 
 // ---------------------------------------------------------------------
-// Relatório enviado (só leitura)
+// Relatório enviado (leitura)
 // ---------------------------------------------------------------------
+const METRICS: [keyof Report, string][] = [
+  ['contacts', 'Contatos feitos'],
+  ['responses', 'Respostas recebidas'],
+  ['appointments', 'Agendamentos'],
+  ['meetings', 'Reuniões feitas'],
+  ['closed', 'Projetos fechados'],
+];
+
+function Block({ icon, color, title, body }: { icon: string; color: string; title: string; body: string }) {
+  return (
+    <div className="card stack" style={{ gap: 8 }}>
+      <div className="row" style={{ gap: 10 }}>
+        <div style={{ width: 28, height: 28, borderRadius: 8, background: color, color: '#fff', display: 'grid', placeItems: 'center', flex: 'none' }}>
+          <Mark m={icon} size={15} />
+        </div>
+        <div style={{ fontWeight: 600, fontSize: 16 }}>{title}</div>
+      </div>
+      <div style={{ fontSize: 15, lineHeight: 1.55, color: body ? 'var(--t)' : 'var(--t3)', whiteSpace: 'pre-wrap' }}>{body || 'Não preenchido.'}</div>
+    </div>
+  );
+}
+
 export function RelatorioDetalhe() {
   const { id } = useParams();
   const q = useReports();
@@ -240,122 +267,183 @@ export function RelatorioDetalhe() {
   const r = reps[i]!, prev = reps[i + 1];
   const delta = prev && prev.revenue > 0 ? Math.round(((r.revenue - prev.revenue) / prev.revenue) * 100) : null;
 
-  const Text = ({ icon, color, title, body }: { icon: string; color: string; title: string; body: string }) => (
-    <div className="card stack" style={{ gap: 8 }}>
-      <div className="row" style={{ gap: 10 }}>
-        <div style={{ width: 28, height: 28, borderRadius: 8, background: color, color: '#fff', display: 'grid', placeItems: 'center', flex: 'none' }}><Mark m={icon} size={15} /></div>
-        <div style={{ fontWeight: 600, fontSize: 16 }}>{title}</div>
-      </div>
-      <div style={{ fontSize: 15, lineHeight: 1.55, color: body ? 'var(--t)' : 'var(--t3)', whiteSpace: 'pre-wrap' }}>{body || 'Não preenchido neste relatório.'}</div>
-    </div>
-  );
-
   return (
     <div className="page">
-      <div className="flow">
+      <div className="flow wide">
         <BackLink to="/relatorios">Relatórios</BackLink>
-        <div style={{ marginTop: -10 }}>
-          <div style={{ fontSize: 14, color: 'var(--t3)' }}>Relatório quinzenal</div>
-          <div className="h-flow">{fmtPeriod(r.period_start, r.period_end)}</div>
-          <div style={{ fontSize: 14, color: 'var(--t3)', marginTop: 2 }}>Enviado {fmtDay(r.created_at, false)} · só leitura</div>
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0,1fr))', gap: 10 }}>
-          <div className="card" style={{ padding: 16 }}>
-            <div className="label">Faturamento</div>
-            <div style={{ fontWeight: 600, fontSize: 24, marginTop: 6 }}>{fmtBRL(r.revenue)}</div>
-            {delta !== null && (
-              <div style={{ fontSize: 13, fontWeight: 600, marginTop: 2, color: delta >= 0 ? 'var(--ok-t)' : 'var(--err-t)' }}>
-                {delta >= 0 ? '↑' : '↓'} {Math.abs(delta)}% vs. anterior
-              </div>
-            )}
-          </div>
-          <div className="card" style={{ padding: 16 }}>
-            <div className="label">Prospecção</div>
-            <div style={{ fontSize: 15, lineHeight: 1.6, marginTop: 6 }}>
-              <b>{r.contacts}</b> contatos
-              <br />
-              <b>{r.proposals}</b> propostas enviadas
-              <br />
-              <b>{r.closed}</b> {r.closed === 1 ? 'fechada' : 'fechadas'}
+        <div className="between" style={{ marginTop: -10, alignItems: 'flex-end', flexWrap: 'wrap', gap: 12 }}>
+          <div>
+            <div style={{ fontSize: 14, color: 'var(--t3)' }}>Relatório quinzenal</div>
+            <div className="h-flow">{fmtPeriod(r.period_start, r.period_end)}</div>
+            <div style={{ fontSize: 14, color: 'var(--t3)', marginTop: 2 }}>
+              Enviado {fmtDay(r.created_at, false)}
+              {r.updated_at && r.updated_at.slice(0, 16) !== r.created_at.slice(0, 16) ? ` · editado ${fmtDay(r.updated_at, false)}` : ''}
             </div>
           </div>
+          <Link to={`/relatorios/${r.id}/editar`} className="btn btn-secondary btn-sm">
+            <Pencil size={14} aria-hidden /> Editar
+          </Link>
         </div>
-        <Text icon="★" color="var(--ok)" title="Maiores conquistas" body={r.wins} />
-        <Text icon="!" color="var(--warn)" title="Maiores dificuldades" body={r.struggles} />
-        <Text icon="→" color="var(--ac)" title="Foco da próxima quinzena" body={r.next_focus} />
+
+        {r.staff_comment && (
+          <div className="card" style={{ borderColor: 'var(--ink)', display: 'flex', gap: 12 }}>
+            <div style={{ width: 32, height: 32, borderRadius: 8, background: 'var(--ink)', color: 'var(--gold)', display: 'grid', placeItems: 'center', flex: 'none' }}>
+              <Mark m="★" size={16} />
+            </div>
+            <div style={{ minWidth: 0 }}>
+              <div className="label">Feedback da equipe RCN{r.staff_comment_at ? ` · ${fmtDay(r.staff_comment_at, false)}` : ''}</div>
+              <div style={{ fontSize: 15, lineHeight: 1.55, marginTop: 6, whiteSpace: 'pre-wrap' }}>{r.staff_comment}</div>
+            </div>
+          </div>
+        )}
+
+        <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+          <div className="between" style={{ padding: '16px 18px', borderBottom: '1px solid var(--line)', alignItems: 'baseline', flexWrap: 'wrap' }}>
+            <div>
+              <div className="label">Faturamento da quinzena</div>
+              <div className="evo-num" style={{ fontSize: 28 }}>{fmtBRL(r.revenue)}</div>
+            </div>
+            {delta !== null && (
+              <span className="chip" style={{ background: delta >= 0 ? 'var(--ok-bg)' : 'var(--err-bg)', color: delta >= 0 ? 'var(--ok-t)' : 'var(--err-t)' }}>
+                {delta >= 0 ? '↑' : '↓'} {Math.abs(delta)}% vs. anterior
+              </span>
+            )}
+          </div>
+          <div className="metric-grid">
+            {METRICS.map(([k, label]) => (
+              <div key={k}>
+                <div className="label">{label}</div>
+                <div className="evo-num" style={{ fontSize: 22 }}>{String(r[k] ?? 0)}</div>
+              </div>
+            ))}
+          </div>
+          {r.notes && <div style={{ padding: '0 18px 16px', fontSize: 14, color: 'var(--t2)' }}><span className="label" style={{ marginRight: 8 }}>Observações</span>{r.notes}</div>}
+        </div>
+
+        <div className="card row" style={{ gap: 10 }}>
+          <span className="chip" style={r.executed ? { background: 'var(--ok-bg)', color: 'var(--ok-t)' } : { background: 'var(--warn-bg)', color: 'var(--warn-t)' }}>
+            {r.executed ? 'Sim' : 'Não'}
+          </span>
+          <span style={{ fontSize: 15 }}>Conseguiu executar ações nesta quinzena?</span>
+        </div>
+
+        {r.executed ? (
+          <>
+            <Block icon="→" color="var(--ink)" title="Ações realizadas" body={r.actions} />
+            <Block icon="★" color="var(--ok)" title="Principais conquistas" body={r.wins} />
+            <Block icon="!" color="var(--warn)" title="Principais desafios" body={r.struggles} />
+          </>
+        ) : (
+          <>
+            <Block icon="!" color="var(--warn)" title="O que impediu a execução" body={r.blocker} />
+            <Block icon="→" color="var(--ink)" title="O que precisa para destravar" body={r.needs} />
+          </>
+        )}
+        <Block icon="✓" color="var(--ac)" title="Combinado / próximo passo" body={r.next_focus} />
       </div>
     </div>
   );
 }
 
 // ---------------------------------------------------------------------
-// Novo relatório
+// Novo relatório / editar
 // ---------------------------------------------------------------------
-/** Quinzena anterior à data de hoje: 1–15 ou 16–fim do mês. */
-function lastFortnight(): [string, string] {
+/** Quinzena atual: 1–15 ou 16–fim do mês. */
+function currentFortnight(): [string, string] {
   const now = new Date();
   const y = now.getFullYear(), m = now.getMonth(), d = now.getDate();
   const iso = (dt: Date) => dt.toISOString().slice(0, 10);
-  if (d > 15) return [iso(new Date(Date.UTC(y, m, 1))), iso(new Date(Date.UTC(y, m, 15)))];
-  return [iso(new Date(Date.UTC(y, m - 1, 16))), iso(new Date(Date.UTC(y, m, 0)))];
+  if (d <= 15) return [iso(new Date(Date.UTC(y, m, 1))), iso(new Date(Date.UTC(y, m, 15)))];
+  return [iso(new Date(Date.UTC(y, m, 16))), iso(new Date(Date.UTC(y, m + 1, 0)))];
 }
 
+type Form = {
+  start: string; end: string; executed: boolean | null; actions: string;
+  contacts: string; responses: string; appointments: string; meetings: string; closed: string; revenue: string; notes: string;
+  wins: string; struggles: string; blocker: string; needs: string; next_focus: string;
+};
+const num = (s: string) => Number(String(s).replace(/\./g, '').replace(',', '.')) || 0;
+
 export function NovoRelatorio() {
-  const [a, b] = lastFortnight();
-  const [f, setF] = useState({ start: a, end: b, revenue: '', contacts: '', proposals: '', closed: '', wins: '', struggles: '', next_focus: '' });
+  const { id } = useParams();
+  const q = useReports();
+  const editing = !!id;
+  const existing = editing ? q.data?.find((r) => r.id === id) : undefined;
+  if (editing && q.isLoading) return <div className="page"><div className="flow"><div className="skel-card" style={{ height: 500 }} /></div></div>;
+  if (editing && !existing) return <Navigate to="/relatorios" replace />;
+  return <ReportForm key={id || 'novo'} existing={existing} />;
+}
+
+function ReportForm({ existing }: { existing?: Report }) {
+  const [a, b] = currentFortnight();
+  const s = (n: number | undefined) => (n === undefined ? '' : String(n));
+  const [f, setF] = useState<Form>(() =>
+    existing
+      ? { start: existing.period_start, end: existing.period_end, executed: existing.executed, actions: existing.actions, contacts: s(existing.contacts), responses: s(existing.responses), appointments: s(existing.appointments), meetings: s(existing.meetings), closed: s(existing.closed), revenue: s(existing.revenue), notes: existing.notes, wins: existing.wins, struggles: existing.struggles, blocker: existing.blocker, needs: existing.needs, next_focus: existing.next_focus }
+      : { start: a, end: b, executed: null, actions: '', contacts: '', responses: '', appointments: '', meetings: '', closed: '', revenue: '', notes: '', wins: '', struggles: '', blocker: '', needs: '', next_focus: '' },
+  );
   const [busy, setBusy] = useState(false);
   const qc = useQueryClient();
   const nav = useNavigate();
   const toast = useToast();
-  const num = (s: string) => Number(s.replace(/\./g, '').replace(',', '.')) || 0;
-  const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setF({ ...f, [k]: e.target.value });
-  const ok = f.start && f.end && f.end >= f.start && f.revenue.trim() !== '' && f.wins.trim() !== '' && f.struggles.trim() !== '';
+  const { session } = useAuth();
+  const set = (k: keyof Form) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setF({ ...f, [k]: e.target.value });
+
+  const missing: string[] = [];
+  if (!f.start || !f.end || f.end < f.start) missing.push('o período');
+  if (f.executed === null) missing.push('se conseguiu executar ações');
+  if (f.executed === true) {
+    if (!f.actions.trim()) missing.push('as ações realizadas');
+    if (!f.wins.trim()) missing.push('as conquistas');
+    if (!f.struggles.trim()) missing.push('os desafios');
+  }
+  if (f.executed === false) {
+    if (!f.blocker.trim()) missing.push('o que impediu');
+    if (!f.needs.trim()) missing.push('o que precisa para destravar');
+  }
+  if (!f.next_focus.trim()) missing.push('o combinado');
+  const ok = missing.length === 0;
 
   const save = async () => {
     if (!ok || busy) return;
     setBusy(true);
-    const { error } = await supabase.from('reports').insert({
-      period_start: f.start,
-      period_end: f.end,
-      revenue: num(f.revenue),
-      contacts: num(f.contacts),
-      proposals: num(f.proposals),
-      closed: num(f.closed),
-      wins: f.wins.trim(),
-      struggles: f.struggles.trim(),
-      next_focus: f.next_focus.trim(),
-    });
+    const row = {
+      period_start: f.start, period_end: f.end, executed: !!f.executed, actions: f.actions.trim(),
+      contacts: num(f.contacts), responses: num(f.responses), appointments: num(f.appointments), meetings: num(f.meetings), closed: num(f.closed), revenue: num(f.revenue), notes: f.notes.trim(),
+      wins: f.wins.trim(), struggles: f.struggles.trim(), blocker: f.blocker.trim(), needs: f.needs.trim(), next_focus: f.next_focus.trim(),
+    };
+    const { data, error } = existing
+      ? await supabase.from('reports').update(row).eq('id', existing.id).select('id').single()
+      : await supabase.from('reports').insert({ ...row, student_id: session!.user.id }).select('id').single();
     setBusy(false);
-    if (error) return toast('O relatório não foi enviado. Tente de novo.');
+    if (error) return toast('O relatório não foi salvo. Tente de novo.');
     await qc.invalidateQueries({ queryKey: ['reports'] });
-    toast('Relatório enviado.');
-    nav('/relatorios');
+    toast(existing ? 'Relatório atualizado.' : 'Relatório enviado.');
+    nav(`/relatorios/${data.id}`);
   };
 
-  const numField = (k: 'revenue' | 'contacts' | 'proposals' | 'closed', label: string, ph: string, mode: 'numeric' | 'decimal' = 'numeric') => (
+  const numField = (k: 'contacts' | 'responses' | 'appointments' | 'meetings' | 'closed', label: string) => (
     <label className="field" style={{ minWidth: 0 }}>
       <span>{label}</span>
-      <input className="input md" inputMode={mode} placeholder={ph} value={f[k]} onChange={set(k)} />
+      <input className="input md" inputMode="numeric" placeholder="0" value={f[k]} onChange={set(k)} />
     </label>
   );
-  const textField = (k: 'wins' | 'struggles' | 'next_focus', label: string, ph: string, required: boolean) => (
+  const text = (k: keyof Form, label: string, ph: string, hint?: string) => (
     <label className="field">
-      <span>
-        {label}
-        {!required && <span style={{ fontWeight: 400, color: 'var(--t3)' }}> (opcional)</span>}
-      </span>
-      <textarea className="textarea" placeholder={ph} value={f[k]} onChange={set(k)} />
+      <span>{label}</span>
+      {hint && <span style={{ fontSize: 13, fontWeight: 400, color: 'var(--t3)', marginTop: -4 }}>{hint}</span>}
+      <textarea className="textarea" placeholder={ph} value={f[k] as string} onChange={set(k)} />
     </label>
   );
 
   return (
     <div className="page">
-      <div className="flow">
-        <BackLink to="/relatorios">Relatórios</BackLink>
-        <h1 style={{ fontWeight: 600, fontSize: 28, marginTop: -12 }}>Relatório quinzenal</h1>
+      <div className="flow wide">
+        <BackLink to={existing ? `/relatorios/${existing.id}` : '/relatorios'}>{existing ? 'Relatório' : 'Relatórios'}</BackLink>
+        <h1 style={{ fontWeight: 600, fontSize: 28, marginTop: -12, letterSpacing: '-.03em' }}>{existing ? 'Editar relatório' : 'Relatório quinzenal'}</h1>
 
         <div className="card stack" style={{ gap: 14 }}>
-          <div className="h-card">Período e números</div>
+          <div className="h-card">Período da quinzena</div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0,1fr))', gap: 10 }}>
             <label className="field" style={{ minWidth: 0 }}>
               <span>De</span>
@@ -366,27 +454,67 @@ export function NovoRelatorio() {
               <input className="input md" style={{ minWidth: 0, padding: '0 10px' }} type="date" value={f.end} onChange={set('end')} />
             </label>
           </div>
-          {numField('revenue', 'Faturamento na quinzena (R$)', 'Ex.: 3.150', 'decimal')}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0,1fr))', gap: 10 }}>
-            {numField('contacts', 'Contatos', '0')}
-            {numField('proposals', 'Propostas', '0')}
-            {numField('closed', 'Fechadas', '0')}
+          <div className="field">
+            <span>Conseguiu executar ações nesta quinzena?</span>
+            <div className="seg" style={{ gridTemplateColumns: '1fr 1fr', maxWidth: 320 }} role="radiogroup">
+              <button type="button" role="radio" aria-checked={f.executed === true} className={f.executed === true ? 'on' : ''} onClick={() => setF({ ...f, executed: true })}>Sim</button>
+              <button type="button" role="radio" aria-checked={f.executed === false} className={f.executed === false ? 'on' : ''} onClick={() => setF({ ...f, executed: false })}>Não</button>
+            </div>
           </div>
         </div>
 
+        {f.executed === true && (
+          <div className="card stack" style={{ gap: 14 }}>
+            <div className="h-card">Ações realizadas</div>
+            {text('actions', 'Principais ações da quinzena', 'Ex.: prospecção, conteúdo, tarefas da gamificação concluídas…', 'Liste prospecção, conteúdo e tarefas do checklist que você concluiu.')}
+          </div>
+        )}
+
         <div className="card stack" style={{ gap: 14 }}>
-          <div className="h-card">Como foi a quinzena</div>
-          {textField('wins', 'Maiores conquistas', 'Ex.: fechei meu primeiro contrato com construtora.', true)}
-          {textField('struggles', 'Maiores dificuldades', 'Ex.: o cliente pediu muitas alterações e atrasou a entrega.', true)}
-          {textField('next_focus', 'Foco da próxima quinzena', 'Ex.: enviar 10 propostas para escritórios.', false)}
+          <div className="h-card">Métricas de prospecção e vendas</div>
+          <div className="metric-form">
+            {numField('contacts', 'Contatos feitos')}
+            {numField('responses', 'Respostas recebidas')}
+            {numField('appointments', 'Agendamentos')}
+            {numField('meetings', 'Reuniões feitas')}
+            {numField('closed', 'Projetos fechados')}
+            <label className="field" style={{ minWidth: 0 }}>
+              <span>Faturamento (R$)</span>
+              <input className="input md" inputMode="decimal" placeholder="0" value={f.revenue} onChange={set('revenue')} />
+            </label>
+          </div>
+          <label className="field">
+            <span>Observações <span style={{ fontWeight: 400, color: 'var(--t3)' }}>(opcional)</span></span>
+            <input className="input md" placeholder="Ex.: um cliente em negociação para dezembro" value={f.notes} onChange={set('notes')} />
+          </label>
+        </div>
+
+        {f.executed === true && (
+          <div className="card stack" style={{ gap: 14 }}>
+            <div className="h-card">Como foi a quinzena</div>
+            {text('wins', 'Principais conquistas', 'Ex.: fechei meu primeiro contrato com construtora.')}
+            {text('struggles', 'Principais desafios', 'Ex.: tenho dificuldade em começar os contatos ativos.')}
+          </div>
+        )}
+        {f.executed === false && (
+          <div className="card stack" style={{ gap: 14, borderColor: 'var(--warn)' }}>
+            <div className="h-card">Se não conseguiu executar nesta quinzena</div>
+            <div style={{ fontSize: 14, color: 'var(--t3)', marginTop: -6 }}>É essencial para a equipe entender o que precisa ser ajustado.</div>
+            {text('blocker', 'O que impediu a execução?', 'Ex.: semana de entregas acumuladas, problema de saúde…')}
+            {text('needs', 'O que você precisa para destravar?', 'Apoio, clareza, tempo ou recurso.')}
+          </div>
+        )}
+
+        <div className="card stack" style={{ gap: 14 }}>
+          {text('next_focus', 'Combinado / próximo passo para a próxima quinzena', 'Ex.: 1h por dia de prospecção e enviar 3 orçamentos.')}
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           <button className="btn btn-primary btn-lg" disabled={!ok || busy} onClick={save}>
-            {busy ? 'Enviando…' : 'Enviar relatório'}
+            {busy ? 'Salvando…' : existing ? 'Salvar alterações' : 'Enviar relatório'}
           </button>
           <div style={{ fontSize: 13, color: 'var(--t3)', textAlign: 'center' }}>
-            {ok ? 'Depois de enviado, o relatório fica disponível para consulta.' : 'Preencha faturamento, conquistas e dificuldades para enviar.'}
+            {ok ? 'A equipe vê o relatório assim que você enviar e pode deixar um comentário.' : `Falta preencher: ${missing.join(', ')}.`}
           </div>
         </div>
       </div>

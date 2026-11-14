@@ -108,6 +108,9 @@ svg.lucide { flex: none; }
 .logo { font-weight: 700; font-size: 15px; line-height: .95; letter-spacing: -.03em; color: var(--t); flex: none; margin-right: 8px; display: flex; align-items: center; gap: 10px; }
 .logo small { font-family: var(--mono); font-size: 9px; font-weight: 500; margin-left: 3px; letter-spacing: .02em; color: var(--t3); }
 .logo:hover { text-decoration: none; }
+.logo img { height: 44px; width: auto; display: block; }
+.sidebar .logo img { height: 52px; }
+.mheader .logo img { height: 28px; }
 .logo-mark { width: 26px; height: 26px; border-radius: var(--r-sm); background: var(--ink); display: grid; place-items: center; flex: none; }
 .logo-mark i { width: 9px; height: 9px; background: var(--gold); border-radius: 2px; }
 .topnav { display: flex; gap: 2px; flex: 1; min-width: 0; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
@@ -299,6 +302,28 @@ a.card:hover, a.card-link:hover { text-decoration: none; border-color: var(--b-b
   .dev-doc iframe { height: calc(100vh - 220px) !important; }
   .dev-inline-doc { display: none; }
 }
+
+.metric-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 16px; padding: 16px 18px; }
+.metric-form { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+@media (max-width: 760px) { .metric-form { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* ---------- Painel da equipe ---------- */
+.kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+.kpi { text-align: left; transition: border-color .15s; }
+.kpi:hover { border-color: var(--b-btn); }
+.painel-split { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 16px; align-items: start; }
+@media (max-width: 1100px) { .painel-split { grid-template-columns: minmax(0, 1fr); } }
+.stu-row { display: grid; grid-template-columns: minmax(220px, 2fr) 1fr 1.1fr .8fr .9fr; gap: 16px; align-items: center; padding: 12px 16px; border-bottom: 1px solid var(--b-div); color: inherit; }
+a.stu-row:hover { text-decoration: none; background: var(--alt); }
+.stu-head { padding: 9px 16px; font-family: var(--mono); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--t3); background: var(--alt); }
+.act-item { display: flex; gap: 10px; align-items: flex-start; padding: 9px 0; border-top: 1px solid var(--b-div); color: inherit; }
+.act-item:hover { text-decoration: none; }
+.act-item:hover b { text-decoration: underline; }
+.act-ico { width: 26px; height: 26px; border-radius: 7px; display: grid; place-items: center; flex: none; background: var(--alt2); color: var(--t2); }
+.act-ico.red { background: var(--err-bg); color: var(--err); }
+.act-ico.task { background: var(--ok-bg); color: var(--ok); }
+.act-ico.doc { background: var(--ac-soft); color: var(--ac); }
+select.input { appearance: auto; padding-right: 10px; cursor: pointer; }
 
 /* ---------- Calendário ---------- */
 .cal-layout { display: grid; grid-template-columns: minmax(0, 2.2fr) minmax(300px, 1fr); gap: 16px; align-items: start; }

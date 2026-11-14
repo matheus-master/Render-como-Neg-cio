@@ -103,10 +103,16 @@ O Vite (porta 5173) repassa `/api` para o Worker (porta 8787). Para disparar a t
 - **O aluno nunca lê `ai_draft` nem `draft`**: a tabela `feedbacks` é só da equipe; o aluno lê a view `student_feedbacks`, que expõe só o que foi liberado.
 - **Gamificação**: tarefas com `auto_slot` se marcam sozinhas quando a última versão daquele documento vem `ok`, e o banco recusa marcação manual.
 
+## Equipe
+- **Painel** (`/equipe`): alunos ativos, relatórios atrasados (mais de 16 dias), devolutivas pendentes, faturamento dos últimos 15 dias por grupo, Botão Vermelho acionado, tabela de alunos com busca e filtros e atividade recente.
+- **Ficha do aluno** (`/equipe/aluno/:id`): grupo e situação editáveis; abas Resumo, Relatórios (com "Feedback da equipe RCN"), Documentos, Gamificação (a equipe pode marcar tarefas) e Sessões (Botão Vermelho com motivo, situação e anotações).
+- **Fila de revisão** (`/equipe/fila`) e **Revisão** da devolutiva.
+- **Configurações** (`/equipe/config`): códigos de turma, endereço iCal da agenda e lista da equipe.
+
 ## Decisões em aberto (do handoff)
 1. **Fonte**: mantida Onest em tudo.
 2. **Menu "Feedback"**: mantido. Para renomear para "Pesquisa da mentoria", troque o rótulo em `src/components/StudentLayout.tsx`.
-3. **Gamificação**: a tabela `tasks` tem as 8 tarefas de exemplo do nível 2. Cadastre as 17 reais e os textos dos outros níveis (`levels`).
+3. **Gamificação**: importada de `materiais/RCN_Checklist_Gamificacao.xlsx` (94 tarefas principais + 18 missões bônus, 6 níveis).
 4. **Critérios (tela D) e Ficha do aluno (tela C)**: a tabela `criteria` já existe e a IA já usa os critérios publicados do tipo e do grupo. Falta a tela de edição.
 
 ## Testes feitos

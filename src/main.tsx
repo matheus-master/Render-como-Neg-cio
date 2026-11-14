@@ -14,6 +14,7 @@ import NovaAnalise from './pages/NovaAnalise';
 import Calendario from './pages/Calendario';
 import { FeedbackMentoria, Gamificacao, Perfil, Sessoes } from './pages/OtherPages';
 import { NovoRelatorio, RelatorioDetalhe, Relatorios } from './pages/Relatorios';
+import { AlunoFicha, Configuracoes, Painel } from './pages/staff/Painel';
 import { Fila, Revisao, StaffLayout } from './pages/staff/Staff';
 import './styles.css';
 
@@ -46,8 +47,11 @@ function App() {
       <Route path="/primeiro-acesso" element={<PublicOnly><FirstAccess /></PublicOnly>} />
       <Route path="/nova-senha" element={<NewPassword />} />
       <Route path="/equipe" element={<Guard staff><StaffLayout /></Guard>}>
-        <Route index element={<Fila />} />
+        <Route index element={<Painel />} />
+        <Route path="fila" element={<Fila />} />
         <Route path="revisao/:id" element={<Revisao />} />
+        <Route path="aluno/:id" element={<AlunoFicha />} />
+        <Route path="config" element={<Configuracoes />} />
       </Route>
       <Route element={<Guard><StudentLayout /></Guard>}>
         <Route index element={<Inicio />} />
@@ -60,6 +64,7 @@ function App() {
         <Route path="relatorios" element={<Relatorios />} />
         <Route path="relatorios/novo" element={<NovoRelatorio />} />
         <Route path="relatorios/:id" element={<RelatorioDetalhe />} />
+        <Route path="relatorios/:id/editar" element={<NovoRelatorio />} />
         <Route path="sessoes" element={<Sessoes />} />
         <Route path="calendario" element={<Calendario />} />
         <Route path="feedback" element={<FeedbackMentoria />} />

@@ -1,4 +1,5 @@
 import { SLOTS, type Slot } from '../shared/domain';
+import { REFERENCIAS } from './referencias';
 
 export interface Criterion {
   name: string;
@@ -54,9 +55,13 @@ export function userPrompt(opts: { slot: Slot; group: string | null; note: strin
         })
         .join('\n')
     : '';
+  const ref = REFERENCIAS[slot];
+  const refBlock = ref
+    ? `\n\n<referencia_interna>\nDocumento de referência da mentoria para este tipo de material. Use para comparar estrutura, cláusulas e condições com o material do aluno e encontrar o que falta ou está fraco. NUNCA mencione que existe uma referência, um modelo ou um padrão: escreva cada ponto como sugestão sua, direta, com um exemplo concreto.\n\n${ref}\n</referencia_interna>`
+    : '';
   return `Tipo de material: ${SLOTS[slot].title}.
 Versão enviada: ${version}.${group ? `\nGrupo do aluno: ${group}.` : ''}
-${BASE[slot]}${crit}
+${BASE[slot]}${crit}${refBlock}
 ${note?.trim() ? `\nObservação do aluno ao enviar: "${note.trim()}"` : ''}
 
 Leia o material e escreva a devolutiva.`;

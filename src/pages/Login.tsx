@@ -15,13 +15,7 @@ function AuthShell({ children }: { children: React.ReactNode }) {
   );
 }
 
-const BigLogo = () => (
-  <div style={{ fontWeight: 600, fontSize: 26, lineHeight: 0.95, letterSpacing: '-.02em', color: 'var(--ac)' }}>
-    Render<span style={{ fontSize: 14, fontWeight: 600, marginLeft: 3 }}>como</span>
-    <br />
-    Negócio
-  </div>
-);
+const BigLogo = () => <img src="/logo-rcn.png" alt="Render como Negócio" style={{ height: 58, width: 'auto', alignSelf: 'flex-start' }} />;
 
 function ErrAlert({ children }: { children: React.ReactNode }) {
   return (

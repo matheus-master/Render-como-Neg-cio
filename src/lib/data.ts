@@ -130,7 +130,7 @@ export interface Level { n: number; name: string; tagline: string | null; goal: 
 export interface TaskMark { task_id: number; status: 'andamento' | 'feita'; updated_at?: string }
 /** href: para onde leva a tarefa automática (documento ligado a ela). */
 export type TaskState = { kind: 'pendente' | 'feita' | 'andamento'; note?: string; href?: string };
-export interface Task { id: number; level: number; position: number; title: string; description: string; category: string; xp: number; auto_slot: Slot | null }
+export interface Task { id: number; level: number; position: number; title: string; description: string; category: string; xp: number; auto_slot: Slot | null; bonus: boolean }
 
 export function useGami() {
   const uid = useUid();
@@ -170,12 +170,14 @@ export function useGami() {
   const ts = tasks.data || [];
   const byLevel = (n: number) => ts.filter((t) => t.level === n);
   // Nível atual: o primeiro com tarefas e alguma pendente (níveis sem tarefas cadastradas contam como concluídos se anteriores).
-  const current = lv.find((l) => byLevel(l.n).length > 0 && byLevel(l.n).some((t) => !isDone(t))) ?? lv[lv.length - 1];
+  // Só as tarefas principais definem o nível; missões bônus somam XP mas não seguram a subida.
+  const mainOf = (n: number) => byLevel(n).filter((t) => !t.bonus);
+  const current = lv.find((l) => mainOf(l.n).length > 0 && mainOf(l.n).some((t) => !isDone(t))) ?? lv[lv.length - 1];
   const curTasks = current ? byLevel(current.n) : [];
   const xpMax = curTasks.reduce((a, t) => a + t.xp, 0);
   const xpLevel = curTasks.filter(isDone).reduce((a, t) => a + t.xp, 0);
   const xpTotal = ts.filter(isDone).reduce((a, t) => a + t.xp, 0);
-  const curStarted = curTasks.filter((t) => stateOf(t).kind === 'andamento');
+  const curStarted = curTasks.filter((t) => !t.bonus && stateOf(t).kind === 'andamento');
   /** Quando a tarefa foi concluída (data da devolutiva aprovada, nas automáticas). */
   const doneAt = (t: Task): string | null => {
     if (!isDone(t)) return null;
@@ -195,8 +197,9 @@ export function useGami() {
     xpMax,
     xpLevel,
     xpTotal,
-    tasksDone: curTasks.filter(isDone).length,
-    tasksTotal: curTasks.length,
+    tasksDone: curTasks.filter((t) => !t.bonus && isDone(t)).length,
+    tasksTotal: curTasks.filter((t) => !t.bonus).length,
+    mainOf,
     isLoading: levels.isLoading || tasks.isLoading || comp.isLoading || dl,
     isError: levels.isError || tasks.isError || comp.isError || de,
     refetch: () => Promise.all([levels.refetch(), tasks.refetch(), comp.refetch()]),
@@ -227,7 +230,13 @@ export function useSetTaskStatus() {
 // ---------------------------------------------------------------------
 // Relatórios, sessões, pesquisa, arquivos, configurações
 // ---------------------------------------------------------------------
-export interface Report { id: string; period_start: string; period_end: string; revenue: number; contacts: number; proposals: number; closed: number; created_at: string; wins: string; struggles: string; next_focus: string }
+export interface Report {
+  id: string; student_id: string; period_start: string; period_end: string; created_at: string; updated_at: string;
+  executed: boolean; actions: string;
+  revenue: number; contacts: number; responses: number; appointments: number; meetings: number; closed: number; proposals: number; notes: string;
+  wins: string; struggles: string; blocker: string; needs: string; next_focus: string;
+  staff_comment: string | null; staff_comment_at: string | null;
+}
 
 export function useReports() {
   const uid = useUid();
@@ -244,7 +253,7 @@ export function useRedButton() {
   return useQuery({
     queryKey: ['red_button', uid],
     enabled: !!uid,
-    queryFn: async () => unwrap(await supabase.from('red_button').select('used_at').maybeSingle()) as { used_at: string } | null,
+    queryFn: async () => unwrap(await supabase.from('red_button').select('used_at, reason, staff_status, staff_notes').maybeSingle()) as { used_at: string; reason: string; staff_status: 'solicitado' | 'agendado' | 'realizado'; staff_notes: string } | null,
   });
 }
 

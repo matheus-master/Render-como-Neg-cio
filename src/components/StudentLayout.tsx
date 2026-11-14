@@ -37,14 +37,7 @@ const MORE: [string, string][] = [
 export function Logo({ to = '/' }: { to?: string }) {
   return (
     <Link to={to} className="logo" aria-label="Render como Negócio · Início">
-      <span className="logo-mark" aria-hidden>
-        <i />
-      </span>
-      <span>
-        Render<small>como</small>
-        <br />
-        Negócio
-      </span>
+      <img src="/logo-rcn.png" alt="Render como Negócio" />
     </Link>
   );
 }

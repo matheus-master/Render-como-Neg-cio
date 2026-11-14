@@ -1,6 +1,8 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useState } from 'react';
-import { Link, Outlet, useNavigate, useParams } from 'react-router-dom';
+import { Inbox, LayoutDashboard, LogOut, Settings } from 'lucide-react';
+import { Link, NavLink, Outlet, useNavigate, useParams } from 'react-router-dom';
+import { useIsMobile } from '../../lib/useIsMobile';
 import { forbiddenHits, SLOTS, VERDICTS, type Feedback, type Verdict } from '../../../shared/domain';
 import { Chip, ErrorState, VerdictChip, Mark } from '../../components/ui';
 import { Logo } from '../../components/StudentLayout';
@@ -17,30 +19,53 @@ export function StaffLayout() {
   const { signOut } = useAuth();
   const q = useQueue();
   const nav = useNavigate();
+  const mobile = useIsMobile();
   const pend = (q.data || []).filter((r) => r.status === 'revisao').length;
+  const items: [string, string, React.ReactNode, number?][] = [
+    ['/equipe', 'Painel', <LayoutDashboard size={17} strokeWidth={1.8} aria-hidden key="p" />],
+    ['/equipe/fila', 'Fila de revisão', <Inbox size={17} strokeWidth={1.8} aria-hidden key="f" />, pend],
+    ['/equipe/config', 'Configurações', <Settings size={17} strokeWidth={1.8} aria-hidden key="c" />],
+  ];
+  const logout = async () => { await signOut(); nav('/login'); };
+  const links = items.map(([to, label, icon, badge]) => (
+    <NavLink key={to} to={to} end={to === '/equipe'} className={({ isActive }) => (isActive || (to === '/equipe/fila' && location.pathname.startsWith('/equipe/revisao')) ? 'active' : '')}>
+      {icon}
+      <span style={{ flex: 1 }}>{label}</span>
+      {!!badge && <span className="badge">{badge}</span>}
+    </NavLink>
+  ));
+  if (mobile) {
+    return (
+      <div className="app">
+        <header className="mheader">
+          <Logo to="/equipe" />
+          <button className="btn-out-light" onClick={logout}>Sair</button>
+        </header>
+        <nav className="sidenav" style={{ flexDirection: 'row', overflowX: 'auto', padding: '8px 12px', gap: 6, borderBottom: '1px solid var(--line)', flex: 'none' }}>{links}</nav>
+        <main style={{ flex: 1, display: 'flex', flexDirection: 'column' }}><Outlet /></main>
+      </div>
+    );
+  }
   return (
-    <div className="app">
-      <header className="topbar staff-top">
-        <Logo to="/equipe" />
-        <span className="chip" style={{ background: 'var(--ink)', color: 'var(--gold)' }}>Equipe</span>
-        <nav className="topnav">
-          <Link to="/equipe" className="active">
-            Fila de revisão
-            <span className="badge">{pend}</span>
-          </Link>
-        </nav>
-        <div className="row" style={{ gap: 10, whiteSpace: 'nowrap' }}>
-          <div className="avatar-btn" style={{ width: 34, height: 34 }}>{initials(profile.full_name)}</div>
-          <div style={{ fontSize: 14 }}>
-            <div style={{ fontWeight: 600 }}>{firstName(profile.full_name)}</div>
-            <div style={{ fontSize: 12, color: 'var(--t3)' }}>Equipe</div>
-          </div>
-          <button className="btn-out-light" style={{ marginLeft: 8 }} onClick={async () => { await signOut(); nav('/login'); }}>
-            Sair
-          </button>
+    <div className="app with-sidebar">
+      <aside className="sidebar">
+        <div style={{ padding: '4px 10px 0' }}>
+          <Logo to="/equipe" />
+          <span className="chip" style={{ background: 'var(--ink)', color: 'var(--gold)', marginTop: 10 }}>Equipe</span>
         </div>
-      </header>
-      <main style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+        <nav className="sidenav" aria-label="Menu da equipe">
+          <div className="sidenav-group">{links}</div>
+        </nav>
+        <div className="sidebar-user">
+          <div className="avatar-btn" style={{ width: 34, height: 34 }}>{initials(profile.full_name)}</div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 14, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{firstName(profile.full_name)}</div>
+            <div className="mono" style={{ fontSize: 11, color: 'var(--t3)' }}>Equipe RCN</div>
+          </div>
+          <button className="rv-x" onClick={logout} aria-label="Sair" title="Sair"><LogOut size={17} aria-hidden /></button>
+        </div>
+      </aside>
+      <main style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
         <Outlet />
       </main>
     </div>
@@ -272,7 +297,7 @@ function ReviewScreen({ item, refetch }: { item: ReviewItem; refetch: () => unkn
       await apiPost(`/api/submissions/${item.id}/release`, { draft: fbNow });
       qc.invalidateQueries({ queryKey: ['queue'] });
       toast(`Devolutiva liberada. ${student} já pode ver no portal.`);
-      nav('/equipe');
+      nav('/equipe/fila');
     } catch {
       setReleaseErr(true);
     } finally {
@@ -297,7 +322,7 @@ function ReviewScreen({ item, refetch }: { item: ReviewItem; refetch: () => unkn
   return (
     <>
       <div className="row" style={{ background: '#fff', borderBottom: '1px solid var(--b-card)', gap: 14, padding: '14px 28px', flexWrap: 'wrap' }}>
-        <Link to="/equipe" className="link"><Mark m="←" size={14} /> Fila</Link>
+        <Link to="/equipe/fila" className="link"><Mark m="←" size={14} /> Fila</Link>
         <div style={{ width: 1, height: 24, background: 'var(--b-card)' }} />
         <div className="av">{initials(item.student.full_name)}</div>
         <div style={{ minWidth: 0 }}>
