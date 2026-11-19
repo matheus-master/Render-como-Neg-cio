@@ -127,7 +127,10 @@ export function Gamificacao() {
             <div className="h-card">
               Nível {lvl?.n} · {lvl?.name}
             </div>
-            {lvl?.tagline && <div style={{ fontSize: 15, color: 'var(--t3)', marginTop: 2, marginBottom: 8 }}>{lvl.tagline}</div>}
+            {lvl?.tagline && <div style={{ fontSize: 15, color: 'var(--t3)', marginTop: 2 }}>{lvl.tagline}</div>}
+            <div className="task-hint">
+              Em cada tarefa, toque na situação: <b>A fazer</b>, <b>Fazendo</b> ou <b>Feita</b>. Só <b>Feita</b> soma XP.
+            </div>
             {tasks.map((t, i) => {
               const st = states[i]!;
               const on = st.kind === 'feita';
@@ -144,43 +147,40 @@ export function Gamificacao() {
                     <div style={{ fontSize: 13, color: 'var(--t3)', marginTop: 2 }}>Somam XP, mas não contam para subir de nível.</div>
                   </div>
                 )}
-                <div className="row" style={{ padding: '14px 0', borderTop: '1px solid var(--b-div)', alignItems: 'center', background: going ? 'linear-gradient(90deg, var(--ac-soft), transparent 70%)' : undefined, margin: going ? '0 -20px' : undefined, paddingLeft: going ? 20 : 0, paddingRight: going ? 20 : 0 }}>
-                  <div style={{ width: 22, fontWeight: 600, color: going ? 'var(--ac)' : 'var(--t4)', flex: 'none' }}>{t.position}</div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: 600, fontSize: 15, color: on ? 'var(--t3)' : 'var(--t)', textDecoration: on ? 'line-through' : 'none' }}>{t.title}</div>
+                <div className={'task-row' + (going ? ' going' : '') + (on ? ' done' : '')}>
+                  <div className="task-num">{t.position}</div>
+                  <div className="task-main">
+                    <div className="task-title">{t.title}</div>
                     <div style={{ fontSize: 13, lineHeight: 1.4, color: 'var(--t3)' }}>
                       {t.description}
                       {t.category ? ' · ' + t.category : ''}
+                      <span className="mono" style={{ marginLeft: 6, color: going ? 'var(--ac)' : on ? 'var(--ok-t)' : 'var(--t2)', fontWeight: 600 }}>+{t.xp} XP</span>
                     </div>
-                    <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', marginTop: 6 }}>
-                      {going && <Chip tone="soft" live>Em andamento</Chip>}
-                      {on && <Chip tone="ok">Feita</Chip>}
-                      {t.auto_slot ? (
-                        <button onClick={() => nav(st.href!)} style={{ fontSize: 12, fontWeight: 600, color: 'var(--ac)' }}>
-                          {st.note} →
-                        </button>
-                      ) : st.kind === 'pendente' ? (
-                        <button onClick={() => set(t.id, 'andamento')} style={{ fontSize: 12, fontWeight: 600, color: 'var(--ac)', border: '1px solid var(--ac)', borderRadius: 8, padding: '3px 8px' }}>
-                          <Mark m="▶" size={12} /> Começar
-                        </button>
-                      ) : going ? (
-                        <button onClick={() => set(t.id, 'pendente')} style={{ fontSize: 12, fontWeight: 600, color: 'var(--t3)' }}>
-                          Ainda não comecei
-                        </button>
-                      ) : null}
-                    </div>
+                    {t.auto_slot && (
+                      <button onClick={() => nav(st.href!)} style={{ fontSize: 12, fontWeight: 600, color: 'var(--ac)', marginTop: 4 }}>
+                        {st.note} →
+                      </button>
+                    )}
                   </div>
-                  <div style={{ fontWeight: 600, fontSize: 14, whiteSpace: 'nowrap', color: going ? 'var(--ac)' : undefined }}>+{t.xp} XP</div>
-                  <button
-                    role="checkbox"
-                    aria-checked={on}
-                    aria-label={on ? 'Desmarcar ' + t.title : 'Marcar como feita: ' + t.title}
-                    disabled={!!t.auto_slot}
-                    onClick={() => set(t.id, on ? 'andamento' : 'feita')}
-                    style={{ width: 28, height: 28, borderRadius: 8, flex: 'none', display: 'grid', placeItems: 'center', color: '#fff', fontSize: 15, fontWeight: 600, background: on ? 'var(--ok)' : going ? 'var(--ac-soft)' : '#fff', border: on ? 'none' : going ? '2px solid var(--ac)' : '2px solid var(--b-dash)', cursor: t.auto_slot ? 'default' : 'pointer' }}
-                  >
-                    {on ? <Mark m="✓" /> : going ? <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--ac)' }} /> : ''}
-                  </button>
+                  {t.auto_slot ? (
+                    <Chip tone={on ? 'ok' : going ? 'soft' : 'none'}>{on ? 'Feita' : going ? 'Fazendo' : 'A fazer'}</Chip>
+                  ) : (
+                    <div className="task-state" role="radiogroup" aria-label={`Situação de ${t.title}`}>
+                      {([['pendente', 'A fazer'], ['andamento', 'Fazendo'], ['feita', 'Feita']] as const).map(([k, label]) => (
+                        <button
+                          key={k}
+                          role="radio"
+                          aria-checked={st.kind === k}
+                          className={'ts-' + k + (st.kind === k ? ' on' : '')}
+                          onClick={() => st.kind !== k && set(t.id, k)}
+                        >
+                          {k === 'feita' && <Mark m="✓" size={12} />}
+                          {k === 'andamento' && <span className="ts-dot" />}
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
                 </Fragment>
               );
