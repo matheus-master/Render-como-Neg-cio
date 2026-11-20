@@ -473,70 +473,136 @@ export function FeedbackMentoria() {
   const survey = useSurvey();
   const qc = useQueryClient();
   const toast = useToast();
+  const [writing, setWriting] = useState(false);
   const [q1, setQ1] = useState<number | null>(null);
   const [q2, setQ2] = useState<number | null>(null);
   const [q3, setQ3] = useState<number | null>(null);
   const [q4, setQ4] = useState('');
+  const [q5, setQ5] = useState('');
   const [busy, setBusy] = useState(false);
+  const [openId, setOpenId] = useState<string | null>(null);
+  const list = survey.data || [];
   const ok = q1 !== null && q2 !== null && q3 !== null && q4.trim().length > 0;
 
+  const start = () => {
+    // Já começa com o tempo de mentoria da última resposta; o resto em branco.
+    const prev = list[0] ? Q1.indexOf(list[0].time_in_mentoring) : -1;
+    setQ1(prev >= 0 ? prev : null);
+    setQ2(null); setQ3(null); setQ4(''); setQ5('');
+    setWriting(true);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+  const close = () => setWriting(false);
   const submit = async () => {
     if (!ok || busy) return;
     setBusy(true);
-    const { error } = await supabase.from('survey_responses').insert({ time_in_mentoring: Q1[q1!], satisfaction: q2, contribution: q3, transformation: q4.trim() });
+    const { error } = await supabase
+      .from('survey_responses')
+      .insert({ time_in_mentoring: Q1[q1!], satisfaction: q2, contribution: q3, transformation: q4.trim(), suggestion: q5.trim() });
     setBusy(false);
     if (error) return toast('As respostas não foram enviadas. Tente de novo.');
-    qc.invalidateQueries({ queryKey: ['survey'] });
+    await qc.invalidateQueries({ queryKey: ['survey'] });
+    setWriting(false);
+    toast('Obrigado! A equipe lê cada feedback.');
   };
+  const showForm = writing || (!survey.isLoading && !survey.isError && list.length === 0);
 
   return (
     <div className="page">
       <PageHead
         title="Feedback e Evolução da Mentoria RCN"
         sub="Este formulário não é uma avaliação sua. É uma forma de construirmos juntos a próxima versão da RCN: o que está funcionando, o que precisa melhorar e o que você quer da mentoria daqui pra frente. Seja sincero(a)!"
+        right={!showForm && list.length > 0 ? <button className="btn btn-primary" onClick={start}><Mark m="+" size={15} /> Mandar novo feedback</button> : undefined}
       />
       {survey.isLoading ? (
         <div className="skel-card" style={{ height: 400 }} />
       ) : survey.isError ? (
         <ErrorState onRetry={survey.refetch} />
-      ) : survey.data ? (
-        <div className="card" style={{ padding: '32px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, textAlign: 'center' }}>
-          <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'var(--ok-bg)', color: 'var(--ok)', display: 'grid', placeItems: 'center', fontSize: 22, fontWeight: 600 }}><Mark m="✓" size={13} /></div>
-          <div style={{ fontWeight: 600, fontSize: 20 }}>Obrigado pelas respostas</div>
-          <div style={{ fontSize: 15, color: 'var(--t2)' }}>A equipe lê cada uma delas.</div>
-        </div>
       ) : (
-        <div className="card stack" style={{ padding: '8px 20px 20px' }}>
-          <div className="divrow stack" style={{ padding: '18px 0', gap: 10 }}>
-            <Q n={1}>Há quanto tempo você está na mentoria? *</Q>
-            <div role="radiogroup">
-              {Q1.map((label, i) => (
-                <button key={label} role="radio" aria-checked={q1 === i} onClick={() => setQ1(i)} className="row" style={{ minHeight: 44, width: '100%' }}>
-                  <div style={{ width: 22, height: 22, borderRadius: '50%', flex: 'none', display: 'grid', placeItems: 'center', background: q1 === i ? 'var(--ac)' : '#fff', border: q1 === i ? 'none' : '2px solid var(--b-btn)' }}>
-                    <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#fff' }} />
-                  </div>
-                  <div style={{ fontSize: 15 }}>{label}</div>
-                </button>
-              ))}
+        <>
+          {showForm && (
+            <>
+              {list.length > 0 && <div className="h-card">Novo feedback</div>}
+          <div className="card stack" style={{ padding: '8px 20px 20px' }}>
+            <div className="divrow stack" style={{ padding: '18px 0', gap: 10 }}>
+              <Q n={1}>Há quanto tempo você está na mentoria? *</Q>
+              <div role="radiogroup">
+                {Q1.map((label, i) => (
+                  <button key={label} role="radio" aria-checked={q1 === i} onClick={() => setQ1(i)} className="row" style={{ minHeight: 44, width: '100%' }}>
+                    <div style={{ width: 22, height: 22, borderRadius: '50%', flex: 'none', display: 'grid', placeItems: 'center', background: q1 === i ? 'var(--ac)' : '#fff', border: q1 === i ? 'none' : '2px solid var(--b-btn)' }}>
+                      <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#fff' }} />
+                    </div>
+                    <div style={{ fontSize: 15 }}>{label}</div>
+                  </button>
+                ))}
+              </div>
             </div>
+            <div className="divrow stack" style={{ padding: '18px 0', gap: 12 }}>
+              <Q n={2}>De 0 a 10, quanto você está satisfeito(a) com a mentoria atualmente? *</Q>
+              <Scale v={q2} set={setQ2} />
+            </div>
+            <div className="divrow stack" style={{ padding: '18px 0', gap: 12 }}>
+              <Q n={3}>De 0 a 10, o quanto você sente que a mentoria está contribuindo para o crescimento do seu negócio/carreira? *</Q>
+              <Scale v={q3} set={setQ3} />
+            </div>
+            <div className="divrow stack" style={{ padding: '18px 0', gap: 12 }}>
+              <Q n={4}>Qual foi a principal transformação que a mentoria trouxe para você até agora? *</Q>
+              <textarea className="textarea" style={{ minHeight: 110 }} value={q4} onChange={(e) => setQ4(e.target.value)} />
+            </div>
+            <div className="stack" style={{ padding: '18px 0', gap: 12 }}>
+              <Q n={5}>Tem alguma sugestão ou pedido para a equipe? <span style={{ fontWeight: 400, color: 'var(--t3)' }}>(opcional)</span></Q>
+              <textarea className="textarea" style={{ minHeight: 90 }} placeholder="Ex.: uma aula sobre contrato, mais exemplos de proposta…" value={q5} onChange={(e) => setQ5(e.target.value)} />
+            </div>
+            <div className="row" style={{ gap: 10, marginTop: 8 }}>
+              {list.length > 0 && <button className="btn btn-secondary btn-md" onClick={close}>Cancelar</button>}
+              <button className="btn btn-primary btn-md" style={{ flex: 1 }} disabled={!ok || busy} onClick={submit}>
+                {busy ? 'Enviando…' : 'Enviar respostas'}
+              </button>
+            </div>
+            <div style={{ fontSize: 13, color: 'var(--t3)', textAlign: 'center', marginTop: 8 }}>{ok ? 'Tudo certo para enviar.' : 'Responda as perguntas 1 a 4 para enviar.'}</div>
           </div>
-          <div className="divrow stack" style={{ padding: '18px 0', gap: 12 }}>
-            <Q n={2}>De 0 a 10, quanto você está satisfeito(a) com a mentoria atualmente? *</Q>
-            <Scale v={q2} set={setQ2} />
-          </div>
-          <div className="divrow stack" style={{ padding: '18px 0', gap: 12 }}>
-            <Q n={3}>De 0 a 10, o quanto você sente que a mentoria está contribuindo para o crescimento do seu negócio/carreira? *</Q>
-            <Scale v={q3} set={setQ3} />
-          </div>
-          <div className="stack" style={{ padding: '18px 0', gap: 12 }}>
-            <Q n={4}>Qual foi a principal transformação que a mentoria trouxe para você até agora? *</Q>
-            <textarea className="textarea" style={{ minHeight: 110 }} value={q4} onChange={(e) => setQ4(e.target.value)} />
-          </div>
-          <button className="btn btn-primary btn-md" style={{ marginTop: 8 }} disabled={!ok || busy} onClick={submit}>
-            Enviar respostas
-          </button>
-          <div style={{ fontSize: 13, color: 'var(--t3)', textAlign: 'center', marginTop: 8 }}>{ok ? 'Tudo certo para enviar.' : 'Responda as 4 perguntas para enviar.'}</div>
-        </div>
+            </>
+          )}
+          {list.length > 0 && (
+            <div className="card" style={{ padding: '20px 20px 6px' }}>
+              <div className="between" style={{ alignItems: 'baseline', flexWrap: 'wrap', gap: 8 }}>
+                <div className="h-card">Seus feedbacks</div>
+                <span className="label">{list.length === 1 ? '1 enviado' : `${list.length} enviados`}</span>
+              </div>
+              <div style={{ fontSize: 14, color: 'var(--t3)', marginTop: 2, marginBottom: 8 }}>Do mais recente para o mais antigo. Toque para ver as respostas.</div>
+              {list.map((r, i) => {
+                const open = openId === r.id || (openId === null && i === 0);
+                return (
+                  <div key={r.id} style={{ borderTop: '1px solid var(--b-div)' }}>
+                    <button className="fb-head" aria-expanded={open} onClick={() => setOpenId(open ? '' : r.id)}>
+                      <div style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
+                        <div style={{ fontWeight: 600, fontSize: 15 }}>{new Intl.DateTimeFormat('pt-BR', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'America/Sao_Paulo' }).format(new Date(r.created_at))}</div>
+                        <div style={{ fontSize: 13, color: 'var(--t3)' }}>{i === 0 ? 'Mais recente · ' : ''}{r.time_in_mentoring} de mentoria</div>
+                      </div>
+                      <span className="chip chip-soft mono">Satisfação {r.satisfaction}/10</span>
+                      <span className="chip chip-soft mono">Contribuição {r.contribution}/10</span>
+                      <span style={{ color: 'var(--t4)', transform: open ? 'rotate(90deg)' : 'none', transition: 'transform .2s', display: 'flex' }}><Mark m="›" size={18} /></span>
+                    </button>
+                    {open && (
+                      <div className="stack" style={{ gap: 12, padding: '0 0 18px' }}>
+                        <div>
+                          <div className="label">Principal transformação</div>
+                          <div style={{ fontSize: 15, lineHeight: 1.55, marginTop: 4, whiteSpace: 'pre-wrap' }}>{r.transformation}</div>
+                        </div>
+                        {r.suggestion && (
+                          <div>
+                            <div className="label">Sugestão para a equipe</div>
+                            <div style={{ fontSize: 15, lineHeight: 1.55, marginTop: 4, whiteSpace: 'pre-wrap' }}>{r.suggestion}</div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </>
       )}
     </div>
   );

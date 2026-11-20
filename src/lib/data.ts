@@ -263,12 +263,17 @@ export function useRedButton() {
   });
 }
 
+export interface SurveyResponse {
+  id: string; created_at: string; time_in_mentoring: string; satisfaction: number; contribution: number; transformation: string; suggestion: string;
+}
+/** Todos os feedbacks da mentoria enviados pelo aluno, do mais novo para o mais antigo. */
 export function useSurvey() {
   const uid = useUid();
   return useQuery({
     queryKey: ['survey', uid],
     enabled: !!uid,
-    queryFn: async () => unwrap(await supabase.from('survey_responses').select('created_at').maybeSingle()) as { created_at: string } | null,
+    queryFn: async () =>
+      unwrap(await supabase.from('survey_responses').select('*').eq('student_id', uid!).order('created_at', { ascending: false })) as SurveyResponse[],
   });
 }
 
