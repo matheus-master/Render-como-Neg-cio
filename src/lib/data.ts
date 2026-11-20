@@ -206,6 +206,9 @@ export function useGami() {
   };
 }
 
+/** Última marcação feita pelo aluno, para o "Desfazer" do aviso de nível. */
+export let lastTaskChange: { taskId: number; prev: 'pendente' | TaskMark['status']; at: number } | null = null;
+
 export function useSetTaskStatus() {
   const qc = useQueryClient();
   const uid = useUid();
@@ -218,11 +221,14 @@ export function useSetTaskStatus() {
       if (status === 'andamento') throw new Error('Rode a migração 20261113_task_progress no Supabase para usar "Em andamento".');
       return unwrap(await supabase.from('task_completions').insert({ task_id: taskId }));
     },
-    onMutate: ({ taskId, status }) =>
+    onMutate: ({ taskId, status }) => {
+      const before = qc.getQueryData<TaskMark[]>(['task_completions', uid])?.find((m) => m.task_id === taskId)?.status ?? 'pendente';
+      lastTaskChange = { taskId, prev: before, at: Date.now() };
       qc.setQueryData<TaskMark[]>(['task_completions', uid], (old = []) => {
         const rest = old.filter((m) => m.task_id !== taskId);
         return status === 'pendente' ? rest : [...rest, { task_id: taskId, status }];
-      }),
+      });
+    },
     onSettled: () => qc.invalidateQueries({ queryKey: ['task_completions'] }),
   });
 }
@@ -233,7 +239,7 @@ export function useSetTaskStatus() {
 export interface Report {
   id: string; student_id: string; period_start: string; period_end: string; created_at: string; updated_at: string;
   executed: boolean; actions: string;
-  revenue: number; contacts: number; responses: number; appointments: number; meetings: number; closed: number; proposals: number; notes: string;
+  revenue: number; leads: number; contacts: number; responses: number; appointments: number; meetings: number; closed: number; proposals: number; notes: string;
   wins: string; struggles: string; blocker: string; needs: string; next_focus: string;
   staff_comment: string | null; staff_comment_at: string | null;
 }

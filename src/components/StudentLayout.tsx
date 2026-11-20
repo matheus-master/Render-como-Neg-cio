@@ -4,6 +4,7 @@ import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-do
 import { useAuth, useProfile } from '../lib/auth';
 import { useDocs, useGami } from '../lib/data';
 import { initials } from '../lib/format';
+import { LevelUp } from './LevelUp';
 import { useIsMobile } from '../lib/useIsMobile';
 
 /** Menu lateral (computador), em dois grupos: o dia a dia e a mentoria. */
@@ -72,7 +73,7 @@ function LevelWidget({ g }: { g: ReturnType<typeof useGami> }) {
 export default function StudentLayout() {
   const mobile = useIsMobile();
   const profile = useProfile();
-  const { signOut } = useAuth();
+  const { signOut, session } = useAuth();
   const { unseen } = useDocs();
   const gami = useGami();
   const nav = useNavigate();
@@ -135,6 +136,7 @@ export default function StudentLayout() {
       <main style={{ flex: 1, minWidth: 0 }}>
         <Outlet />
       </main>
+      {session && <LevelUp uid={session.user.id} g={gami} />}
 
       {mobile && !inNova && (
         <nav className="tabbar">

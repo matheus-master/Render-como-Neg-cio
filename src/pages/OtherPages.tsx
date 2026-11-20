@@ -2,7 +2,7 @@ import { PasswordFields, passwordOk } from '../components/PasswordFields';
 import { useQueryClient } from '@tanstack/react-query';
 import { Fragment, useEffect, useState } from 'react';
 import { Pencil } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Chip, ErrorState, PageHead, PageSkeleton, Mark } from '../components/ui';
 import { useAuth, useProfile } from '../lib/auth';
 import { useGami, useRedButton, type Level, type Task, useSurvey, useSetTaskStatus } from '../lib/data';
@@ -18,7 +18,13 @@ export function Gamificacao() {
   const setStatus = useSetTaskStatus();
   const toast = useToast();
   const nav = useNavigate();
-  const [sel, setSel] = useState<number | null>(null);
+  const [params, setParams] = useSearchParams();
+  const [sel, setSelRaw] = useState<number | null>(() => Number(params.get('nivel')) || null);
+  const fixing = params.get('corrigir') === '1';
+  const setSel = (n: number) => {
+    setSelRaw(n);
+    if (params.toString()) setParams({}, { replace: true });
+  };
 
   if (g.isLoading) return <div className="page"><PageSkeleton /></div>;
   if (g.isError) return <div className="page"><ErrorState onRetry={g.refetch} /></div>;
@@ -65,7 +71,7 @@ export function Gamificacao() {
       {isFuture && lvl ? (
         <LevelFuture lvl={lvl} unlockAfter={g.levels.find((l) => l.n === shown - 1)?.name ?? cur!.name} tasks={tasks} />
       ) : isPast && lvl ? (
-        <LevelPast lvl={lvl} tasks={tasks} g={g} />
+        <LevelPast lvl={lvl} tasks={tasks} g={g} fixing={fixing} onSet={set} />
       ) : tasks.length === 0 ? (
         <div className="card" style={{ padding: 28, textAlign: 'center', fontSize: 15, lineHeight: 1.5, color: 'var(--t2)' }}>
           As tarefas deste nível ainda não foram cadastradas pela equipe.
@@ -165,21 +171,7 @@ export function Gamificacao() {
                   {t.auto_slot ? (
                     <Chip tone={on ? 'ok' : going ? 'soft' : 'none'}>{on ? 'Feita' : going ? 'Fazendo' : 'A fazer'}</Chip>
                   ) : (
-                    <div className="task-state" role="radiogroup" aria-label={`Situação de ${t.title}`}>
-                      {([['pendente', 'A fazer'], ['andamento', 'Fazendo'], ['feita', 'Feita']] as const).map(([k, label]) => (
-                        <button
-                          key={k}
-                          role="radio"
-                          aria-checked={st.kind === k}
-                          className={'ts-' + k + (st.kind === k ? ' on' : '')}
-                          onClick={() => st.kind !== k && set(t.id, k)}
-                        >
-                          {k === 'feita' && <Mark m="✓" size={12} />}
-                          {k === 'andamento' && <span className="ts-dot" />}
-                          {label}
-                        </button>
-                      ))}
-                    </div>
+                    <TaskPicker t={t} kind={st.kind} onSet={(k) => set(t.id, k)} />
                   )}
                 </div>
                 </Fragment>
@@ -195,6 +187,22 @@ export function Gamificacao() {
 
 
 type Gami = ReturnType<typeof useGami>;
+type Kind = 'pendente' | 'andamento' | 'feita';
+
+/** Seletor de situação da tarefa: um toque leva direto para a situação escolhida. */
+function TaskPicker({ t, kind, onSet }: { t: Task; kind: Kind; onSet: (k: Kind) => void }) {
+  return (
+    <div className="task-state" role="radiogroup" aria-label={`Situação de ${t.title}`}>
+      {([['pendente', 'A fazer'], ['andamento', 'Fazendo'], ['feita', 'Feita']] as const).map(([k, label]) => (
+        <button key={k} role="radio" aria-checked={kind === k} className={'ts-' + k + (kind === k ? ' on' : '')} onClick={() => kind !== k && onSet(k)}>
+          {k === 'feita' && <Mark m="✓" size={12} />}
+          {k === 'andamento' && <span className="ts-dot" />}
+          {label}
+        </button>
+      ))}
+    </div>
+  );
+}
 
 function TaskRowStatic({ n, t, mode, date }: { n: number; t: Task; mode: 'done' | 'missed' | 'locked'; date?: string | null }) {
   return (
@@ -220,7 +228,8 @@ function TaskRowStatic({ n, t, mode, date }: { n: number; t: Task; mode: 'done' 
   );
 }
 
-function LevelPast({ lvl, tasks: raw, g }: { lvl: Level; tasks: Task[]; g: Gami }) {
+function LevelPast({ lvl, tasks: raw, g, fixing: fix0, onSet }: { lvl: Level; tasks: Task[]; g: Gami; fixing: boolean; onSet: (id: number, k: Kind) => void }) {
+  const [fixing, setFixing] = useState(fix0);
   const tasks = [...raw.filter((t) => !t.bonus), ...raw.filter((t) => t.bonus)];
   const xp = tasks.filter(g.isDone).reduce((a, t) => a + t.xp, 0);
   const dates = tasks.map(g.doneAt).filter(Boolean).sort() as string[];
@@ -245,9 +254,35 @@ function LevelPast({ lvl, tasks: raw, g }: { lvl: Level; tasks: Task[]; g: Gami 
           <div style={{ fontSize: 15, color: 'var(--t3)', marginTop: 2, marginBottom: 8 }}>
             {tasks.filter((t) => !t.bonus && g.isDone(t)).length} de {tasks.filter((t) => !t.bonus).length} tarefas principais
           </div>
-          {tasks.map((t) => (
-            <TaskRowStatic key={t.id} n={t.position} t={t} mode={g.isDone(t) ? 'done' : 'missed'} date={g.doneAt(t)} />
-          ))}
+          {fixing ? (
+            <div className="fix-bar">
+              <span>Marcou alguma tarefa sem querer? Volte ela para <b>A fazer</b> ou <b>Fazendo</b>. Se for uma tarefa principal, você volta para o {lvl.name} até concluí-la.</span>
+              <button className="btn btn-secondary btn-sm" onClick={() => setFixing(false)}>Pronto</button>
+            </div>
+          ) : (
+            <div style={{ fontSize: 13, color: 'var(--t3)', marginBottom: 6 }}>
+              Marcou algo sem querer?{' '}
+              <button className="link" style={{ fontSize: 13 }} onClick={() => setFixing(true)}>Corrigir tarefas deste nível</button>
+            </div>
+          )}
+          {tasks.map((t) =>
+            fixing && !t.auto_slot ? (
+              <div key={t.id} className={'task-row' + (g.isDone(t) ? ' done' : g.stateOf(t).kind === 'andamento' ? ' going' : '')}>
+                <div className="task-num">{t.position}</div>
+                <div className="task-main">
+                  <div className="task-title">{t.title}</div>
+                  <div style={{ fontSize: 13, lineHeight: 1.4, color: 'var(--t3)' }}>
+                    {t.description}
+                    {t.bonus ? ' · missão bônus' : ''}
+                    <span className="mono" style={{ marginLeft: 6, fontWeight: 600 }}>+{t.xp} XP</span>
+                  </div>
+                </div>
+                <TaskPicker t={t} kind={g.stateOf(t).kind} onSet={(k) => onSet(t.id, k)} />
+              </div>
+            ) : (
+              <TaskRowStatic key={t.id} n={t.position} t={t} mode={g.isDone(t) ? 'done' : 'missed'} date={g.doneAt(t)} />
+            ),
+          )}
         </div>
       ) : (
         <div className="card" style={{ padding: 22, fontSize: 15, lineHeight: 1.5, color: 'var(--t2)' }}>

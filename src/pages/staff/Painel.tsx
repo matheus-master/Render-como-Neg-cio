@@ -350,7 +350,7 @@ function ReportCard({ r, onSaved }: { r: Overview['reports'][number]; onSaved: (
         <div className="evo-num" style={{ fontSize: 20, marginTop: 0 }}>{fmtBRL(r.revenue)}</div>
       </div>
       <div className="mono" style={{ fontSize: 12, color: 'var(--t2)' }}>
-        {r.contacts} contatos · {r.responses} respostas · {r.appointments} agend. · {r.meetings} reuniões · {r.closed} fechados
+        {r.leads} leads · {r.contacts} contatos · {r.responses} respostas · {r.appointments} agend. · {r.meetings} reuniões · {r.proposals} propostas · {r.closed} fechados
       </div>
       {r.executed ? (
         <div style={{ fontSize: 14, lineHeight: 1.55, display: 'grid', gap: 6 }}>

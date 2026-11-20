@@ -304,7 +304,7 @@ a.card:hover, a.card-link:hover { text-decoration: none; border-color: var(--b-b
 }
 
 .metric-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 16px; padding: 16px 18px; }
-.metric-form { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.metric-form { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
 @media (max-width: 760px) { .metric-form { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 
 /* ---------- Gamificação: linha de tarefa com 3 situações ---------- */
@@ -453,3 +453,33 @@ a.rep-row:hover { text-decoration: none; background: var(--alt); }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
+
+/* Funil de prospecção */
+.funnel { display: flex; flex-direction: column; gap: 8px; }
+.fn-row { display: grid; grid-template-columns: 170px minmax(0, 1fr) 56px 48px; align-items: center; gap: 12px; }
+.fn-label { font-size: 14px; color: var(--t2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fn-track { height: 22px; border-radius: 6px; background: var(--alt3); overflow: hidden; }
+.fn-track i { display: block; height: 100%; border-radius: 6px; background: var(--ink); transition: width .4s; }
+.fn-track i.end { background: var(--ok); }
+.fn-num { font-family: 'Geist Mono', ui-monospace, monospace; font-size: 15px; font-weight: 600; text-align: right; }
+.fn-rate { font-family: 'Geist Mono', ui-monospace, monospace; font-size: 12px; color: var(--t3); text-align: right; }
+.fn-total { margin-top: 6px; padding-top: 12px; border-top: 1px solid var(--b-div); font-size: 14px; color: var(--t2); }
+.fn-total b { color: var(--t); font-weight: 600; }
+@media (max-width: 760px) {
+  .fn-row { grid-template-columns: minmax(0, 1fr) 44px 40px; row-gap: 4px; }
+  .fn-label { grid-column: 1; }
+  .fn-track { grid-column: 1 / -1; grid-row: 2; height: 14px; }
+}
+
+/* Subiu de nível */
+.modal.lvlup { border-color: var(--ink); background: var(--ink); color: #fff; text-align: center; padding: 34px 28px 24px; max-width: 440px; position: relative; overflow: hidden; }
+.lvlup::before { content: ''; position: absolute; inset: -40% -20% auto; height: 260px; background: radial-gradient(closest-side, color-mix(in oklab, var(--gold) 38%, transparent), transparent); pointer-events: none; }
+.lvlup > * { position: relative; }
+.lvlup-badge { width: 76px; height: 76px; margin: 0 auto 14px; border-radius: 22px; display: grid; place-items: center; background: var(--gold); color: var(--ink); font-size: 34px; font-weight: 700; box-shadow: 0 0 0 8px color-mix(in oklab, var(--gold) 18%, transparent); animation: lvlup-pop .6s cubic-bezier(.2, 1.4, .4, 1) both; }
+@keyframes lvlup-pop { from { transform: scale(.4) rotate(-12deg); opacity: 0; } to { transform: none; opacity: 1; } }
+.lvlup .steps { display: flex; align-items: center; justify-content: center; gap: 10px; margin: 16px 0 4px; font-size: 14px; color: #A9AFB9; }
+.lvlup .steps s { text-decoration-color: #A9AFB9; }
+.lvlup .steps b { color: var(--gold); font-weight: 600; }
+.lvlup-undo { margin-top: 14px; font-size: 13px; color: #A9AFB9; text-decoration: underline; text-underline-offset: 3px; }
+.lvlup-undo:hover { color: #fff; }
+.fix-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 12px 14px; border-radius: 10px; background: var(--warn-bg); color: var(--warn-t); font-size: 14px; margin: 8px 0; }

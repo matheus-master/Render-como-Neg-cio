@@ -1,6 +1,6 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { Pencil } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { Fragment, useEffect, useRef, useState } from 'react';
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
 import { BackLink, ErrorState, PageHead, Mark } from '../components/ui';
 import { useAuth } from '../lib/auth';
@@ -8,6 +8,7 @@ import { useReports, type Report } from '../lib/data';
 import { fmtBRL, fmtDay, fmtPeriod } from '../lib/format';
 import { supabase } from '../lib/supabase';
 import { useToast } from '../lib/toast';
+import { FUNNEL, FunnelBars, sumFunnel, type FunnelKey } from '../components/Funnel';
 
 
 // ---------------------------------------------------------------------
@@ -46,6 +47,7 @@ export function Relatorios() {
         </div>
       ) : (
         <>
+          <FunnelCard reps={reps} />
           <Evolution reps={reps} />
           <Journey reps={reps} />
           <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
@@ -64,7 +66,7 @@ export function Relatorios() {
                 </div>
                 <div className="evo-num" style={{ fontSize: 18, marginTop: 0 }}>{fmtBRL(r.revenue)}</div>
                 <div className="mono" style={{ fontSize: 12, color: 'var(--t2)', whiteSpace: 'nowrap' }}>
-                  {r.contacts} cont. · {r.responses} resp. · {r.meetings} reun. · {r.closed} fech.
+                  {r.leads ? `${r.leads} leads · ` : ''}{r.contacts} cont. · {r.responses} resp. · {r.proposals} prop. · {r.closed} fech.
                 </div>
                 <div style={{ fontSize: 14, color: 'var(--t2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>
                   {r.staff_comment && <span className="chip chip-soft" style={{ marginRight: 8 }}>Comentado</span>}
@@ -82,6 +84,29 @@ export function Relatorios() {
   );
 }
 
+
+/** Funil de prospecção: da quinzena mais recente ou somando todas. */
+function FunnelCard({ reps }: { reps: Report[] }) {
+  const [all, setAll] = useState(false);
+  const v = sumFunnel(all ? reps : reps.slice(0, 1));
+  return (
+    <div className="card" style={{ padding: '20px 22px' }}>
+      <div className="between" style={{ alignItems: 'center', flexWrap: 'wrap', gap: 10, marginBottom: 14 }}>
+        <div>
+          <div className="h-card">Funil de prospecção</div>
+          <div style={{ fontSize: 14, color: 'var(--t3)', marginTop: 2 }}>
+            Quantos chegaram em cada etapa e quanto passou para a próxima.
+          </div>
+        </div>
+        <div className="seg" style={{ gridTemplateColumns: '1fr 1fr', width: 280, maxWidth: '100%' }} role="radiogroup" aria-label="Período do funil">
+          <button role="radio" aria-checked={!all} className={!all ? 'on' : ''} onClick={() => setAll(false)}>Última quinzena</button>
+          <button role="radio" aria-checked={all} className={all ? 'on' : ''} onClick={() => setAll(true)}>Todas</button>
+        </div>
+      </div>
+      <FunnelBars v={v} />
+    </div>
+  );
+}
 
 /** Conquistas e dificuldades de cada quinzena, numa linha do tempo horizontal (da mais antiga para a mais recente). */
 function Journey({ reps }: { reps: Report[] }) {
@@ -234,13 +259,6 @@ function Evolution({ reps }: { reps: Report[] }) {
 // ---------------------------------------------------------------------
 // Relatório enviado (leitura)
 // ---------------------------------------------------------------------
-const METRICS: [keyof Report, string][] = [
-  ['contacts', 'Contatos feitos'],
-  ['responses', 'Respostas recebidas'],
-  ['appointments', 'Agendamentos'],
-  ['meetings', 'Reuniões feitas'],
-  ['closed', 'Projetos fechados'],
-];
 
 function Block({ icon, color, title, body }: { icon: string; color: string; title: string; body: string }) {
   return (
@@ -309,13 +327,8 @@ export function RelatorioDetalhe() {
               </span>
             )}
           </div>
-          <div className="metric-grid">
-            {METRICS.map(([k, label]) => (
-              <div key={k}>
-                <div className="label">{label}</div>
-                <div className="evo-num" style={{ fontSize: 22 }}>{String(r[k] ?? 0)}</div>
-              </div>
-            ))}
+          <div style={{ padding: '16px 18px' }}>
+            <FunnelBars v={sumFunnel([r])} />
           </div>
           {r.notes && <div style={{ padding: '0 18px 16px', fontSize: 14, color: 'var(--t2)' }}><span className="label" style={{ marginRight: 8 }}>Observações</span>{r.notes}</div>}
         </div>
@@ -359,7 +372,7 @@ function currentFortnight(): [string, string] {
 
 type Form = {
   start: string; end: string; executed: boolean | null; actions: string;
-  contacts: string; responses: string; appointments: string; meetings: string; closed: string; revenue: string; notes: string;
+  leads: string; contacts: string; responses: string; appointments: string; meetings: string; proposals: string; closed: string; revenue: string; notes: string;
   wins: string; struggles: string; blocker: string; needs: string; next_focus: string;
 };
 const num = (s: string) => Number(String(s).replace(/\./g, '').replace(',', '.')) || 0;
@@ -379,8 +392,8 @@ function ReportForm({ existing }: { existing?: Report }) {
   const s = (n: number | undefined) => (n === undefined ? '' : String(n));
   const [f, setF] = useState<Form>(() =>
     existing
-      ? { start: existing.period_start, end: existing.period_end, executed: existing.executed, actions: existing.actions, contacts: s(existing.contacts), responses: s(existing.responses), appointments: s(existing.appointments), meetings: s(existing.meetings), closed: s(existing.closed), revenue: s(existing.revenue), notes: existing.notes, wins: existing.wins, struggles: existing.struggles, blocker: existing.blocker, needs: existing.needs, next_focus: existing.next_focus }
-      : { start: a, end: b, executed: null, actions: '', contacts: '', responses: '', appointments: '', meetings: '', closed: '', revenue: '', notes: '', wins: '', struggles: '', blocker: '', needs: '', next_focus: '' },
+      ? { start: existing.period_start, end: existing.period_end, executed: existing.executed, actions: existing.actions, leads: s(existing.leads), proposals: s(existing.proposals), contacts: s(existing.contacts), responses: s(existing.responses), appointments: s(existing.appointments), meetings: s(existing.meetings), closed: s(existing.closed), revenue: s(existing.revenue), notes: existing.notes, wins: existing.wins, struggles: existing.struggles, blocker: existing.blocker, needs: existing.needs, next_focus: existing.next_focus }
+      : { start: a, end: b, executed: null, actions: '', leads: '', proposals: '', contacts: '', responses: '', appointments: '', meetings: '', closed: '', revenue: '', notes: '', wins: '', struggles: '', blocker: '', needs: '', next_focus: '' },
   );
   const [busy, setBusy] = useState(false);
   const qc = useQueryClient();
@@ -409,7 +422,7 @@ function ReportForm({ existing }: { existing?: Report }) {
     setBusy(true);
     const row = {
       period_start: f.start, period_end: f.end, executed: !!f.executed, actions: f.actions.trim(),
-      contacts: num(f.contacts), responses: num(f.responses), appointments: num(f.appointments), meetings: num(f.meetings), closed: num(f.closed), revenue: num(f.revenue), notes: f.notes.trim(),
+      leads: num(f.leads), proposals: num(f.proposals), contacts: num(f.contacts), responses: num(f.responses), appointments: num(f.appointments), meetings: num(f.meetings), closed: num(f.closed), revenue: num(f.revenue), notes: f.notes.trim(),
       wins: f.wins.trim(), struggles: f.struggles.trim(), blocker: f.blocker.trim(), needs: f.needs.trim(), next_focus: f.next_focus.trim(),
     };
     const { data, error } = existing
@@ -422,7 +435,7 @@ function ReportForm({ existing }: { existing?: Report }) {
     nav(`/relatorios/${data.id}`);
   };
 
-  const numField = (k: 'contacts' | 'responses' | 'appointments' | 'meetings' | 'closed', label: string) => (
+  const numField = (k: FunnelKey, label: string) => (
     <label className="field" style={{ minWidth: 0 }}>
       <span>{label}</span>
       <input className="input md" inputMode="numeric" placeholder="0" value={f[k]} onChange={set(k)} />
@@ -471,13 +484,12 @@ function ReportForm({ existing }: { existing?: Report }) {
         )}
 
         <div className="card stack" style={{ gap: 14 }}>
-          <div className="h-card">Métricas de prospecção e vendas</div>
+          <div>
+            <div className="h-card">Métricas de prospecção e vendas</div>
+            <div style={{ fontSize: 14, color: 'var(--t3)', marginTop: 2 }}>Na ordem do funil: de quantos leads você levantou até quantos projetos fechou. Deixe 0 no que não aconteceu.</div>
+          </div>
           <div className="metric-form">
-            {numField('contacts', 'Contatos feitos')}
-            {numField('responses', 'Respostas recebidas')}
-            {numField('appointments', 'Agendamentos')}
-            {numField('meetings', 'Reuniões feitas')}
-            {numField('closed', 'Projetos fechados')}
+            {FUNNEL.map(({ k, label }) => <Fragment key={k}>{numField(k, label)}</Fragment>)}
             <label className="field" style={{ minWidth: 0 }}>
               <span>Faturamento (R$)</span>
               <input className="input md" inputMode="decimal" placeholder="0" value={f.revenue} onChange={set('revenue')} />
