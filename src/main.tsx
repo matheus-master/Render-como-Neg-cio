@@ -11,6 +11,7 @@ import Documentos from './pages/Documentos';
 import Inicio from './pages/Inicio';
 import { FirstAccess, Login, NewPassword } from './pages/Login';
 import NovaAnalise from './pages/NovaAnalise';
+import Lote from './pages/Lote';
 import Calendario from './pages/Calendario';
 import { FeedbackMentoria, Gamificacao, Perfil, Sessoes } from './pages/OtherPages';
 import { NovoRelatorio, RelatorioDetalhe, Relatorios } from './pages/Relatorios';
@@ -57,6 +58,7 @@ function App() {
         <Route index element={<Inicio />} />
         <Route path="documentos" element={<Documentos />} />
         <Route path="documentos/nova" element={<NovaAnalise />} />
+        <Route path="documentos/lote" element={<Lote />} />
         <Route path="documentos/:slot/status" element={<Status />} />
         <Route path="documentos/:slot/devolutiva" element={<Devolutiva />} />
         <Route path="documentos/:slot/historico" element={<Historico />} />

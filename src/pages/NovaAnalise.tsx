@@ -1,6 +1,6 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
-import { Navigate, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { isSlot, MAX_UPLOAD_BYTES, MIN_TEXT_CHARS, SLOT_ORDER, SLOTS } from '../../shared/domain';
 import { BackLink, ErrorState, extOf, FileIcon, PageSkeleton, Mark } from '../components/ui';
 import { useAuth } from '../lib/auth';
@@ -123,7 +123,10 @@ export default function NovaAnalise() {
 
         {!slot ? (
           <div className="stack" style={{ gap: 10 }}>
-            <div className="h-card">O que você quer analisar?</div>
+            <div className="between" style={{ alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+              <div className="h-card">O que você quer analisar?</div>
+              <Link to="/documentos/lote" className="link" style={{ fontSize: 14 }}>Enviar vários de uma vez →</Link>
+            </div>
             {SLOT_ORDER.map((s) => (
               <button key={s} onClick={() => setParams({ slot: s }, { replace: true })} className="row card tight" style={{ gap: 14, padding: 14, minHeight: 72 }}>
                 <div style={{ flex: 1 }}>

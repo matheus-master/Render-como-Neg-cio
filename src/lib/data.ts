@@ -362,3 +362,15 @@ export function useReviewItem(id: string | undefined) {
     refetchInterval: (q) => (q.state.data && ['pending', 'queued'].includes(q.state.data.fb.ai_status) ? 8_000 : false),
   });
 }
+
+/** O que está ligado no servidor: análise automática (robô) e e-mail. */
+export function useFeatures() {
+  return useQuery({
+    queryKey: ['features'],
+    staleTime: 300_000,
+    queryFn: async () => {
+      const r = await fetch('/api/health').then((x) => x.json()).catch(() => ({}));
+      return { ai: !!r.ai, email: !!r.email };
+    },
+  });
+}

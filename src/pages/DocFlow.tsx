@@ -1,10 +1,10 @@
 import { Fragment, useEffect, useState } from 'react';
-import { Link, Navigate, useParams } from 'react-router-dom';
-import { isSlot, SLOTS, VERDICTS, type Feedback, type Slot } from '../../shared/domain';
+import { Link, Navigate, useLocation, useParams } from 'react-router-dom';
+import { isSlot, SLOT_ORDER, SLOTS, VERDICTS, type Feedback, type Slot } from '../../shared/domain';
 import { BackLink, CheckIcon, ErrorState, PageSkeleton, VerdictChip, VersionChip, Mark } from '../components/ui';
 import { MaterialPreview } from '../components/MaterialPreview';
 import { useProfile } from '../lib/auth';
-import { useDocs, useGami, useMarkSeen, useSetChecks } from '../lib/data';
+import { useDocs, useFeatures, useGami, useMarkSeen, useSetChecks } from '../lib/data';
 import { firstName, fmtDay, fmtDue, initials } from '../lib/format';
 
 /** Tempo típico da análise (para a barra de progresso) e a partir de quando avisamos que está demorando. */
@@ -43,8 +43,13 @@ export function Status() {
   const { slot, q } = useSlotDocs();
   const profile = useProfile();
   const d = slot ? q.docs[slot] : null;
+  const feat = useFeatures();
+  const justSent = !!(useLocation().state as { justSent?: boolean } | null)?.justSent;
+  // Sem o robô ligado, o material vai direto para a equipe: nada de barra de progresso fingindo análise.
+  const ai = feat.data?.ai ?? false;
+  const mail = feat.data?.email ?? false;
   const stage = d ? ({ analise: 1, revisao: 2, pronta: 3, none: 0 } as const)[d.status] : 0;
-  const now = useNow(stage === 1);
+  const now = useNow(stage === 1 && ai);
 
   if (!slot) return <Navigate to="/documentos" replace />;
   if (q.isLoading) return <Shell><PageSkeleton hero={false} /></Shell>;
@@ -55,20 +60,33 @@ export function Status() {
   const reviewer = firstName(lv.feedback?.reviewer_name || '') || 'a equipe';
   const elapsed = now - new Date(lv.created_at).getTime();
   const anaPct = Math.min(96, 8 + (elapsed / TYPICAL_MS) * 88);
-  const slow = stage === 1 && elapsed > SLOW_MS;
+  const slow = ai && stage === 1 && elapsed > SLOW_MS;
+  const notSent = SLOT_ORDER.filter((x) => x !== slot && q.docs[x].status === 'none');
 
-  const title = stage === 1 ? 'Sua devolutiva chega até ' + fmtDue(lv.due_at) : stage === 2 ? 'A equipe está revisando sua devolutiva' : 'Sua devolutiva está pronta';
+  const where = mail ? `Avisamos em ${profile.email} e aqui em Documentos quando estiver pronta.` : 'Ela aparece aqui em Documentos quando estiver pronta.';
+  const title =
+    stage === 1 ? (ai ? 'Sua devolutiva chega até ' + fmtDue(lv.due_at) : 'Seu material está com a equipe') : stage === 2 ? 'A equipe está revisando sua devolutiva' : 'Sua devolutiva está pronta';
   const sub =
     stage === 1
-      ? `Não precisa ficar nesta tela. Avisamos em ${profile.email} quando estiver pronta.`
+      ? ai
+        ? `Não precisa ficar nesta tela. ${where}`
+        : `A equipe lê o material e escreve a devolutiva até ${fmtDue(lv.due_at)}. Não precisa ficar nesta tela: ${where.charAt(0).toLowerCase() + where.slice(1)}`
       : stage === 2
-        ? `Previsão: até ${fmtDue(lv.due_at)}. Você recebe um e-mail quando for liberada.`
+        ? `Previsão: até ${fmtDue(lv.due_at)}. ${where}`
         : `Revisada por ${reviewer}.`;
-  const steps: [string, string][] = [
-    ['Em análise', stage === 1 ? 'Costuma levar de 2 a 5 minutos.' : 'Concluída'],
-    ['Em revisão pela equipe', stage === 3 ? `Concluída por ${reviewer}` : 'Alguém da equipe lê e ajusta antes de liberar.'],
-    ['Devolutiva pronta', stage === 3 ? 'Liberada' : 'Você recebe um e-mail.'],
-  ];
+  const steps: [string, string][] = ai
+    ? [
+        ['Em análise', stage === 1 ? 'Uma primeira leitura automática. Costuma levar de 2 a 5 minutos.' : 'Concluída'],
+        ['Em revisão pela equipe', stage === 3 ? `Concluída por ${reviewer}` : 'Alguém da equipe lê e ajusta antes de liberar.'],
+        ['Devolutiva pronta', stage === 3 ? 'Liberada' : mail ? 'Você recebe um e-mail.' : 'Aparece em Documentos.'],
+      ]
+    : [
+        ['Recebido', 'Seu material chegou e está guardado com segurança.'],
+        ['Com a equipe', stage === 3 ? `Concluída por ${reviewer}` : `Alguém da equipe lê e escreve sua devolutiva até ${fmtDue(lv.due_at)}.`],
+        ['Devolutiva pronta', stage === 3 ? 'Liberada' : mail ? 'Você recebe um e-mail.' : 'Aparece em Documentos.'],
+      ];
+  // Sem robô, "Recebido" já está concluído e a etapa atual é "Com a equipe".
+  const shown = ai ? stage : stage === 3 ? 3 : 2;
 
   return (
     <Shell>
@@ -83,7 +101,7 @@ export function Status() {
 
       <div className="card stack">
         {steps.map(([label, s], i) => {
-          const n = i + 1, done = n < stage || stage === 3, cur = n === stage && !done;
+          const n = i + 1, done = n < shown || shown === 3, cur = n === shown && !done;
           return (
             <div key={label} style={{ display: 'flex', gap: 14 }}>
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
@@ -95,7 +113,7 @@ export function Status() {
               <div style={{ paddingBottom: 20, flex: 1 }}>
                 <div style={{ fontWeight: 600, fontSize: 16, color: done || cur ? 'var(--t)' : 'var(--t3)' }}>{label}</div>
                 <div style={{ fontSize: 14, lineHeight: 1.45, color: 'var(--t3)', marginTop: 2 }}>{s}</div>
-                {cur && n === 1 && (
+                {cur && n === 1 && ai && (
                   <div style={{ height: 6, borderRadius: 3, background: 'var(--alt3)', overflow: 'hidden', marginTop: 10 }}>
                     <div style={{ width: anaPct + '%', height: '100%', borderRadius: 3, background: 'var(--ac)', transition: 'width .9s linear' }} />
                   </div>
@@ -125,8 +143,23 @@ export function Status() {
           Ver devolutiva
         </Link>
       )}
-      <Link to="/" className="btn btn-secondary btn-md btn-block" style={{ borderRadius: 10 }}>
-        Voltar ao início
+      {stage !== 3 && notSent.length > 0 && (
+        <div className="card stack" style={{ gap: 10 }}>
+          <div style={{ fontWeight: 600, fontSize: 16 }}>{justSent ? 'Quer aproveitar e mandar os outros?' : 'Ainda falta enviar'}</div>
+          <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
+            {notSent.map((x) => (
+              <Link key={x} to={`/documentos/nova?slot=${x}`} className="btn btn-secondary btn-sm">
+                <Mark m="+" size={13} /> {SLOTS[x].title}
+              </Link>
+            ))}
+            {notSent.length > 1 && (
+              <Link to="/documentos/lote" className="btn btn-primary btn-sm">Enviar todos de uma vez</Link>
+            )}
+          </div>
+        </div>
+      )}
+      <Link to="/documentos" className="btn btn-secondary btn-md btn-block" style={{ borderRadius: 10 }}>
+        Voltar para Documentos
       </Link>
     </Shell>
   );

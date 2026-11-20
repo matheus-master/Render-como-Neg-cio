@@ -73,7 +73,7 @@ async function enqueue(env: Env, submissionId: string) {
 }
 
 async function api(req: Request, url: URL, env: Env, ctx: ExecutionContext): Promise<Response> {
-  if (url.pathname === '/api/health') return json({ ok: true });
+  if (url.pathname === '/api/health') return json({ ok: true, ai: !!(env.ANTHROPIC_API_KEY && env.SUPABASE_SERVICE_ROLE_KEY), email: !!env.RESEND_API_KEY });
 
   // GET /api/calendar · eventos da agenda da mentoria (lidos do endereço iCal do Google Agenda)
   if (url.pathname === '/api/calendar' && req.method === 'GET') {

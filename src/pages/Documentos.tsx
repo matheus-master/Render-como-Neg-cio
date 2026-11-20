@@ -19,7 +19,15 @@ export default function Documentos() {
 
   return (
     <div className="page">
-      <PageHead title="Meus documentos" sub="Envie seus materiais da mentoria. A equipe analisa e devolve uma devolutiva aqui mesmo, em até 48h." />
+      <PageHead
+        title="Meus documentos"
+        sub="Envie seus materiais da mentoria. A equipe analisa e devolve uma devolutiva aqui mesmo, em até 48h."
+        right={
+          <Link to="/documentos/lote" className="btn btn-primary">
+            <Mark m="↑" size={15} /> Enviar vários de uma vez
+          </Link>
+        }
+      />
       <div className="seg" style={{ gridTemplateColumns: '1fr 1fr', maxWidth: 360 }} role="tablist">
         {(['list', 'hist'] as const).map((k) => (
           <button key={k} role="tab" aria-selected={tab === k} className={tab === k ? 'on' : ''} onClick={() => setParams(k === 'hist' ? { tab: 'hist' } : {}, { replace: true })}>
