@@ -300,7 +300,7 @@ function LevelFuture({ lvl, unlockAfter, tasks: raw }: { lvl: Level; unlockAfter
   return (
     <>
       <div style={{ background: '#fff', border: '1.5px dashed var(--b-dash)', borderRadius: 12, padding: '20px 22px', display: 'flex', gap: 16, alignItems: 'center' }}>
-        <div style={{ width: 44, height: 44, borderRadius: 8, background: 'var(--alt2)', display: 'grid', placeItems: 'center', fontSize: 20, flex: 'none' }}>🔒</div>
+        <div style={{ width: 44, height: 44, borderRadius: 8, background: 'var(--alt2)', display: 'grid', placeItems: 'center', fontSize: 20, flex: 'none' }}><Mark m="🔒" size={20} /></div>
         <div style={{ minWidth: 0 }}>
           <div className="label">O que você vai conquistar</div>
           <div style={{ fontWeight: 600, fontSize: 22 }}>Nível {lvl.n} · {lvl.name}</div>
