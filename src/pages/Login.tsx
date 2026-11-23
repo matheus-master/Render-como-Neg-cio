@@ -69,6 +69,22 @@ function AuthSplit({ team, children }: { team?: boolean; children: React.ReactNo
   );
 }
 
+/** Escolha bem visível entre as duas entradas, no topo das telas. */
+function RoleSwitch({ team }: { team?: boolean }) {
+  return (
+    <nav className={'role-switch' + (team ? ' team' : '')} aria-label="Tipo de acesso">
+      <Link to="/login" className={!team ? 'on' : ''} aria-current={!team ? 'page' : undefined}>
+        <span className="rs-ico" aria-hidden>🎓</span>
+        <span><b>Sou aluno</b><small>Mentorado RCN</small></span>
+      </Link>
+      <Link to="/equipe/entrar" className={team ? 'on' : ''} aria-current={team ? 'page' : undefined}>
+        <span className="rs-ico" aria-hidden>🔒</span>
+        <span><b>Sou da equipe</b><small>Acesso restrito</small></span>
+      </Link>
+    </nav>
+  );
+}
+
 function useSignIn(team: boolean) {
   const nav = useNavigate();
   const toast = useToast();
@@ -137,6 +153,7 @@ export function Login() {
   return (
     <AuthSplit>
       <img src="/logo-rcn.png" alt="Render como Negócio" className="auth-mobile-logo" />
+      <RoleSwitch />
       <div>
         <div className="auth-chip">Portal do aluno</div>
         <h1 className="auth-h1">Bem-vindo de volta</h1>
@@ -155,7 +172,6 @@ export function Login() {
         </div>
         <Link to="/primeiro-acesso" className="btn btn-secondary btn-md">Criar meu acesso</Link>
       </div>
-      <Link to="/equipe/entrar" className="auth-switch">É da equipe RCN? <b>Área da equipe →</b></Link>
     </AuthSplit>
   );
 }
@@ -165,6 +181,7 @@ export function StaffLogin() {
   return (
     <AuthSplit team>
       <img src="/logo-rcn-branco.png" alt="Render como Negócio" className="auth-mobile-logo" />
+      <RoleSwitch team />
       <div>
         <div className="auth-chip team"><span className="auth-lock">🔒</span> Acesso restrito · Equipe RCN</div>
         <h1 className="auth-h1">Área da equipe</h1>
@@ -177,7 +194,6 @@ export function StaffLogin() {
       </form>
       <button onClick={f.forgot} className="auth-forgot">Esqueci minha senha</button>
       <div className="auth-note">Não tem acesso? Os acessos da equipe são liberados pela coordenação da RCN.</div>
-      <Link to="/login" className="auth-switch">É aluno? <b>Portal do aluno →</b></Link>
     </AuthSplit>
   );
 }
