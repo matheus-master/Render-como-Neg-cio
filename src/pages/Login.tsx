@@ -11,6 +11,7 @@ const probe = createClient(SUPABASE_URL || 'http://localhost', SUPABASE_ANON_KEY
   auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false, storageKey: 'rcn-probe' },
 });
 import { useToast } from '../lib/toast';
+import { StudentShowcase } from '../components/StudentShowcase';
 import { useIsMobile } from '../lib/useIsMobile';
 
 function AuthShell({ children }: { children: React.ReactNode }) {
@@ -50,17 +51,14 @@ function AuthSplit({ team, children }: { team?: boolean; children: React.ReactNo
             </ul>
           </div>
         ) : (
-          <div className="auth-side-body">
-            <div className="auth-kicker">Portal do aluno</div>
-            <div className="auth-title">Seu studio,<br />tratado como negócio.</div>
-            <div className="auth-mock">
-              <div className="label" style={{ color: 'var(--gold)' }}>Nível 2 de 6</div>
-              <div style={{ fontWeight: 600, fontSize: 20, marginTop: 4 }}>Criador</div>
-              <div className="track" style={{ marginTop: 12 }}><i style={{ width: '62%' }} /></div>
-              <div className="auth-mock-row"><span className="mono">730/1170 XP</span><span>Próximo: <b>Elite</b></span></div>
+          <>
+            <StudentShowcase />
+            <div className="auth-side-body">
+              <div className="auth-kicker">Portal do aluno · Render como Negócio</div>
+              <div className="auth-title">Seu studio,<br />tratado como negócio.</div>
+              <div className="auth-foot">Envie seus materiais, receba a devolutiva da equipe, suba de nível e acompanhe seu faturamento crescer.</div>
             </div>
-            <div className="auth-foot">Documentos com devolutiva · Relatórios · Gamificação · Sessões</div>
-          </div>
+          </>
         )}
       </aside>
       <main className="auth-main">
