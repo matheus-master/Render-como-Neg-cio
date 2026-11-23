@@ -9,7 +9,7 @@ import { ToastProvider } from './lib/toast';
 import { Devolutiva, Historico, Status } from './pages/DocFlow';
 import Documentos from './pages/Documentos';
 import Inicio from './pages/Inicio';
-import { FirstAccess, Login, NewPassword } from './pages/Login';
+import { FirstAccess, Login, NewPassword, StaffLogin } from './pages/Login';
 import NovaAnalise from './pages/NovaAnalise';
 import Lote from './pages/Lote';
 import Calendario from './pages/Calendario';
@@ -26,7 +26,7 @@ function Guard({ staff, children }: { staff?: boolean; children: ReactNode }) {
   const { ready, session, profile, profileLoading, profileError, reloadProfile } = useAuth();
   const loc = useLocation();
   if (!ready) return null;
-  if (!session) return <Navigate to="/login" replace state={{ from: loc.pathname }} />;
+  if (!session) return <Navigate to={staff ? '/equipe/entrar' : '/login'} replace state={{ from: loc.pathname }} />;
   if (profileLoading) return <div className="page"><PageSkeleton /></div>;
   if (profileError || !profile) return <div className="page"><ErrorState onRetry={reloadProfile} /></div>;
   if (staff && profile.role !== 'staff') return <Navigate to="/" replace />;
@@ -34,10 +34,10 @@ function Guard({ staff, children }: { staff?: boolean; children: ReactNode }) {
   return <>{children}</>;
 }
 
-function PublicOnly({ children }: { children: ReactNode }) {
+function PublicOnly({ to = '/', children }: { to?: string; children: ReactNode }) {
   const { ready, session } = useAuth();
   if (!ready) return null;
-  if (session) return <Navigate to="/" replace />;
+  if (session) return <Navigate to={to} replace />;
   return <>{children}</>;
 }
 
@@ -45,6 +45,7 @@ function App() {
   return (
     <Routes>
       <Route path="/login" element={<PublicOnly><Login /></PublicOnly>} />
+      <Route path="/equipe/entrar" element={<PublicOnly to="/equipe"><StaffLogin /></PublicOnly>} />
       <Route path="/primeiro-acesso" element={<PublicOnly><FirstAccess /></PublicOnly>} />
       <Route path="/nova-senha" element={<NewPassword />} />
       <Route path="/equipe" element={<Guard staff><StaffLayout /></Guard>}>

@@ -2,7 +2,13 @@ import { PasswordFields, passwordOk } from '../components/PasswordFields';
 import { Mark } from '../components/ui';
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { supabase } from '../lib/supabase';
+import { createClient } from '@supabase/supabase-js';
+import { supabase, SUPABASE_ANON_KEY, SUPABASE_URL } from '../lib/supabase';
+
+/** Cliente só para conferir login e tipo de conta antes de abrir a sessão de verdade (não guarda nada). */
+const probe = createClient(SUPABASE_URL || 'http://localhost', SUPABASE_ANON_KEY || 'anon', {
+  auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false, storageKey: 'rcn-probe' },
+});
 import { useToast } from '../lib/toast';
 import { useIsMobile } from '../lib/useIsMobile';
 
@@ -26,79 +32,153 @@ function ErrAlert({ children }: { children: React.ReactNode }) {
   );
 }
 
-export function Login() {
+/** Lado visual das telas de entrada (computador). */
+function AuthSplit({ team, children }: { team?: boolean; children: React.ReactNode }) {
+  return (
+    <div className={'auth' + (team ? ' auth-team' : ' auth-student')}>
+      <aside className="auth-side" aria-hidden>
+        <img src={team ? '/logo-rcn-branco.png' : '/logo-rcn.png'} alt="" className="auth-side-logo" />
+        {team ? (
+          <div className="auth-side-body">
+            <div className="auth-kicker">Área da equipe</div>
+            <div className="auth-title">Acompanhe cada aluno de perto.</div>
+            <ul className="auth-list">
+              <li><b>Fila</b> de documentos esperando devolutiva</li>
+              <li><b>Relatórios</b> quinzenais e quem está atrasado</li>
+              <li><b>Botão Vermelho</b>, tarefas e progresso por nível</li>
+            </ul>
+          </div>
+        ) : (
+          <div className="auth-side-body">
+            <div className="auth-kicker">Portal do aluno</div>
+            <div className="auth-title">Seu studio,<br />tratado como negócio.</div>
+            <div className="auth-mock">
+              <div className="label" style={{ color: 'var(--gold)' }}>Nível 2 de 6</div>
+              <div style={{ fontWeight: 600, fontSize: 20, marginTop: 4 }}>Criador</div>
+              <div className="track" style={{ marginTop: 12 }}><i style={{ width: '62%' }} /></div>
+              <div className="auth-mock-row"><span className="mono">730/1170 XP</span><span>Próximo: <b>Elite</b></span></div>
+            </div>
+            <div className="auth-foot">Documentos com devolutiva · Relatórios · Gamificação · Sessões</div>
+          </div>
+        )}
+      </aside>
+      <main className="auth-main">
+        <div className="auth-form">{children}</div>
+      </main>
+    </div>
+  );
+}
+
+function useSignIn(team: boolean) {
   const nav = useNavigate();
   const toast = useToast();
   const [email, setEmail] = useState('');
   const [pass, setPass] = useState('');
-  const [err, setErr] = useState<string | null>(null);
+  const [err, setErr] = useState<React.ReactNode | null>(null);
   const [passErr, setPassErr] = useState(false);
   const [busy, setBusy] = useState(false);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!email.trim()) return setErr('Digite seu e-mail.');
     if (!pass.trim()) {
       setPassErr(true);
       return setErr('Digite sua senha para entrar.');
     }
     setBusy(true);
-    const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password: pass });
-    setBusy(false);
-    if (error) {
+    const { data, error } = await probe.auth.signInWithPassword({ email: email.trim(), password: pass });
+    if (error || !data.session) {
+      setBusy(false);
       setPassErr(true);
-      return setErr(error.message.includes('Email not confirmed') ? 'Confirme seu e-mail pelo link que enviamos.' : 'E-mail ou senha não conferem.');
+      return setErr(error?.message.includes('Email not confirmed') ? 'Confirme seu e-mail pelo link que enviamos.' : 'E-mail ou senha não conferem.');
     }
-    nav('/', { replace: true });
+    const { data: prof } = await probe.from('profiles').select('role').eq('id', data.user.id).maybeSingle();
+    const isStaff = prof?.role === 'staff';
+    if (team && !isStaff) {
+      // Conta de aluno na área da equipe: não abre sessão por aqui.
+      await probe.auth.signOut({ scope: 'local' });
+      setBusy(false);
+      return setErr(<>Esta é uma conta de aluno. <Link to="/login" className="link">Entre pelo Portal do Aluno</Link>.</>);
+    }
+    await supabase.auth.setSession({ access_token: data.session.access_token, refresh_token: data.session.refresh_token });
+    setBusy(false);
+    if (!team && isStaff) toast('Conta da equipe: abrimos o painel da equipe.');
+    nav(isStaff ? '/equipe' : '/', { replace: true });
   };
-
   const forgot = async () => {
     if (!email.trim()) return setErr('Digite seu e-mail para receber o link.');
     await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo: window.location.origin + '/nova-senha' });
     toast('Enviamos um link para ' + email.trim() + '.');
   };
+  const fields = (
+    <>
+      <label className="field">
+        <span>E-mail</span>
+        <input className="input" type="email" autoComplete="email" placeholder={team ? 'voce@rendercomonegocio.com.br' : 'voce@seustudio.com.br'} value={email} onChange={(e) => { setEmail(e.target.value); setErr(null); }} />
+      </label>
+      <label className="field">
+        <span>Senha</span>
+        <input
+          className={'input' + (passErr ? ' bad' : '')}
+          type="password"
+          autoComplete="current-password"
+          placeholder="Sua senha"
+          value={pass}
+          onChange={(e) => { setPass(e.target.value); setPassErr(false); setErr(null); }}
+        />
+      </label>
+    </>
+  );
+  return { submit, forgot, fields, err, busy };
+}
 
+export function Login() {
+  const f = useSignIn(false);
   return (
-    <AuthShell>
-      <BigLogo />
+    <AuthSplit>
+      <img src="/logo-rcn.png" alt="Render como Negócio" className="auth-mobile-logo" />
       <div>
-        <h1 style={{ fontWeight: 600, fontSize: 28, lineHeight: 1.15 }}>Bem-vindo de volta</h1>
-        <div style={{ fontSize: 15, lineHeight: 1.5, color: 'var(--t3)', marginTop: 6 }}>Entre para ver seus materiais, devolutivas e progresso.</div>
+        <div className="auth-chip">Portal do aluno</div>
+        <h1 className="auth-h1">Bem-vindo de volta</h1>
+        <div className="auth-sub">Entre para ver seus documentos, devolutivas e seu progresso na mentoria.</div>
       </div>
-      {err && <ErrAlert>{err}</ErrAlert>}
-      <form onSubmit={submit} style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
-        <label className="field">
-          <span>E-mail</span>
-          <input className="input" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} />
-        </label>
-        <label className="field">
-          <span>Senha</span>
-          <input
-            className={'input' + (passErr ? ' bad' : '')}
-            type="password"
-            autoComplete="current-password"
-            placeholder="Sua senha"
-            value={pass}
-            onChange={(e) => {
-              setPass(e.target.value);
-              setPassErr(false);
-              setErr(null);
-            }}
-          />
-        </label>
-        <button className="btn btn-primary btn-lg" disabled={busy}>
-          {busy ? 'Entrando…' : 'Entrar'}
-        </button>
+      {f.err && <ErrAlert>{f.err}</ErrAlert>}
+      <form onSubmit={f.submit} className="auth-fields">
+        {f.fields}
+        <button className="btn btn-primary btn-lg" disabled={f.busy}>{f.busy ? 'Entrando…' : 'Entrar'}</button>
       </form>
-      <button onClick={forgot} style={{ fontWeight: 600, fontSize: 15, color: 'var(--ac)', textAlign: 'center', padding: 6, marginTop: -8 }}>
-        Esqueci minha senha
-      </button>
-      <div style={{ borderTop: '1px solid var(--b-card)', paddingTop: 20, display: 'flex', flexDirection: 'column', gap: 10, textAlign: 'center' }}>
-        <div style={{ fontSize: 15, color: 'var(--t2)' }}>Primeiro acesso?</div>
-        <Link to="/primeiro-acesso" className="btn btn-secondary btn-md btn-block" style={{ borderRadius: 10 }}>
-          Entrar com o código da turma
-        </Link>
+      <button onClick={f.forgot} className="auth-forgot">Esqueci minha senha</button>
+      <div className="auth-first">
+        <div>
+          <div style={{ fontWeight: 600, fontSize: 15 }}>Primeiro acesso?</div>
+          <div style={{ fontSize: 14, color: 'var(--t3)' }}>Use o código da turma que a equipe enviou.</div>
+        </div>
+        <Link to="/primeiro-acesso" className="btn btn-secondary btn-md">Criar meu acesso</Link>
       </div>
-    </AuthShell>
+      <Link to="/equipe/entrar" className="auth-switch">É da equipe RCN? <b>Área da equipe →</b></Link>
+    </AuthSplit>
+  );
+}
+
+export function StaffLogin() {
+  const f = useSignIn(true);
+  return (
+    <AuthSplit team>
+      <img src="/logo-rcn-branco.png" alt="Render como Negócio" className="auth-mobile-logo" />
+      <div>
+        <div className="auth-chip team"><span className="auth-lock">🔒</span> Acesso restrito · Equipe RCN</div>
+        <h1 className="auth-h1">Área da equipe</h1>
+        <div className="auth-sub">Painel de acompanhamento dos alunos, fila de devolutivas e relatórios.</div>
+      </div>
+      {f.err && <ErrAlert>{f.err}</ErrAlert>}
+      <form onSubmit={f.submit} className="auth-fields">
+        {f.fields}
+        <button className="btn btn-gold btn-lg" disabled={f.busy}>{f.busy ? 'Entrando…' : 'Entrar no painel'}</button>
+      </form>
+      <button onClick={f.forgot} className="auth-forgot">Esqueci minha senha</button>
+      <div className="auth-note">Não tem acesso? Os acessos da equipe são liberados pela coordenação da RCN.</div>
+      <Link to="/login" className="auth-switch">É aluno? <b>Portal do aluno →</b></Link>
+    </AuthSplit>
   );
 }
 
@@ -150,7 +230,7 @@ export function FirstAccess() {
   };
 
   return (
-    <AuthShell>
+    <AuthSplit>
       <Link to="/login" className="back" style={{ marginBottom: -4 }}>
         <Mark m="←" size={14} /> Já tenho conta
       </Link>
@@ -184,7 +264,7 @@ export function FirstAccess() {
       <button className="btn btn-primary btn-lg" disabled={!ok || busy} onClick={create}>
         {busy ? 'Criando…' : 'Criar acesso'}
       </button>
-    </AuthShell>
+    </AuthSplit>
   );
 }
 

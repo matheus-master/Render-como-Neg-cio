@@ -26,7 +26,7 @@ export function StaffLayout() {
     ['/equipe/fila', 'Fila de revisão', <Inbox size={17} strokeWidth={1.8} aria-hidden key="f" />, pend],
     ['/equipe/config', 'Configurações', <Settings size={17} strokeWidth={1.8} aria-hidden key="c" />],
   ];
-  const logout = async () => { await signOut(); nav('/login'); };
+  const logout = async () => { await signOut(); nav('/equipe/entrar'); };
   const links = items.map(([to, label, icon, badge]) => (
     <NavLink key={to} to={to} end={to === '/equipe'} className={({ isActive }) => (isActive || (to === '/equipe/fila' && location.pathname.startsWith('/equipe/revisao')) ? 'active' : '')}>
       {icon}
