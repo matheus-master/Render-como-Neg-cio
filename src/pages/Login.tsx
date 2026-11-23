@@ -1,3 +1,4 @@
+import { GraduationCap, Lock } from 'lucide-react';
 import { PasswordFields, passwordOk } from '../components/PasswordFields';
 import { Mark } from '../components/ui';
 import { useEffect, useState } from 'react';
@@ -74,11 +75,11 @@ function RoleSwitch({ team }: { team?: boolean }) {
   return (
     <nav className={'role-switch' + (team ? ' team' : '')} aria-label="Tipo de acesso">
       <Link to="/login" className={!team ? 'on' : ''} aria-current={!team ? 'page' : undefined}>
-        <span className="rs-ico" aria-hidden>🎓</span>
+        <span className="rs-ico" aria-hidden><GraduationCap size={17} strokeWidth={1.8} /></span>
         <span><b>Sou aluno</b><small>Mentorado RCN</small></span>
       </Link>
       <Link to="/equipe/entrar" className={team ? 'on' : ''} aria-current={team ? 'page' : undefined}>
-        <span className="rs-ico" aria-hidden>🔒</span>
+        <span className="rs-ico" aria-hidden><Lock size={16} strokeWidth={1.9} /></span>
         <span><b>Sou da equipe</b><small>Acesso restrito</small></span>
       </Link>
     </nav>
@@ -183,7 +184,7 @@ export function StaffLogin() {
       <img src="/logo-rcn-branco.png" alt="Render como Negócio" className="auth-mobile-logo" />
       <RoleSwitch team />
       <div>
-        <div className="auth-chip team"><span className="auth-lock">🔒</span> Acesso restrito · Equipe RCN</div>
+        <div className="auth-chip team"><Lock size={12} strokeWidth={2.2} aria-hidden /> Acesso restrito · Equipe RCN</div>
         <h1 className="auth-h1">Área da equipe</h1>
         <div className="auth-sub">Painel de acompanhamento dos alunos, fila de devolutivas e relatórios.</div>
       </div>
