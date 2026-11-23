@@ -77,7 +77,9 @@ export function directUrls(raw: string): string[] {
 
 const PRIVATE_MSG = 'O link está privado. No Drive, mude para "Qualquer pessoa com o link" e cole de novo.';
 
-export async function fetchLink(raw: string): Promise<{ ok: true; material: Material } | { ok: false; private: boolean; reason: string }> {
+const BLOCKED_MSG = 'Este site não permite leitura automática. A equipe abre o link e analisa por lá.';
+
+export async function fetchLink(raw: string): Promise<{ ok: true; material: Material } | { ok: false; private: boolean; blocked?: boolean; reason: string }> {
   const [url] = directUrls(raw);
   if (!url) return { ok: false, private: false, reason: 'Esse link não parece válido.' };
   let res: Response;
@@ -87,9 +89,13 @@ export async function fetchLink(raw: string): Promise<{ ok: true; material: Mate
     return { ok: false, private: false, reason: 'Não conseguimos abrir esse link. Confira se ele está certo.' };
   }
   const finalUrl = res.url || url;
-  if (res.status === 401 || res.status === 403 || /accounts\.google\.com|ServiceLogin|\/login/i.test(finalUrl)) {
+  // "Privado" só faz sentido em serviços de arquivo (Drive, Dropbox, OneDrive). Sites como Behance e Instagram
+  // bloqueiam robôs com 403/429 mesmo sendo públicos: o link vale, só não dá para ler automaticamente.
+  const fileHost = /(google\.com|dropbox\.com|onedrive|sharepoint\.com|1drv\.ms|wetransfer|box\.com)/i.test(new URL(url).hostname);
+  if (fileHost && (res.status === 401 || res.status === 403 || /accounts\.google\.com|ServiceLogin|\/login/i.test(finalUrl))) {
     return { ok: false, private: true, reason: PRIVATE_MSG };
   }
+  if (!fileHost && [401, 403, 429, 999].includes(res.status)) return { ok: false, blocked: true, private: false, reason: BLOCKED_MSG };
   if (!res.ok) return { ok: false, private: false, reason: 'Esse link não abriu (erro ' + res.status + '). Confira se ele está certo.' };
 
   const type = res.headers.get('content-type') || '';

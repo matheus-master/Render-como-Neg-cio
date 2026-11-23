@@ -109,6 +109,10 @@ async function api(req: Request, url: URL, env: Env, ctx: ExecutionContext): Pro
     const { url: link } = (await req.json()) as { url?: string };
     if (!link) return json({ ok: false, private: false, reason: 'Cole um link.' });
     const r = await fetchLink(link);
+    // Site público que bloqueia robôs (Behance, Instagram…): aceita o link; a equipe abre manualmente.
+    if (!r.ok && r.blocked) return json({ ok: true, blocked: true, reason: r.reason });
+    // Páginas montadas por JavaScript (portfólios) chegam quase vazias: também valem como link.
+    if (!r.ok && !r.private && /conteúdo legível/.test(r.reason)) return json({ ok: true, blocked: true, reason: r.reason });
     return json(r.ok ? { ok: true } : { ok: false, private: r.private, reason: r.reason });
   }
 
