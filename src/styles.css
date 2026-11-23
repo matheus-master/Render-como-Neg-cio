@@ -573,3 +573,29 @@ a.rep-row:hover { text-decoration: none; background: var(--alt); }
 .role-switch.team a.on { background: var(--gold); color: var(--ink); box-shadow: 0 6px 18px -8px rgba(242, 183, 31, .6); }
 .role-switch.team a.on .rs-ico { background: rgba(14, 17, 22, .12); }
 @media (max-width: 380px) { .role-switch a small { display: none; } }
+
+/* Instagram: antes e depois */
+.ig-pair { display: grid; grid-template-columns: minmax(0, 1fr) 54px minmax(0, 1fr); gap: 12px; align-items: start; }
+.ig-col { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.ig-tag { font-family: 'Geist Mono', ui-monospace, monospace; font-size: 11px; letter-spacing: .12em; text-transform: uppercase; padding: 4px 9px; border-radius: 999px; background: var(--alt2); color: var(--t2); }
+.ig-tag.after { background: var(--ink); color: var(--gold); }
+.ig-frame { display: grid; place-items: center; width: 100%; aspect-ratio: 9 / 16; max-height: 560px; border-radius: 18px; overflow: hidden; background: #0E1116; border: 1px solid var(--b-card); padding: 0; }
+.ig-frame img { width: 100%; height: 100%; object-fit: contain; }
+.ig-frame.empty { background: #fff; border: 1.5px dashed var(--b-dash); color: var(--t3); gap: 6px; align-content: center; padding: 18px; text-align: center; }
+.ig-frame.empty b { color: var(--t); font-size: 15px; font-weight: 600; }
+.ig-frame.empty small { font-size: 13px; line-height: 1.4; }
+.ig-frame.empty:hover { border-color: var(--t3); }
+.ig-arrow { align-self: center; display: flex; flex-direction: column; align-items: center; gap: 6px; color: var(--t3); font-size: 11px; text-align: center; }
+.ig-strip { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 4px; }
+.ig-thumb { flex: none; width: 74px; display: flex; flex-direction: column; gap: 4px; align-items: center; font-size: 11px; color: var(--t3); }
+.ig-thumb img { width: 74px; height: 120px; object-fit: cover; border-radius: 10px; border: 2px solid transparent; background: #0E1116; }
+.ig-thumb.on img { border-color: var(--ink); }
+.ig-thumb.on span { color: var(--t); font-weight: 600; }
+.ig-zoom { max-width: min(480px, 92vw); max-height: 92vh; display: flex; flex-direction: column; gap: 8px; align-items: center; color: #fff; font-size: 12px; }
+.ig-zoom img { max-height: 84vh; max-width: 100%; border-radius: 14px; }
+@media (max-width: 600px) {
+  .ig-pair { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .ig-arrow { display: none; }
+}
+.ig-col > .between { flex-wrap: wrap; gap: 6px; }
+@media (max-width: 600px) { .ig-col > .between .mono { font-size: 11px !important; } }

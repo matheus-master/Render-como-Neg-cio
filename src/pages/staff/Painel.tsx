@@ -8,6 +8,7 @@ import { fmtBRL, fmtDay, fmtLongToday, fmtPeriod, initials } from '../../lib/for
 import { daysSince, LATE_DAYS, progressOf, useStaffOverview, type Overview, type StaffStudent } from '../../lib/staffData';
 import { supabase } from '../../lib/supabase';
 import { useToast } from '../../lib/toast';
+import { InstagramAntesDepois, instagramOf } from '../../components/InstagramAntesDepois';
 
 const STATUS_LABEL: Record<StaffStudent['status'], string> = { ativo: 'Ativo', onboarding: 'Aguardando onboarding', pausado: 'Pausado/Inativo' };
 const GROUP_COLOR: Record<string, string> = { 'Zorango Tango': '#7A4FD0', 'Octa Performance': '#0E7C66' };
@@ -202,8 +203,8 @@ export function Painel() {
 // ---------------------------------------------------------------------
 // Ficha do aluno
 // ---------------------------------------------------------------------
-type Tab = 'resumo' | 'relatorios' | 'documentos' | 'gamificacao' | 'sessoes';
-const TABS: [Tab, string][] = [['resumo', 'Resumo'], ['relatorios', 'Relatórios'], ['documentos', 'Documentos'], ['gamificacao', 'Gamificação'], ['sessoes', 'Sessões']];
+type Tab = 'resumo' | 'relatorios' | 'documentos' | 'gamificacao' | 'instagram' | 'sessoes';
+const TABS: [Tab, string][] = [['resumo', 'Resumo'], ['relatorios', 'Relatórios'], ['documentos', 'Documentos'], ['gamificacao', 'Gamificação'], ['instagram', 'Instagram'], ['sessoes', 'Sessões']];
 
 export function AlunoFicha() {
   const { id } = useParams();
@@ -239,7 +240,13 @@ export function AlunoFicha() {
         <div style={{ flex: '1 1 260px', minWidth: 0 }}>
           <div className="h-flow" style={{ fontSize: 24 }}>{s.full_name}</div>
           <div style={{ fontSize: 14, color: 'var(--t3)', marginTop: 2 }}>
-            {[s.studio, s.city, s.email, s.whatsapp, s.instagram].filter(Boolean).join(' · ')}
+            {[s.studio, s.city, s.email, s.whatsapp].filter(Boolean).join(' · ')}
+            {instagramOf(s.instagram) && (
+              <>
+                {' · '}
+                <a className="link" href={instagramOf(s.instagram)!.url} target="_blank" rel="noreferrer">@{instagramOf(s.instagram)!.handle} ↗</a>
+              </>
+            )}
           </div>
           <div className="mono" style={{ fontSize: 11, color: 'var(--t3)', marginTop: 4 }}>desde {fmtDay(s.created_at, false)}</div>
         </div>
@@ -321,6 +328,8 @@ export function AlunoFicha() {
       )}
 
       {tab === 'gamificacao' && <StaffGami o={o} studentId={s.id} onChanged={refresh} />}
+
+      {tab === 'instagram' && <InstagramAntesDepois studentId={s.id} instagram={s.instagram} team />}
 
       {tab === 'sessoes' && <StaffSessions red={red} studentName={s.full_name} onSaved={refresh} />}
     </div>

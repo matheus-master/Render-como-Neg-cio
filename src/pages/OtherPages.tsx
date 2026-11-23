@@ -1,4 +1,5 @@
 import { PasswordFields, passwordOk } from '../components/PasswordFields';
+import { InstagramAntesDepois, InstagramLink, instagramOf } from '../components/InstagramAntesDepois';
 import { useQueryClient } from '@tanstack/react-query';
 import { Fragment, useEffect, useState } from 'react';
 import { Pencil } from 'lucide-react';
@@ -630,6 +631,12 @@ export function Perfil() {
     if (!form.full_name.trim()) return toast('O nome completo não pode ficar vazio.');
     setSavingData(true);
     const clean = Object.fromEntries(Object.entries(form).map(([k, v]) => [k, v.trim()])) as typeof form;
+    // Instagram: aceita @, nome ou link; guarda como @perfil.
+    if (clean.instagram) {
+      const ig = instagramOf(clean.instagram);
+      if (!ig) return toast('Não reconhecemos esse Instagram. Use @seustudio ou o link do perfil.');
+      clean.instagram = '@' + ig.handle;
+    }
     const { error } = await supabase.from('profiles').update(clean).eq('id', profile.id);
     setSavingData(false);
     if (error) return toast('Não deu para salvar. Tente de novo.');
@@ -665,7 +672,7 @@ export function Perfil() {
     ['studio', 'Studio', ''],
     ['city', 'Cidade', 'Ex.: Curitiba, PR'],
     ['whatsapp', 'WhatsApp', '(41) 99999-0000'],
-    ['instagram', 'Instagram', '@seustudio'],
+    ['instagram', 'Instagram', '@seustudio ou link do perfil'],
   ];
 
   return (
@@ -707,7 +714,7 @@ export function Perfil() {
                 <div key={k} className="between divrow" style={{ padding: '11px 0', alignItems: 'baseline', gap: 16 }}>
                   <dt className="label" style={{ flex: 'none' }}>{label}</dt>
                   <dd style={{ margin: 0, fontSize: 15, fontWeight: 500, textAlign: 'right', overflowWrap: 'anywhere', color: profile[k] ? 'var(--t)' : 'var(--t4)' }}>
-                    {profile[k] || 'Não informado'}
+                    {k === 'instagram' ? <InstagramLink value={profile.instagram} /> : profile[k] || 'Não informado'}
                   </dd>
                 </div>
               ))}
@@ -749,6 +756,7 @@ export function Perfil() {
           </button>
         </div>
       </div>
+      <InstagramAntesDepois studentId={profile.id} instagram={profile.instagram} />
     </div>
   );
 }
