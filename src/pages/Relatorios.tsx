@@ -65,8 +65,8 @@ export function Relatorios() {
                   <div className="mono" style={{ fontSize: 11, color: 'var(--t3)' }}>enviado {fmtDay(r.created_at, false)}</div>
                 </div>
                 <div className="evo-num" style={{ fontSize: 18, marginTop: 0 }}>{fmtBRL(r.revenue)}</div>
-                <div className="mono" style={{ fontSize: 12, color: 'var(--t2)', whiteSpace: 'nowrap' }}>
-                  {r.leads ? `${r.leads} leads · ` : ''}{r.contacts} cont. · {r.responses} resp. · {r.proposals} prop. · {r.closed} fech.
+                <div className="mono" style={{ fontSize: 12, color: 'var(--t2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0 }} title={`${r.leads} leads · ${r.contacts} contatos · ${r.responses} respostas · ${r.meetings} reuniões · ${r.proposals} propostas · ${r.closed} fechados`}>
+                  {r.contacts} cont. · {r.proposals} prop. · {r.closed} fech.
                 </div>
                 <div style={{ fontSize: 14, color: 'var(--t2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>
                   {r.staff_comment && <span className="chip chip-soft" style={{ marginRight: 8 }}>Comentado</span>}
@@ -403,7 +403,8 @@ function ReportForm({ existing }: { existing?: Report }) {
   const set = (k: keyof Form) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setF({ ...f, [k]: e.target.value });
 
   const missing: string[] = [];
-  if (!f.start || !f.end || f.end < f.start) missing.push('o período');
+  if (!f.start || !f.end) missing.push('o período');
+  else if (f.end < f.start) missing.push('o período (a data final está antes da inicial)');
   if (f.executed === null) missing.push('se conseguiu executar ações');
   if (f.executed === true) {
     if (!f.actions.trim()) missing.push('as ações realizadas');

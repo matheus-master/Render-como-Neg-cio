@@ -746,3 +746,31 @@ a.rep-row:hover { text-decoration: none; background: var(--alt); }
 .stale-row { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid var(--b-div); }
 .stale-name { font-weight: 600; font-size: 15px; color: var(--t); }
 .stale-name:hover { text-decoration: underline; }
+
+/* ---------- Check-up: listas que cortavam texto ---------- */
+.fila-table { min-width: 980px; }
+.stu-row { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1.1fr) minmax(0, .9fr) minmax(0, .9fr); }
+.stu-row > * { min-width: 0; }
+.stu-row .chip { white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+@media (max-width: 1400px) {
+  .stu-row { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1.1fr) minmax(0, .9fr); }
+  .stu-row > :nth-child(5) { display: none; }
+}
+@media (max-width: 760px) {
+  .stu-row { grid-template-columns: minmax(0, 1fr) 112px; padding: 12px 14px; }
+  .stu-row > :nth-child(3), .stu-row > :nth-child(4) { display: none; }
+  .fila-table { min-width: 0; }
+  .fila-head { display: none; }
+  .fila-grid { grid-template-columns: minmax(0, 1fr) auto; gap: 4px 12px; padding: 14px 16px; }
+  .fila-grid > :nth-child(2) { display: none; }
+  .fila-grid > :nth-child(3), .fila-grid > :nth-child(4), .fila-grid > :nth-child(5) { grid-column: 1; font-size: 13px; }
+  .fila-grid > :nth-child(6) { grid-column: 2; grid-row: 1; }
+  .fb-head > div:first-child { flex: 1 1 100% !important; }
+  .ag-ev .ag-resp { flex-basis: 100%; padding-left: 16px; }
+}
+/* Menu da equipe no celular: rolagem horizontal sem cortar */
+.staff-mnav { flex-direction: row !important; overflow-x: auto; padding: 8px 12px; gap: 4px; border-bottom: 1px solid var(--line); flex: none; scrollbar-width: none; }
+.staff-mnav::-webkit-scrollbar { display: none; }
+.staff-mnav a { flex: none; white-space: nowrap; }
+@media (max-width: 760px) { .staff-mnav a { padding: 8px 10px; gap: 6px; font-size: 14px; } .staff-mnav a svg { width: 16px; height: 16px; } }
+@media (max-width: 760px) { .staff-mnav { padding: 8px; gap: 2px; } .staff-mnav a { flex: 1 1 auto; justify-content: center; padding: 8px 7px; } .staff-mnav a span[style] { flex: none !important; } }

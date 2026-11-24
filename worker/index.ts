@@ -47,7 +47,7 @@ export default {
   },
 
   async scheduled(_ctrl: ScheduledController, env: Env): Promise<void> {
-    if (!hasServiceKey(env)) return;
+    if (!hasServiceKey(env) || !env.ANTHROPIC_API_KEY) return; // robô desligado: nada a fazer
     const supa = adminClient(env);
     // 1) Envios que nunca entraram na fila (o app caiu entre o insert e o pedido de análise).
     const { data: orphan } = await supa
@@ -106,8 +106,10 @@ async function api(req: Request, url: URL, env: Env, ctx: ExecutionContext): Pro
 
   // POST /api/check-link  { url }
   if (url.pathname === '/api/check-link') {
-    const { url: link } = (await req.json()) as { url?: string };
+    const body = (await req.json().catch(() => ({}))) as { url?: unknown };
+    const link = typeof body.url === 'string' ? body.url.trim().slice(0, 2000) : '';
     if (!link) return json({ ok: false, private: false, reason: 'Cole um link.' });
+    if (!isPublicUrl(link)) return json({ ok: false, private: false, reason: 'Esse link não parece válido. Use um endereço que comece com https://' });
     const r = await fetchLink(link);
     // Site público que bloqueia robôs (Behance, Instagram…): aceita o link; a equipe abre manualmente.
     if (!r.ok && r.blocked) return json({ ok: true, blocked: true, reason: r.reason });
@@ -122,7 +124,7 @@ async function api(req: Request, url: URL, env: Env, ctx: ExecutionContext): Pro
 
   // POST /api/submissions/:id/analyze  · aluno (logo após enviar) ou equipe ("Gerar de novo")
   if (action === 'analyze') {
-    if (!hasServiceKey(env)) return json({ error: 'A análise automática ainda não está ligada. A equipe faz a devolutiva.' }, 503);
+    if (!hasServiceKey(env) || !env.ANTHROPIC_API_KEY) return json({ error: 'A análise automática ainda não está ligada. A equipe faz a devolutiva.' }, 503);
     const { data: sub } = await adminClient(env).from('submissions').select('id, student_id, status, feedbacks(ai_status)').eq('id', id).single();
     if (!sub) return json({ error: 'Envio não encontrado' }, 404);
     const fb = sub.feedbacks as unknown as { ai_status: string };
@@ -140,7 +142,7 @@ async function api(req: Request, url: URL, env: Env, ctx: ExecutionContext): Pro
 
   // POST /api/submissions/:id/release  { draft }  · só equipe
   if (caller.role !== 'staff') return json({ error: 'Sem permissão' }, 403);
-  const { draft } = (await req.json()) as { draft?: Feedback };
+  const { draft } = (await req.json().catch(() => ({}))) as { draft?: Feedback };
   if (!draft || !['ok', 'aj', 're'].includes(draft.verdict)) return json({ error: 'Escolha um veredito antes de liberar.' }, 400);
   const clean: Feedback = {
     verdict: draft.verdict,
@@ -155,4 +157,19 @@ async function api(req: Request, url: URL, env: Env, ctx: ExecutionContext): Pro
   if (error) return json({ error: error.message }, 400);
   if (hasServiceKey(env)) ctx.waitUntil(notifyReleased(env, id).catch((e) => console.error('email', e)));
   return json({ ok: true });
+}
+
+/** Só endereços públicos http(s): nada de IP interno, localhost ou outros protocolos. */
+function isPublicUrl(raw: string): boolean {
+  let u: URL;
+  try {
+    u = new URL(/^[a-z][a-z0-9+.-]*:/i.test(raw) ? raw : 'https://' + raw);
+  } catch {
+    return false;
+  }
+  if (u.protocol !== 'https:' && u.protocol !== 'http:') return false;
+  const h = u.hostname.toLowerCase();
+  if (!h.includes('.') || h === 'localhost' || h.endsWith('.local') || h.endsWith('.internal')) return false;
+  if (/^\d+\.\d+\.\d+\.\d+$/.test(h) || h.startsWith('[')) return false; // IP direto
+  return true;
 }

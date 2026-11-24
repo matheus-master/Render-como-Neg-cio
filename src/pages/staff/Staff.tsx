@@ -7,7 +7,7 @@ import { forbiddenHits, SLOTS, VERDICTS, type Feedback, type Verdict } from '../
 import { Chip, ErrorState, VerdictChip, Mark } from '../../components/ui';
 import { Logo } from '../../components/StudentLayout';
 import { useAuth, useProfile } from '../../lib/auth';
-import { useQueue, useReviewItem, type QueueRow, type ReviewItem } from '../../lib/data';
+import { useFeatures, useQueue, useReviewItem, type QueueRow, type ReviewItem } from '../../lib/data';
 import { firstName, fmtDue, fmtDueRel, fmtLongToday, fmtSent, fmtTime } from '../../lib/format';
 import { apiPost, supabase } from '../../lib/supabase';
 import { useToast } from '../../lib/toast';
@@ -21,7 +21,7 @@ export function StaffLayout() {
   const q = useQueue();
   const nav = useNavigate();
   const mobile = useIsMobile();
-  const pend = (q.data || []).filter((r) => r.status === 'revisao').length;
+  const pend = (q.data || []).filter((r) => r.status !== 'pronta').length; // com o robô desligado, 'em análise' também espera a equipe
   const items: [string, string, React.ReactNode, number?][] = [
     ['/equipe', 'Painel', <LayoutDashboard size={17} strokeWidth={1.8} aria-hidden key="p" />],
     ['/equipe/fila', 'Fila de revisão', <Inbox size={17} strokeWidth={1.8} aria-hidden key="f" />, pend],
@@ -29,10 +29,11 @@ export function StaffLayout() {
     ['/equipe/config', 'Configurações', <Settings size={17} strokeWidth={1.8} aria-hidden key="c" />],
   ];
   const logout = async () => { await signOut(); nav('/equipe/entrar'); };
+  const SHORT: Record<string, string> = { 'Fila de revisão': 'Fila', Configurações: 'Ajustes' };
   const links = items.map(([to, label, icon, badge]) => (
-    <NavLink key={to} to={to} end={to === '/equipe'} className={({ isActive }) => (isActive || (to === '/equipe/fila' && location.pathname.startsWith('/equipe/revisao')) ? 'active' : '')}>
+    <NavLink key={to} to={to} end={to === '/equipe'} aria-label={label} className={({ isActive }) => (isActive || (to === '/equipe/fila' && location.pathname.startsWith('/equipe/revisao')) ? 'active' : '')}>
       {icon}
-      <span style={{ flex: 1 }}>{label}</span>
+      <span style={{ flex: 1 }}>{mobile ? SHORT[label] ?? label : label}</span>
       {!!badge && <span className="badge">{badge}</span>}
     </NavLink>
   ));
@@ -43,7 +44,7 @@ export function StaffLayout() {
           <Logo to="/equipe" />
           <button className="btn-out-light" onClick={logout}>Sair</button>
         </header>
-        <nav className="sidenav" style={{ flexDirection: 'row', overflowX: 'auto', padding: '8px 12px', gap: 6, borderBottom: '1px solid var(--line)', flex: 'none' }}>{links}</nav>
+        <nav className="sidenav staff-mnav" aria-label="Menu da equipe">{links}</nav>
         <main style={{ flex: 1, display: 'flex', flexDirection: 'column' }}><Outlet /></main>
       </div>
     );
@@ -88,7 +89,9 @@ export function Fila() {
   const rows = q.data || [];
   const pend = rows.filter((r) => r.status !== 'pronta');
   const lib = rows.filter((r) => r.status === 'pronta').sort((a, b) => (b.fb.released_at || '').localeCompare(a.fb.released_at || ''));
-  const pendCount = pend.filter((r) => r.status === 'revisao').length;
+  const pendCount = pend.length;
+  const ai = useFeatures().data?.ai ?? false;
+  const groups = [...new Set(rows.map((r) => r.student.group_name).filter(Boolean) as string[])].sort();
   const todayDue = pend.filter((r) => fmtDueRel(r.due_at).today).sort((a, b) => a.due_at.localeCompare(b.due_at));
   const list = (tab === 'pend' ? pend : lib).filter((r) => grp === 'Todos' || r.student.group_name === grp);
 
@@ -118,7 +121,7 @@ export function Fila() {
           <button className={tab === 'lib' ? 'on' : ''} onClick={() => setTab('lib')}>Liberadas</button>
         </div>
         <div style={{ width: 1, height: 24, background: '#D3D6DB', margin: '0 4px' }} />
-        {['Todos', 'Zorango Tango', 'Octa Performance'].map((g) => (
+        {['Todos', ...groups].map((g) => (
           <button key={g} className={'pill' + (grp === g ? ' on' : '')} onClick={() => setGrp(g)}>
             {g === 'Todos' ? 'Todos os grupos' : g}
           </button>
@@ -129,7 +132,7 @@ export function Fila() {
         <ErrorState onRetry={q.refetch} />
       ) : (
         <div className="card" style={{ padding: 0, borderRadius: 10, overflowX: 'auto' }}>
-          <div style={{ minWidth: 980, fontSize: 15 }}>
+          <div className="fila-table" style={{ fontSize: 15 }}>
             <div className="fila-grid fila-head">
               <div>Aluno</div>
               <div>Grupo</div>
@@ -185,14 +188,14 @@ export function Fila() {
                     ) : k === 'wait' ? (
                       <Chip tone="soft">Aguardando revisão</Chip>
                     ) : (
-                      <Chip live style={{ border: 0, paddingLeft: 0 }}>Análise em andamento</Chip>
+                      ai ? <Chip live style={{ border: 0, paddingLeft: 0 }}>Análise em andamento</Chip> : <Chip tone="soft">Aguardando a equipe</Chip>
                     )}
                   </div>
                   <div>
                     {k === 'draft' && <button className="btn btn-primary btn-sm btn-block" onClick={open}>Continuar</button>}
                     {k === 'wait' && <button className="btn btn-outline btn-sm btn-block" onClick={open}>Revisar</button>}
                     {k === 'lib' && <button className="btn btn-outline btn-sm btn-block" onClick={open}>Ver</button>}
-                    {k === 'run' && <button className="btn btn-secondary btn-sm btn-block" onClick={open}>Abrir</button>}
+                    {k === 'run' && <button className={'btn btn-sm btn-block ' + (ai ? 'btn-secondary' : 'btn-outline')} onClick={open}>{ai ? 'Abrir' : 'Escrever'}</button>}
                   </div>
                 </div>
               );
@@ -234,7 +237,17 @@ export function Revisao() {
   const { id } = useParams();
   const q = useReviewItem(id);
   if (q.isLoading) return <div style={{ padding: 40 }}><div className="skel" style={{ height: 400, borderRadius: 12 }} /></div>;
-  if (q.isError || !q.data) return <div className="staff-wrap"><ErrorState onRetry={q.refetch} /></div>;
+  if (q.isError) return <div className="staff-wrap"><ErrorState onRetry={q.refetch} /></div>;
+  if (!q.data)
+    return (
+      <div className="staff-wrap">
+        <div className="dashed" style={{ gap: 10 }}>
+          <div style={{ fontWeight: 600, fontSize: 17 }}>Envio não encontrado</div>
+          <div style={{ fontSize: 14, color: 'var(--t3)' }}>Ele pode ter sido apagado, ou o link está incompleto.</div>
+          <Link to="/equipe/fila" className="btn btn-primary btn-sm">Voltar para a fila</Link>
+        </div>
+      </div>
+    );
   return <ReviewScreen key={q.data.id} item={q.data} refetch={q.refetch} />;
 }
 
@@ -243,6 +256,7 @@ function ReviewScreen({ item, refetch }: { item: ReviewItem; refetch: () => unkn
   const nav = useNavigate();
   const qc = useQueryClient();
   const profile = useProfile();
+  const ai = useFeatures().data?.ai ?? false;
   const released = item.status === 'pronta';
   const [draft, setDraft] = useState<Draft>(() => toDraft(released ? item.fb.released : item.fb.draft));
   const [scratch, setScratch] = useState(false);
@@ -318,8 +332,9 @@ function ReviewScreen({ item, refetch }: { item: ReviewItem; refetch: () => unkn
   };
 
   const meta = [item.student.studio, item.student.group_name, `versão ${item.version}`, `enviada ${fmtSent(item.created_at)}`, released ? 'liberada' : `vence ${fmtDue(item.due_at)}`].filter(Boolean).join(' · ');
-  const generating = !hasDraft && ['pending', 'queued'].includes(item.fb.ai_status) && !released;
-  const failed = !hasDraft && item.fb.ai_status === 'failed' && !released;
+  const generating = ai && !hasDraft && ['pending', 'queued'].includes(item.fb.ai_status) && !released;
+  const failed = ai && !hasDraft && item.fb.ai_status === 'failed' && !released;
+  const manual = !ai && !hasDraft && !released; // robô desligado: a equipe escreve a devolutiva
 
   return (
     <>
@@ -340,14 +355,22 @@ function ReviewScreen({ item, refetch }: { item: ReviewItem; refetch: () => unkn
           <div style={{ padding: '24px 28px', display: 'flex', flexDirection: 'column', gap: 20, flex: 1 }}>
             <div className="between" style={{ flexWrap: 'wrap', alignItems: 'center', gap: 10 }}>
               <div style={{ fontSize: 13, fontWeight: 600, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--t3)' }}>
-                {released ? 'Devolutiva liberada' : 'Devolutiva · rascunho gerado'}
+                {released ? 'Devolutiva liberada' : item.fb.draft && !scratch ? 'Devolutiva · rascunho' : 'Devolutiva'}
               </div>
               <div style={{ fontSize: 14, color: 'var(--t3)' }}>
                 Critérios de {SLOTS[item.slot].tipo} · {item.student.group_name || 'todos os grupos'}
               </div>
             </div>
 
-            {generating ? (
+            {manual ? (
+              <div className="card stack" style={{ gap: 12, padding: 24 }}>
+                <div style={{ fontWeight: 600, fontSize: 16 }}>Escreva a devolutiva</div>
+                <div style={{ fontSize: 15, color: 'var(--t2)', lineHeight: 1.45 }}>
+                  A análise automática está desligada, então o rascunho não vem pronto. Leia o material ao lado e escreva a devolutiva: veredito, resumo, pontos a ajustar e próximos passos.
+                </div>
+                <button className="btn btn-primary" style={{ alignSelf: 'flex-start' }} onClick={() => { setScratch(true); setDraft(EMPTY); }}>Escrever devolutiva</button>
+              </div>
+            ) : generating ? (
               <div className="card stack" style={{ alignItems: 'center', gap: 12, padding: '40px 20px', textAlign: 'center' }}>
                 <div className="spinner" />
                 <div style={{ fontWeight: 600, fontSize: 16 }}>Gerando o rascunho da devolutiva…</div>
@@ -481,6 +504,7 @@ function Field({ value, onChange, min = 44, placeholder }: { value: string; onCh
 
 function Material({ item, student }: { item: ReviewItem; student: string }) {
   const [url, setUrl] = useState<string | null>(null);
+  const mobile = useIsMobile();
   const isPdf = item.source_kind === 'file' && /\.pdf$/i.test(item.file_path || '');
   useEffect(() => {
     if (item.source_kind !== 'file' || !item.file_path) return;
@@ -503,7 +527,12 @@ function Material({ item, student }: { item: ReviewItem; student: string }) {
           <span style={{ fontWeight: 600 }}>Observação de {student}:</span> {item.note}
         </div>
       )}
-      {isPdf && url ? (
+      {isPdf && url && mobile ? (
+        <a href={url} target="_blank" rel="noreferrer" className="paper" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, textAlign: 'center' }}>
+          <b>{item.file_name || 'Arquivo PDF'}</b>
+          <span className="btn btn-primary btn-sm">Abrir PDF</span>
+        </a>
+      ) : isPdf && url ? (
         <iframe title="Material do aluno" src={url} style={{ width: '100%', flex: 1, minHeight: 720, border: 0, borderRadius: 6, boxShadow: '0 1px 4px rgba(0,0,0,.12)', background: '#fff' }} />
       ) : body ? (
         <div className="paper">
@@ -512,7 +541,11 @@ function Material({ item, student }: { item: ReviewItem; student: string }) {
         </div>
       ) : (
         <div className="paper" style={{ color: 'var(--t3)' }}>
-          {item.source_kind === 'link' ? 'O conteúdo do link aparece aqui depois da análise. Use "Abrir link".' : item.source_kind === 'file' ? 'O texto do Word aparece aqui depois da análise. Use "Abrir arquivo".' : 'Sem conteúdo.'}
+          {item.source_kind === 'link'
+            ? 'O material está no link enviado pelo aluno. Use "Abrir link ↗" acima.'
+            : item.source_kind === 'file'
+              ? 'Este formato não abre aqui dentro. Use "Abrir arquivo ↗" acima para baixar e ler.'
+              : 'Sem conteúdo.'}
         </div>
       )}
     </div>

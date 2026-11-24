@@ -64,3 +64,8 @@ export const fmtMB = (bytes: number) => new Intl.NumberFormat('pt-BR', { maximum
 export const initials = (name: string) =>
   name.split(/\s+/).filter((w) => /^\p{L}/u.test(w)).slice(0, 2).map((w) => w[0]!.toUpperCase()).join('') || '?';
 export const firstName = (name: string) => name.split(' ').filter(Boolean)[0] || '';
+
+/** O prazo já passou? */
+export const isPast = (iso: string) => new Date(iso).getTime() < Date.now();
+/** Texto curto do prazo para o aluno: a data, ou "finalizando" quando já passou (sem expor atraso como erro). */
+export const dueLine = (iso: string) => (isPast(iso) ? 'finalizando' : 'até ' + fmtDueShort(iso));

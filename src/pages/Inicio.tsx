@@ -3,7 +3,7 @@ import { SLOT_ORDER, SLOTS } from '../../shared/domain';
 import { DocChip, ErrorState, PageSkeleton, Mark } from '../components/ui';
 import { useProfile } from '../lib/auth';
 import { useDocs, useGami, useReports, type DocState } from '../lib/data';
-import { firstName, fmtBRL, fmtDay, fmtDueShort, fmtPeriod } from '../lib/format';
+import { dueLine, firstName, fmtBRL, fmtDay, fmtPeriod } from '../lib/format';
 
 export function slotHref(d: DocState): string {
   if (d.status === 'none') return `/documentos/nova?slot=${d.slot}`;
@@ -14,8 +14,7 @@ export function slotHref(d: DocState): string {
 export function docLine(d: DocState): string {
   const v = d.latest?.version;
   if (d.status === 'none') return 'Toque para enviar';
-  if (d.status === 'analise') return `Versão ${v} · em análise`;
-  if (d.status === 'revisao') return `Versão ${v} · previsão ${fmtDueShort(d.latest!.due_at)}`;
+  if (d.status === 'analise' || d.status === 'revisao') return `Versão ${v} · com a equipe · ${dueLine(d.latest!.due_at)}`;
   return `Versão ${v} · devolutiva pronta`;
 }
 
@@ -79,7 +78,7 @@ export default function Inicio() {
         <div className="card" style={{ padding: '22px 20px', display: 'flex', flexDirection: 'column', gap: 16 }}>
           <div style={{ fontWeight: 600, fontSize: 20, lineHeight: 1.25 }}>Comece enviando seu primeiro material</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12, fontSize: 15, lineHeight: 1.45, color: 'var(--t2)' }}>
-            {['Escolha entre portfólio, proposta ou contrato.', 'Envie o arquivo, um link ou cole o texto.', 'Receba a devolutiva revisada pela equipe em até 48h.'].map((t, i) => (
+            {['Escolha o material: proposta, contrato, portfólio ou apresentação do studio.', 'Envie o arquivo, um link ou cole o texto.', 'Receba a devolutiva revisada pela equipe em até 48h.'].map((t, i) => (
               <div key={i} style={{ display: 'flex', gap: 12 }}>
                 <div style={{ width: 26, height: 26, borderRadius: '50%', background: 'var(--ac-soft)', color: 'var(--ac)', display: 'grid', placeItems: 'center', fontWeight: 600, fontSize: 13, flex: 'none' }}>{i + 1}</div>
                 <div>{t}</div>

@@ -162,6 +162,7 @@ function EventModal({ original, students, groups, onClose }: { original?: StaffE
   };
   const remove = async () => {
     if (!original || !confirm('Apagar este evento de vez? Ele some do calendário dos alunos sem aviso.')) return;
+    if (original.files.length) await supabase.storage.from('files').remove(original.files.map((x) => x.file_path));
     await supabase.from('events').delete().eq('id', original.id);
     refresh();
     onClose();

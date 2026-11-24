@@ -2,6 +2,7 @@ import { PasswordFields, passwordOk } from '../components/PasswordFields';
 import { InstagramAntesDepois, InstagramLink, instagramOf } from '../components/InstagramAntesDepois';
 import { Avatar } from '../components/Avatar';
 import { StudentPlans } from '../components/Planos';
+import { useMyEvents, useMyPlans } from '../lib/agenda';
 import { safeName } from '../lib/upload';
 import { useQueryClient } from '@tanstack/react-query';
 import { Fragment, useEffect, useRef, useState } from 'react';
@@ -370,6 +371,11 @@ function Achievements({ g }: { g: Gami }) {
 // ---------------------------------------------------------------------
 export function Sessoes() {
   const red = useRedButton();
+  const plans = useMyPlans();
+  const events = useMyEvents();
+  const dirEvent = (events.data || []).filter((e) => e.kind === 'direcionamento' && !e.canceled).sort((a, b) => a.starts_at.localeCompare(b.starts_at));
+  const dirNext = dirEvent.find((e) => new Date(e.ends_at).getTime() > Date.now());
+  const dirDone = (plans.data || []).length > 0 || dirEvent.some((e) => new Date(e.ends_at).getTime() <= Date.now());
   const qc = useQueryClient();
   const toast = useToast();
   const [confirm, setConfirm] = useState(false);
@@ -394,9 +400,15 @@ export function Sessoes() {
           <div className="card stack" style={{ gap: 8 }}>
             <div className="between" style={{ alignItems: 'center' }}>
               <div className="h-card">Direcionamento inicial</div>
-              <span className="chip chip-none">Disponível</span>
+              {dirNext ? <Chip tone="soft">Agendado</Chip> : dirDone ? <Chip tone="ok">Realizado</Chip> : <span className="chip chip-none">Disponível</span>}
             </div>
-            <div style={{ fontSize: 15, lineHeight: 1.5, color: 'var(--t2)' }}>Sessão individual com a Taty para montar seu plano de ação personalizado.</div>
+            <div style={{ fontSize: 15, lineHeight: 1.5, color: 'var(--t2)' }}>
+              {dirNext
+                ? `Marcado para ${new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo', weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }).format(new Date(dirNext.starts_at))}. Os detalhes e o link estão no Calendário.`
+                : dirDone
+                  ? 'Sessão feita. Seu plano de ação está logo abaixo: marque cada passo quando fizer.'
+                  : 'Sessão individual com a Taty para montar seu plano de ação personalizado. A equipe marca a data com você.'}
+            </div>
           </div>
           <div className="card stack" style={{ gap: 12 }}>
             <div className="between" style={{ alignItems: 'center' }}>

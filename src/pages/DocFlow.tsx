@@ -5,7 +5,7 @@ import { BackLink, CheckIcon, ErrorState, PageSkeleton, VerdictChip, VersionChip
 import { MaterialPreview } from '../components/MaterialPreview';
 import { useProfile } from '../lib/auth';
 import { useDocs, useFeatures, useGami, useMarkSeen, useSetChecks } from '../lib/data';
-import { firstName, fmtDay, fmtDue, initials } from '../lib/format';
+import { firstName, fmtDay, fmtDue, fmtDueShort, initials, isPast } from '../lib/format';
 
 /** Tempo típico da análise (para a barra de progresso) e a partir de quando avisamos que está demorando. */
 const TYPICAL_MS = 3 * 60_000;
@@ -63,16 +63,20 @@ export function Status() {
   const slow = ai && stage === 1 && elapsed > SLOW_MS;
   const notSent = SLOT_ORDER.filter((x) => x !== slot && q.docs[x].status === 'none');
 
+  const late = isPast(lv.due_at);
+  const dueTxt = late ? 'em breve' : 'até ' + fmtDue(lv.due_at);
   const where = mail ? `Avisamos em ${profile.email} e aqui em Documentos quando estiver pronta.` : 'Ela aparece aqui em Documentos quando estiver pronta.';
   const title =
-    stage === 1 ? (ai ? 'Sua devolutiva chega até ' + fmtDue(lv.due_at) : 'Seu material está com a equipe') : stage === 2 ? 'A equipe está revisando sua devolutiva' : 'Sua devolutiva está pronta';
+    stage === 1 ? (ai && !late ? 'Sua devolutiva chega até ' + fmtDue(lv.due_at) : 'Seu material está com a equipe') : stage === 2 ? 'A equipe está revisando sua devolutiva' : 'Sua devolutiva está pronta';
   const sub =
     stage === 1
       ? ai
         ? `Não precisa ficar nesta tela. ${where}`
-        : `A equipe lê o material e escreve a devolutiva até ${fmtDue(lv.due_at)}. Não precisa ficar nesta tela: ${where.charAt(0).toLowerCase() + where.slice(1)}`
+        : `A equipe lê o material e escreve a devolutiva ${dueTxt}.${late ? ` O prazo previsto era ${fmtDueShort(lv.due_at)}; está levando um pouco mais, mas já está com a equipe.` : ''} Não precisa ficar nesta tela: ${where.charAt(0).toLowerCase() + where.slice(1)}`
       : stage === 2
-        ? `Previsão: até ${fmtDue(lv.due_at)}. ${where}`
+        ? late
+          ? `O prazo previsto era ${fmtDueShort(lv.due_at)}. A revisão está levando um pouco mais, mas a equipe já está finalizando. ${where}`
+          : `Previsão: até ${fmtDue(lv.due_at)}. ${where}`
         : `Revisada por ${reviewer}.`;
   const steps: [string, string][] = ai
     ? [
@@ -82,7 +86,7 @@ export function Status() {
       ]
     : [
         ['Recebido', 'Seu material chegou e está guardado com segurança.'],
-        ['Com a equipe', stage === 3 ? `Concluída por ${reviewer}` : `Alguém da equipe lê e escreve sua devolutiva até ${fmtDue(lv.due_at)}.`],
+        ['Com a equipe', stage === 3 ? `Concluída por ${reviewer}` : late ? 'A equipe está finalizando sua devolutiva.' : `Alguém da equipe lê e escreve sua devolutiva até ${fmtDue(lv.due_at)}.`],
         ['Devolutiva pronta', stage === 3 ? 'Liberada' : mail ? 'Você recebe um e-mail.' : 'Aparece em Documentos.'],
       ];
   // Sem robô, "Recebido" já está concluído e a etapa atual é "Com a equipe".

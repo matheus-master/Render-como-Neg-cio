@@ -148,8 +148,8 @@ export function Painel() {
               <button key={g} className={'pill' + (grp === g ? ' on' : '')} onClick={() => setGrp(g)}>{g === 'Todos' ? 'Todos os grupos' : g}</button>
             ))}
           </div>
-          <div style={{ overflowX: 'auto' }}>
-            <div style={{ minWidth: 820 }}>
+          <div>
+            <div>
               <div className="stu-row stu-head">
                 <div>Aluno</div>
                 <div>Nível</div>

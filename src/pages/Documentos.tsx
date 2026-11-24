@@ -4,8 +4,8 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { MAX_UPLOAD_BYTES, SLOT_ORDER, SLOTS } from '../../shared/domain';
 import { Chip, DocChip, ErrorState, extOf, FileIcon, PageHead, PageSkeleton, VersionChip, Mark } from '../components/ui';
 import { useAuth } from '../lib/auth';
-import { useDocs, useStudentFiles, type StudentFile } from '../lib/data';
-import { fmtDay, fmtDueShort } from '../lib/format';
+import { useDocs, useFeatures, useStudentFiles, type StudentFile } from '../lib/data';
+import { dueLine, fmtDay } from '../lib/format';
 import { supabase } from '../lib/supabase';
 import { useToast } from '../lib/toast';
 import { safeName, uploadWithProgress } from '../lib/upload';
@@ -42,6 +42,7 @@ export default function Documentos() {
 
 function ListTab({ docs }: { docs: ReturnType<typeof useDocs>['docs'] }) {
   const nav = useNavigate();
+  const ai = useFeatures().data?.ai ?? false;
   const seg = (on: boolean, cur: boolean) => ({ height: 6, borderRadius: 3, background: on ? (cur ? 'var(--ac)' : 'var(--ok)') : '#DCDFE3' });
   return (
     <>
@@ -74,7 +75,7 @@ function ListTab({ docs }: { docs: ReturnType<typeof useDocs>['docs'] }) {
                   </div>
                   <div className="between" style={{ fontSize: 14, gap: 10 }}>
                     <span style={{ color: 'var(--t2)' }}>
-                      {d.status === 'analise' ? 'Em análise · leva poucos minutos' : 'Em revisão pela equipe · até ' + fmtDueShort(d.latest!.due_at)}
+                      {d.status === 'analise' && ai ? 'Em análise · leva poucos minutos' : 'Com a equipe · ' + dueLine(d.latest!.due_at)}
                     </span>
                     <span style={{ fontWeight: 600, color: 'var(--ac)', whiteSpace: 'nowrap' }}>Acompanhar  →</span>
                   </div>

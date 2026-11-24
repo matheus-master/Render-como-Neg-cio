@@ -362,9 +362,9 @@ export function useReviewItem(id: string | undefined) {
             'id, slot, version, status, source_kind, file_path, file_name, link_url, pasted_text, note, due_at, created_at, student:profiles!submissions_student_id_fkey(full_name, studio, group_name, avatar_path), fb:feedbacks(ai_status, ai_error, draft, released, material_text, draft_saved_at, saver:profiles!feedbacks_draft_saved_by_fkey(full_name))',
           )
           .eq('id', id!)
-          .single(),
-      ) as unknown as ReviewItem,
-    refetchInterval: (q) => (q.state.data && ['pending', 'queued'].includes(q.state.data.fb.ai_status) ? 8_000 : false),
+          .maybeSingle(),
+      ) as unknown as ReviewItem | null,
+    refetchInterval: (q) => (q.state.data && q.state.data.fb.ai_status === 'queued' ? 8_000 : false),
   });
 }
 
