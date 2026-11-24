@@ -1,16 +1,17 @@
 // Regras de domínio compartilhadas entre o Worker e o front.
 
-export type Slot = 'proposta_arquitetos' | 'proposta_construtoras' | 'contrato' | 'portfolio';
+export type Slot = 'proposta_arquitetos' | 'proposta_construtoras' | 'contrato' | 'portfolio' | 'apresentacao';
 export type SubmissionStatus = 'analise' | 'revisao' | 'pronta';
 export type Verdict = 'ok' | 'aj' | 're';
 
-export const SLOT_ORDER: Slot[] = ['proposta_arquitetos', 'proposta_construtoras', 'contrato', 'portfolio'];
+export const SLOT_ORDER: Slot[] = ['proposta_arquitetos', 'proposta_construtoras', 'contrato', 'portfolio', 'apresentacao'];
 
-export const SLOTS: Record<Slot, { title: string; desc: string; tipo: 'Proposta' | 'Contrato' | 'Portfólio'; task: string | null }> = {
+export const SLOTS: Record<Slot, { title: string; desc: string; tipo: 'Proposta' | 'Contrato' | 'Portfólio' | 'Apresentação'; task: string | null }> = {
   proposta_arquitetos: { title: 'Proposta para arquitetos', desc: 'Escopo, valor por imagem, prazos e alterações para escritórios.', tipo: 'Proposta', task: null },
   proposta_construtoras: { title: 'Proposta para construtoras', desc: 'Pacote de lançamento, cronograma e condições de pagamento.', tipo: 'Proposta', task: 'Proposta para construtoras aprovada' },
   contrato: { title: 'Contrato', desc: 'Pagamento, entregas, direitos de uso das imagens e o que protege você.', tipo: 'Contrato', task: 'Contrato aprovado' },
   portfolio: { title: 'Portfólio', desc: 'Seleção de imagens, ordem e como você apresenta o studio.', tipo: 'Portfólio', task: null },
+  apresentacao: { title: 'Apresentação do studio', desc: 'O PowerPoint da reunião com construtora: quem é o studio, como trabalha e por que contratar.', tipo: 'Apresentação', task: null },
 };
 
 export const isSlot = (s: string | undefined): s is Slot => !!s && s in SLOTS;

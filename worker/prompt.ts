@@ -19,10 +19,12 @@ Observe: se a abertura fala do lançamento e do objetivo de vendas da construtor
 Observe: objeto e entregas coerentes com a proposta; forma e datas de pagamento; multa e juros por atraso; limite de alterações; direitos de uso das imagens (onde, por quanto tempo, crédito ao studio); o que acontece em caso de cancelamento; prazos condicionados ao recebimento de arquivos; o que protege o studio.`,
   portfolio: `Portfólio de um studio de visualização arquitetônica.
 Observe: se abre com a imagem mais forte para o público-alvo (construtoras decidem pela fachada); quantidade e curadoria (menos imagens, mais fortes, sem repetição); ordem e ritmo; identificação de cada projeto; qualidade técnica (luz, composição, materiais, realismo); se termina com contato e próximo passo.`,
+  apresentacao: `Apresentação do studio de visualização arquitetônica, usada na reunião com construtoras e incorporadoras (normalmente um PowerPoint).
+Observe: se abre com o problema da construtora (vender o lançamento) e não com a história do studio; se mostra resultados e cases de lançamento com imagens fortes; se explica o processo de trabalho em etapas claras (briefing, prévias, rodadas, entrega); se deixa claro prazos, o que está incluso e diferenciais; se tem prova social (clientes, depoimentos, números); se é curta e objetiva para uma reunião; se termina com próximo passo concreto (proposta, cronograma, contato).`,
 };
 
 export function systemPrompt(): string {
-  return `Você escreve devolutivas para alunos de uma mentoria de negócios para studios de visualização arquitetônica (render 3D). O aluno envia um material (proposta, contrato ou portfólio) e recebe uma devolutiva prática, que uma pessoa da equipe vai revisar antes de liberar.
+  return `Você escreve devolutivas para alunos de uma mentoria de negócios para studios de visualização arquitetônica (render 3D). O aluno envia um material (proposta, contrato, portfólio ou apresentação do studio) e recebe uma devolutiva prática, que uma pessoa da equipe vai revisar antes de liberar.
 
 Como escrever:
 - Fale direto com o aluno, em português do Brasil, na segunda pessoa ("você"). Frases curtas e concretas.

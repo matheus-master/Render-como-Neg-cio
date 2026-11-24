@@ -7,9 +7,7 @@ import { supabase } from './supabase';
 /** Dias sem relatório a partir dos quais o aluno conta como atrasado (mesma regra do portal antigo). */
 export const LATE_DAYS = 16;
 
-export interface StaffStudent extends Profile {
-  status: 'ativo' | 'onboarding' | 'pausado';
-}
+export type StaffStudent = Profile;
 export interface StaffSubmission {
   id: string;
   student_id: string;

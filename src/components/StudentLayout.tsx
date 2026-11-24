@@ -1,10 +1,10 @@
 import { BarChart3, CalendarDays, ChevronRight, FileText, House, LogOut, MessageSquareText, MoreHorizontal, Siren, Trophy, UserRound, type LucideIcon } from 'lucide-react';
 import { useState } from 'react';
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { useAuth, useProfile } from '../lib/auth';
+import { accessOf, useAuth, useProfile } from '../lib/auth';
 import { useDocs, useGami } from '../lib/data';
-import { initials } from '../lib/format';
 import { LevelUp } from './LevelUp';
+import { Avatar } from './Avatar';
 import { useIsMobile } from '../lib/useIsMobile';
 
 /** Menu lateral (computador), em dois grupos: o dia a dia e a mentoria. */
@@ -70,6 +70,27 @@ function LevelWidget({ g }: { g: ReturnType<typeof useGami> }) {
   );
 }
 
+/** Aviso de fim da mentoria (ou de prazo perto de vencer). */
+function AccessBanner() {
+  const profile = useProfile();
+  if (profile.role !== 'aluno') return null;
+  const a = accessOf(profile);
+  const fmt = (d: string) => new Intl.DateTimeFormat('pt-BR', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' }).format(new Date(d + 'T12:00:00Z'));
+  if (a.ended)
+    return (
+      <div className="access-banner ended">
+        <b>Sua mentoria terminou{a.until ? ` em ${fmt(a.until)}` : ''}.</b> Seus documentos, devolutivas, relatórios e sua evolução continuam aqui para você consultar. Para renovar e voltar a enviar materiais, fale com a equipe RCN.
+      </div>
+    );
+  if (a.left !== null && a.left <= 15)
+    return (
+      <div className="access-banner">
+        <b>{a.left === 0 ? 'Seu acesso vence hoje.' : `Seu acesso vence em ${a.left} ${a.left === 1 ? 'dia' : 'dias'}`}</b>{a.left ? ` (${fmt(a.until!)}).` : ''} Para continuar enviando materiais depois disso, fale com a equipe RCN sobre a renovação.
+      </div>
+    );
+  return null;
+}
+
 export default function StudentLayout() {
   const mobile = useIsMobile();
   const profile = useProfile();
@@ -94,8 +115,8 @@ export default function StudentLayout() {
       {mobile ? (
         <header className="mheader">
           <Logo />
-          <Link to="/perfil" className="avatar-btn" aria-label="Meu perfil">
-            {initials(profile.full_name)}
+          <Link to="/perfil" aria-label="Meu perfil">
+            <Avatar path={profile.avatar_path} name={profile.full_name} className="avatar-btn" />
           </Link>
         </header>
       ) : (
@@ -119,8 +140,8 @@ export default function StudentLayout() {
           </nav>
           {gami.current && <LevelWidget g={gami} />}
           <div className="sidebar-user">
-            <Link to="/perfil" className="avatar-btn" style={{ width: 34, height: 34 }} aria-label="Meu perfil">
-              {initials(profile.full_name)}
+            <Link to="/perfil" aria-label="Meu perfil">
+              <Avatar path={profile.avatar_path} name={profile.full_name} className="avatar-btn" size={34} />
             </Link>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: 14, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{profile.full_name}</div>
@@ -134,6 +155,7 @@ export default function StudentLayout() {
       )}
 
       <main style={{ flex: 1, minWidth: 0 }}>
+        <AccessBanner />
         <Outlet />
       </main>
       {session && <LevelUp uid={session.user.id} g={gami} />}

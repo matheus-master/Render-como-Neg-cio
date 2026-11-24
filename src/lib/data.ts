@@ -305,7 +305,7 @@ export interface QueueRow {
   status: SubmissionStatus;
   due_at: string;
   created_at: string;
-  student: { full_name: string; studio: string; group_name: string | null };
+  student: { full_name: string; studio: string; group_name: string | null; avatar_path: string | null };
   fb: { ai_status: 'pending' | 'queued' | 'done' | 'failed'; verdict: Verdict | null; released_at: string | null; draft_saved_at: string | null; saver: { full_name: string } | null; reviewer: { full_name: string } | null };
 }
 
@@ -317,7 +317,7 @@ export function useQueue() {
         await supabase
           .from('submissions')
           .select(
-            'id, slot, version, status, due_at, created_at, student:profiles!submissions_student_id_fkey(full_name, studio, group_name), fb:feedbacks(ai_status, verdict, released_at, draft_saved_at, saver:profiles!feedbacks_draft_saved_by_fkey(full_name), reviewer:profiles!feedbacks_reviewer_id_fkey(full_name))',
+            'id, slot, version, status, due_at, created_at, student:profiles!submissions_student_id_fkey(full_name, studio, group_name, avatar_path), fb:feedbacks(ai_status, verdict, released_at, draft_saved_at, saver:profiles!feedbacks_draft_saved_by_fkey(full_name), reviewer:profiles!feedbacks_reviewer_id_fkey(full_name))',
           )
           .order('due_at'),
       ) as unknown as QueueRow[],
@@ -338,7 +338,7 @@ export interface ReviewItem {
   note: string | null;
   due_at: string;
   created_at: string;
-  student: { full_name: string; studio: string; group_name: string | null };
+  student: { full_name: string; studio: string; group_name: string | null; avatar_path: string | null };
   fb: {
     ai_status: 'pending' | 'queued' | 'done' | 'failed';
     ai_error: string | null;
@@ -359,7 +359,7 @@ export function useReviewItem(id: string | undefined) {
         await supabase
           .from('submissions')
           .select(
-            'id, slot, version, status, source_kind, file_path, file_name, link_url, pasted_text, note, due_at, created_at, student:profiles!submissions_student_id_fkey(full_name, studio, group_name), fb:feedbacks(ai_status, ai_error, draft, released, material_text, draft_saved_at, saver:profiles!feedbacks_draft_saved_by_fkey(full_name))',
+            'id, slot, version, status, source_kind, file_path, file_name, link_url, pasted_text, note, due_at, created_at, student:profiles!submissions_student_id_fkey(full_name, studio, group_name, avatar_path), fb:feedbacks(ai_status, ai_error, draft, released, material_text, draft_saved_at, saver:profiles!feedbacks_draft_saved_by_fkey(full_name))',
           )
           .eq('id', id!)
           .single(),

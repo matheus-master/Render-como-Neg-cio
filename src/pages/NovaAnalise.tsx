@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { isSlot, MAX_UPLOAD_BYTES, MIN_TEXT_CHARS, SLOT_ORDER, SLOTS } from '../../shared/domain';
 import { BackLink, ErrorState, extOf, FileIcon, PageSkeleton, Mark } from '../components/ui';
-import { useAuth } from '../lib/auth';
+import { accessOf, useAuth, useProfile } from '../lib/auth';
 import { useDocs } from '../lib/data';
 import { fmtMB } from '../lib/format';
 import { apiPost, supabase } from '../lib/supabase';
@@ -16,13 +16,14 @@ type FileState =
   | { st: 'ready'; name: string; size: number; path: string }
   | { st: 'invalid'; name: string; reason: string };
 
-const ACCEPT = '.pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+const ACCEPT = '.pdf,.docx,.pptx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.presentationml.presentation';
 
 export default function NovaAnalise() {
   const [params, setParams] = useSearchParams();
   const slotParam = params.get('slot') ?? undefined;
   const slot = isSlot(slotParam) ? slotParam : null;
   const { session } = useAuth();
+  const profile = useProfile();
   const docsQ = useDocs();
   const qc = useQueryClient();
   const nav = useNavigate();
@@ -40,6 +41,20 @@ export default function NovaAnalise() {
 
   useEffect(() => () => upload.current?.cancel(), []);
 
+  if (accessOf(profile).ended)
+    return (
+      <div className="page">
+        <div className="flow" style={{ gap: 16 }}>
+          <BackLink to="/documentos">Meus documentos</BackLink>
+          <div className="card stack" style={{ gap: 8 }}>
+            <div className="h-card">Sua mentoria terminou</div>
+            <div style={{ fontSize: 15, lineHeight: 1.5, color: 'var(--t2)' }}>
+              Você continua vendo seus documentos e devolutivas, mas o envio de material novo fica fechado. Para renovar, fale com a equipe RCN.
+            </div>
+          </div>
+        </div>
+      </div>
+    );
   if (docsQ.isLoading) return <div className="page"><PageSkeleton hero={false} /></div>;
   if (docsQ.isError) return <div className="page"><ErrorState onRetry={docsQ.refetch} /></div>;
   const d = slot ? docsQ.docs[slot] : null;
@@ -49,8 +64,8 @@ export default function NovaAnalise() {
   const pickFile = (f: File) => {
     upload.current?.cancel();
     const ext = f.name.split('.').pop()?.toLowerCase();
-    if (ext !== 'pdf' && ext !== 'docx') {
-      return setFile({ st: 'invalid', name: f.name, reason: `"${f.name}" não é PDF nem Word. Exporte como PDF e envie de novo, ou mande um link.` });
+    if (ext !== 'pdf' && ext !== 'docx' && ext !== 'pptx') {
+      return setFile({ st: 'invalid', name: f.name, reason: `"${f.name}" não é PDF, Word nem PowerPoint. Exporte como PDF e envie de novo, ou mande um link.` });
     }
     if (f.size > MAX_UPLOAD_BYTES) {
       return setFile({ st: 'invalid', name: f.name, reason: `"${f.name}" tem ${fmtMB(f.size)}. O limite é 50 MB. Comprima o PDF ou mande um link.` });
@@ -168,7 +183,7 @@ export default function NovaAnalise() {
                 <button onClick={() => input.current?.click()} className="upload-zone" style={{ borderRadius: 10, background: '#fff', padding: '26px 16px', gap: 4, alignItems: 'center' }}>
                   <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'var(--ac-soft)', color: 'var(--ac)', display: 'grid', placeItems: 'center', fontSize: 22, fontWeight: 600, marginBottom: 6 }}><Mark m="↑" size={20} /></div>
                   <div style={{ fontWeight: 600, fontSize: 16 }}>Toque para escolher o arquivo</div>
-                  <div style={{ fontSize: 14, color: 'var(--t3)' }}>PDF ou Word (.docx), até 50 MB</div>
+                  <div style={{ fontSize: 14, color: 'var(--t3)' }}>PDF, Word (.docx) ou PowerPoint (.pptx), até 50 MB</div>
                 </button>
               )}
               {mode === 'file' && file.st === 'uploading' && (

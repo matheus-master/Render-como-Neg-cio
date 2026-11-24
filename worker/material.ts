@@ -1,3 +1,4 @@
+import JSZip from 'jszip';
 import mammoth from 'mammoth';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { PermanentError } from './env';
@@ -35,7 +36,8 @@ async function bytesToMaterial(bytes: ArrayBuffer, name: string, mime = ''): Pro
   const head = new Uint8Array(bytes.slice(0, 5));
   const isPdf = String.fromCharCode(...head) === '%PDF-';
   if (isPdf) return { kind: 'pdf', bytes, name };
-  const isZip = head[0] === 0x50 && head[1] === 0x4b; // .docx é um zip
+  const isZip = head[0] === 0x50 && head[1] === 0x4b; // .docx e .pptx são zip
+  if (/presentationml/.test(mime) || /\.pptx$/i.test(name)) return pptxToMaterial(bytes, name);
   if (isZip || /wordprocessingml/.test(mime) || /\.docx$/i.test(name)) {
     try {
       const { value } = await mammoth.extractRawText({ arrayBuffer: bytes } as never);
@@ -46,7 +48,28 @@ async function bytesToMaterial(bytes: ArrayBuffer, name: string, mime = ''): Pro
       throw new PermanentError('Não foi possível ler o arquivo Word.');
     }
   }
-  throw new PermanentError('Formato não suportado. Envie PDF ou Word (.docx).');
+  throw new PermanentError('Formato não suportado. Envie PDF, Word (.docx) ou PowerPoint (.pptx).');
+}
+
+/** PowerPoint: texto de cada slide, na ordem. As imagens ficam para a equipe ver no arquivo. */
+async function pptxToMaterial(bytes: ArrayBuffer, name: string): Promise<Material> {
+  try {
+    const zip = await JSZip.loadAsync(bytes);
+    const slides = Object.keys(zip.files)
+      .filter((f) => /^ppt\/slides\/slide\d+\.xml$/.test(f))
+      .sort((a, b) => Number(a.match(/\d+/)![0]) - Number(b.match(/\d+/)![0]));
+    const parts: string[] = [];
+    for (const [i, f] of slides.entries()) {
+      const xml = await zip.file(f)!.async('string');
+      const text = [...xml.matchAll(/<a:t>([^<]*)<\/a:t>/g)].map((m) => m[1]).join(' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').trim();
+      parts.push(`Slide ${i + 1}: ${text || '(só imagem)'}`);
+    }
+    if (!parts.length) throw new PermanentError('Não encontramos slides nesse PowerPoint. Peça o PDF ao aluno.');
+    return { kind: 'text', text: `Apresentação com ${parts.length} slides. Texto de cada slide (as imagens não aparecem aqui):\n\n` + parts.join('\n'), name };
+  } catch (e) {
+    if (e instanceof PermanentError) throw e;
+    throw new PermanentError('Não foi possível ler o PowerPoint. Peça o PDF ao aluno.');
+  }
 }
 
 // ---------------------------------------------------------------------

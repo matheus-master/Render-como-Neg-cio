@@ -15,6 +15,10 @@ export interface Profile {
   role: 'aluno' | 'staff';
   email_notify: boolean;
   created_at: string;
+  avatar_path: string | null;
+  access_until: string | null;
+  plan: string;
+  status: 'ativo' | 'onboarding' | 'pausado' | 'encerrado';
 }
 
 interface AuthState {
@@ -85,4 +89,11 @@ export function useProfile(): Profile {
   const { profile } = useAuth();
   if (!profile) throw new Error('perfil não carregado');
   return profile;
+}
+
+/** Situação do acesso do aluno (datas no horário de Brasília, igual ao banco): encerrado depois do prazo (ou quando a equipe encerra). */
+export function accessOf(p: Pick<Profile, 'access_until' | 'status'>) {
+  const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date());
+  const left = p.access_until ? Math.round((new Date(p.access_until + 'T12:00:00Z').getTime() - new Date(today + 'T12:00:00Z').getTime()) / 86_400_000) : null;
+  return { ended: p.status === 'encerrado' || (left !== null && left < 0), left, until: p.access_until };
 }

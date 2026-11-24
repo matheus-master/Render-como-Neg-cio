@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { MAX_UPLOAD_BYTES, SLOT_ORDER, SLOTS, type Slot } from '../../shared/domain';
 import { BackLink, ErrorState, extOf, FileIcon, Mark, PageSkeleton } from '../components/ui';
-import { useAuth } from '../lib/auth';
+import { accessOf, useAuth, useProfile } from '../lib/auth';
 import { useDocs } from '../lib/data';
 import { fmtMB } from '../lib/format';
 import { apiPost, supabase } from '../lib/supabase';
@@ -16,7 +16,7 @@ type Item =
   | { st: 'sent'; file: File }
   | { st: 'error'; file: File; reason: string };
 
-const ACCEPT = '.pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+const ACCEPT = '.pdf,.docx,.pptx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.presentationml.presentation';
 
 /** Adivinha o tipo pelo nome do arquivo ("PROPOSTA_CONSTRUTORA.pdf" → proposta para construtoras). */
 function guess(name: string): Slot | null {
@@ -24,13 +24,14 @@ function guess(name: string): Slot | null {
   if (/contrat/.test(n)) return 'contrato';
   if (/portf|book/.test(n)) return 'portfolio';
   if (/constru|incorpor/.test(n)) return 'proposta_construtoras';
+  if (/apresenta|pitch|institucional|\.pptx$/.test(n)) return 'apresentacao';
   if (/arquitet|escritori/.test(n)) return 'proposta_arquitetos';
   return null;
 }
 
 const problem = (f: File) => {
   const ext = f.name.split('.').pop()?.toLowerCase();
-  if (ext !== 'pdf' && ext !== 'docx') return 'Não é PDF nem Word.';
+  if (ext !== 'pdf' && ext !== 'docx' && ext !== 'pptx') return 'Não é PDF, Word nem PowerPoint.';
   if (f.size > MAX_UPLOAD_BYTES) return `Tem ${fmtMB(f.size)}; o limite é 50 MB.`;
   return null;
 };
@@ -38,6 +39,7 @@ const problem = (f: File) => {
 export default function Lote() {
   const q = useDocs();
   const { session } = useAuth();
+  const profile = useProfile();
   const qc = useQueryClient();
   const nav = useNavigate();
   const toast = useToast();
@@ -50,6 +52,20 @@ export default function Lote() {
   const uploads = useRef<UploadHandle[]>([]);
   useEffect(() => () => uploads.current.forEach((u) => u.cancel()), []);
 
+  if (accessOf(profile).ended)
+    return (
+      <div className="page">
+        <div className="flow" style={{ gap: 16 }}>
+          <BackLink to="/documentos">Meus documentos</BackLink>
+          <div className="card stack" style={{ gap: 8 }}>
+            <div className="h-card">Sua mentoria terminou</div>
+            <div style={{ fontSize: 15, lineHeight: 1.5, color: 'var(--t2)' }}>
+              Você continua vendo seus documentos e devolutivas, mas o envio de material novo fica fechado. Para renovar, fale com a equipe RCN.
+            </div>
+          </div>
+        </div>
+      </div>
+    );
   if (q.isLoading) return <div className="page"><PageSkeleton hero={false} /></div>;
   if (q.isError) return <div className="page"><ErrorState onRetry={q.refetch} /></div>;
 
@@ -146,7 +162,7 @@ export default function Lote() {
             >
               <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'var(--ac-soft)', color: 'var(--ac)', display: 'grid', placeItems: 'center', marginBottom: 6 }}><Mark m="↑" size={20} /></div>
               <div style={{ fontWeight: 600, fontSize: 16 }}>Escolher os arquivos</div>
-              <div style={{ fontSize: 14, color: 'var(--t3)' }}>Pode selecionar vários · PDF ou Word, até 50 MB cada</div>
+              <div style={{ fontSize: 14, color: 'var(--t3)' }}>Pode selecionar vários · PDF, Word ou PowerPoint, até 50 MB cada</div>
             </button>
             {warn && <div style={{ fontSize: 14, color: 'var(--warn-t)', background: 'var(--warn-bg)', padding: '10px 12px', borderRadius: 8 }}>{warn}</div>}
 

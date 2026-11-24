@@ -46,6 +46,21 @@ function useShots(studentId: string) {
 const today = () => new Date(Date.now() - new Date().getTimezoneOffset() * 60_000).toISOString().slice(0, 10);
 const fmt = (d: string) => new Intl.DateTimeFormat('pt-BR', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }).format(new Date(d + 'T12:00:00Z'));
 const daysBetween = (a: string, b: string) => Math.round((new Date(b).getTime() - new Date(a).getTime()) / 86_400_000);
+/** Marco do print em relação ao "antes": "1 mês depois", "3 meses depois"… */
+const milestone = (antes: string | undefined, d: string) => {
+  if (!antes) return 'Acompanhamento';
+  const days = daysBetween(antes, d);
+  if (days < 20) return `${Math.max(days, 0)} dias depois`;
+  const m = Math.round(days / 30);
+  return m === 1 ? '1 mês depois' : `${m} meses depois`;
+};
+const addMonths = (iso: string, n: number) => {
+  const d = new Date(iso + 'T12:00:00Z');
+  d.setUTCMonth(d.getUTCMonth() + n);
+  const out = d.toISOString().slice(0, 10);
+  return out > today() ? today() : out;
+};
+const MARCOS = [1, 2, 3, 6];
 
 /** Prints do perfil do Instagram: antes (quando entrou) e depois (evolução), lado a lado. Usado no perfil do aluno e na ficha da equipe. */
 export function InstagramAntesDepois({ studentId, instagram, team }: { studentId: string; instagram?: string | null; team?: boolean }) {
@@ -96,7 +111,7 @@ export function InstagramAntesDepois({ studentId, instagram, team }: { studentId
     setPending(null);
     setPick(null);
     await qc.invalidateQueries({ queryKey: ['instagram_shots', studentId] });
-    toast(pending.kind === 'antes' ? 'Print do antes salvo.' : 'Print do depois salvo.');
+    toast(pending.kind === 'antes' ? 'Print de entrada salvo.' : 'Print de acompanhamento salvo.');
   };
   const remove = async (s: Shot) => {
     if (!confirm('Apagar este print?')) return;
@@ -109,7 +124,7 @@ export function InstagramAntesDepois({ studentId, instagram, team }: { studentId
   const Frame = ({ s, kind }: { s: Shot | null; kind: 'antes' | 'depois' }) => (
     <div className="ig-col">
       <div className="between" style={{ alignItems: 'baseline' }}>
-        <span className={'ig-tag' + (kind === 'depois' ? ' after' : '')}>{kind === 'antes' ? 'Antes' : 'Depois'}</span>
+        <span className={'ig-tag' + (kind === 'depois' ? ' after' : '')}>{kind === 'antes' ? 'Antes · entrada' : s ? milestone(antes?.taken_on, s.taken_on) : 'Acompanhamento'}</span>
         {s && <span className="mono" style={{ fontSize: 12, color: 'var(--t3)' }}>{fmt(s.taken_on)}</span>}
       </div>
       {s?.url ? (
@@ -119,8 +134,8 @@ export function InstagramAntesDepois({ studentId, instagram, team }: { studentId
       ) : (
         <button className="ig-frame empty" onClick={() => choose(kind)}>
           <Mark m="+" size={22} />
-          <b>{kind === 'antes' ? 'Print de quando entrou' : 'Print de agora'}</b>
-          <small>{kind === 'antes' ? 'Como o perfil estava antes da mentoria' : 'Como o perfil está hoje'}</small>
+          <b>{kind === 'antes' ? 'Print de quando entrou' : 'Print de acompanhamento'}</b>
+          <small>{kind === 'antes' ? 'Como o perfil estava ao entrar na mentoria' : 'Opcional · a cada marco: 1, 2, 3 meses…'}</small>
         </button>
       )}
       {s && (
@@ -140,7 +155,9 @@ export function InstagramAntesDepois({ studentId, instagram, team }: { studentId
         <div>
           <div className="h-card">Instagram: antes e depois</div>
           <div style={{ fontSize: 14, color: 'var(--t3)', marginTop: 2, lineHeight: 1.45 }}>
-            {team ? 'Prints do perfil do aluno. A equipe também pode subir os prints.' : 'Suba um print do seu perfil de quando entrou e outro de agora. Vá adicionando novos prints para ver sua evolução.'}
+            {team
+              ? 'O "antes" é o registro de entrada do aluno. Os prints de acompanhamento são opcionais, a cada marco (1, 2, 3 meses). A equipe também pode subir.'
+              : 'O "antes" é como seu perfil estava ao entrar. Depois, se quiser, adicione um print a cada marco (1, 2, 3 meses) para ver a evolução.'}
           </div>
         </div>
         {ig ? (
@@ -167,12 +184,12 @@ export function InstagramAntesDepois({ studentId, instagram, team }: { studentId
           </div>
           {depoisAll.length > 1 && (
             <div>
-              <div className="label" style={{ marginBottom: 8 }}>Evolução · escolha qual "depois" comparar</div>
+              <div className="label" style={{ marginBottom: 8 }}>Marcos · escolha qual comparar com o antes</div>
               <div className="ig-strip">
                 {[...depoisAll].reverse().map((s) => (
                   <button key={s.id} className={'ig-thumb' + (s.id === depois?.id ? ' on' : '')} onClick={() => setPick(s.id)}>
                     {s.url && <img src={s.url} alt="" loading="lazy" />}
-                    <span>{fmt(s.taken_on)}</span>
+                    <span>{milestone(antes?.taken_on, s.taken_on).replace(' depois', '')}</span>
                   </button>
                 ))}
               </div>
@@ -184,8 +201,23 @@ export function InstagramAntesDepois({ studentId, instagram, team }: { studentId
       {pending && (
         <div className="modal-backdrop" onClick={() => !busy && setPending(null)}>
           <div className="modal" role="dialog" aria-modal="true" aria-label="Salvar print" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 380 }}>
-            <div className="h-card">Print do {pending.kind}</div>
+            <div className="h-card">{pending.kind === 'antes' ? 'Print de entrada (antes)' : 'Print de acompanhamento'}</div>
             <div className="ig-frame" style={{ maxHeight: 360 }}><img src={pending.preview} alt="Prévia do print" /></div>
+            {pending.kind === 'depois' && antes && (
+              <div className="field">
+                <span>Qual marco?</span>
+                <div className="row" style={{ gap: 6, flexWrap: 'wrap' }}>
+                  {MARCOS.map((m) => {
+                    const d = addMonths(antes.taken_on, m);
+                    return (
+                      <button key={m} type="button" className={'chip' + (pending.date === d ? ' chip-soft' : '')} style={{ border: '1px solid var(--b-btn)', cursor: 'pointer' }} onClick={() => setPending({ ...pending, date: d })}>
+                        {m === 1 ? '1 mês' : `${m} meses`}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
             <label className="field">
               <span>Data do print</span>
               <input className="input md" type="date" max={today()} value={pending.date} onChange={(e) => setPending({ ...pending, date: e.target.value || today() })} />
@@ -202,7 +234,7 @@ export function InstagramAntesDepois({ studentId, instagram, team }: { studentId
         <div className="modal-backdrop" onClick={() => setZoom(null)}>
           <div className="ig-zoom" role="dialog" aria-modal="true" aria-label="Print ampliado">
             <img src={zoom.url} alt={`Instagram ${zoom.kind}, ${fmt(zoom.taken_on)}`} />
-            <div className="mono">{zoom.kind === 'antes' ? 'Antes' : 'Depois'} · {fmt(zoom.taken_on)} · toque para fechar</div>
+            <div className="mono">{zoom.kind === 'antes' ? 'Antes · entrada' : milestone(antes?.taken_on, zoom.taken_on)} · {fmt(zoom.taken_on)} · toque para fechar</div>
           </div>
         </div>
       )}

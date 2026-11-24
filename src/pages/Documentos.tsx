@@ -131,10 +131,8 @@ function OtherFiles() {
     }
   };
 
-  const defs: [StudentFile['kind'], string][] = [
-    ['apresentacao', 'Apresentação do Studio'],
-    ['outros', 'Outros arquivos'],
-  ];
+  // A apresentação do studio virou documento com devolutiva; aqui fica só o que não precisa de análise.
+  const defs: [StudentFile['kind'], string][] = [['outros', 'Outros arquivos']];
   return (
     <div className="grid-320">
       {defs.map(([kind, title]) => {
@@ -167,13 +165,13 @@ function OtherFiles() {
 }
 
 function HistTab({ docs }: { docs: ReturnType<typeof useDocs>['docs'] }) {
-  const [filter, setFilter] = useState<'Todos' | 'Portfólio' | 'Proposta' | 'Contrato'>('Todos');
+  const [filter, setFilter] = useState<'Todos' | 'Portfólio' | 'Proposta' | 'Contrato' | 'Apresentação'>('Todos');
   const groups = SLOT_ORDER.filter((s) => docs[s].versions.length && (filter === 'Todos' || SLOTS[s].tipo === filter));
   const anyAtAll = SLOT_ORDER.some((s) => docs[s].versions.length);
   return (
     <>
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-        {(['Todos', 'Portfólio', 'Proposta', 'Contrato'] as const).map((f) => (
+        {(['Todos', 'Proposta', 'Contrato', 'Portfólio', 'Apresentação'] as const).map((f) => (
           <button key={f} className={'pill' + (filter === f ? ' on' : '')} onClick={() => setFilter(f)}>
             {f}
           </button>

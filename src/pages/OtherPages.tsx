@@ -1,7 +1,9 @@
 import { PasswordFields, passwordOk } from '../components/PasswordFields';
 import { InstagramAntesDepois, InstagramLink, instagramOf } from '../components/InstagramAntesDepois';
+import { Avatar } from '../components/Avatar';
+import { safeName } from '../lib/upload';
 import { useQueryClient } from '@tanstack/react-query';
-import { Fragment, useEffect, useState } from 'react';
+import { Fragment, useEffect, useRef, useState } from 'react';
 import { Pencil } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Chip, ErrorState, PageHead, PageSkeleton, Mark } from '../components/ui';
@@ -254,6 +256,7 @@ function LevelPast({ lvl, tasks: raw, g, fixing: fix0, onSet }: { lvl: Level; ta
           <div className="h-card">O que você fez neste nível</div>
           <div style={{ fontSize: 15, color: 'var(--t3)', marginTop: 2, marginBottom: 8 }}>
             {tasks.filter((t) => !t.bonus && g.isDone(t)).length} de {tasks.filter((t) => !t.bonus).length} tarefas principais
+            {tasks.some((t) => t.bonus) && ' · as missões bônus continuam abertas: dá para marcar quando quiser'}
           </div>
           {fixing ? (
             <div className="fix-bar">
@@ -267,7 +270,7 @@ function LevelPast({ lvl, tasks: raw, g, fixing: fix0, onSet }: { lvl: Level; ta
             </div>
           )}
           {tasks.map((t) =>
-            fixing && !t.auto_slot ? (
+            (fixing || t.bonus) && !t.auto_slot ? (
               <div key={t.id} className={'task-row' + (g.isDone(t) ? ' done' : g.stateOf(t).kind === 'andamento' ? ' going' : '')}>
                 <div className="task-num">{t.position}</div>
                 <div className="task-main">
@@ -612,6 +615,54 @@ export function FeedbackMentoria() {
 // ---------------------------------------------------------------------
 // Perfil
 // ---------------------------------------------------------------------
+/** Foto de perfil: aparece no menu, no perfil e para a equipe. */
+function PhotoField() {
+  const profile = useProfile();
+  const { reloadProfile } = useAuth();
+  const toast = useToast();
+  const qc = useQueryClient();
+  const input = useRef<HTMLInputElement>(null);
+  const [busy, setBusy] = useState(false);
+  const pick = async (f: File | undefined) => {
+    if (!f) return;
+    if (!f.type.startsWith('image/')) return toast('Escolha uma imagem (JPG ou PNG).');
+    if (f.size > 8 * 1024 * 1024) return toast('A foto passa de 8 MB. Escolha uma menor.');
+    setBusy(true);
+    const path = `${profile.id}/avatar/${Date.now()}_${safeName(f.name)}`;
+    const up = await supabase.storage.from('files').upload(path, f, { contentType: f.type });
+    if (up.error) { setBusy(false); return toast('Não deu para enviar a foto. Tente de novo.'); }
+    const old = profile.avatar_path;
+    const { error } = await supabase.from('profiles').update({ avatar_path: path }).eq('id', profile.id);
+    if (!error && old) await supabase.storage.from('files').remove([old]);
+    setBusy(false);
+    if (error) return toast('Não deu para salvar a foto.');
+    qc.invalidateQueries({ queryKey: ['staff-overview'] });
+    reloadProfile();
+    toast('Foto atualizada.');
+  };
+  const remove = async () => {
+    const old = profile.avatar_path;
+    if (!old) return;
+    await supabase.from('profiles').update({ avatar_path: null }).eq('id', profile.id);
+    await supabase.storage.from('files').remove([old]);
+    reloadProfile();
+  };
+  return (
+    <div className="row" style={{ gap: 14 }}>
+      <Avatar path={profile.avatar_path} name={profile.full_name} className="avatar-btn" size={64} style={{ fontSize: 18 }} />
+      <div className="stack" style={{ gap: 6 }}>
+        <input ref={input} type="file" accept="image/*" hidden onChange={(e) => { pick(e.target.files?.[0]); e.target.value = ''; }} />
+        <div className="row" style={{ gap: 8 }}>
+          <button className="btn btn-secondary btn-sm" disabled={busy} onClick={() => input.current?.click()}>
+            {busy ? 'Enviando…' : profile.avatar_path ? 'Trocar foto' : 'Adicionar foto'}
+          </button>
+          {profile.avatar_path && !busy && <button className="link" style={{ fontSize: 13 }} onClick={remove}>Remover</button>}
+        </div>
+        <span style={{ fontSize: 12, color: 'var(--t3)' }}>Aparece para a equipe RCN.</span>
+      </div>
+    </div>
+  );
+}
 export function Perfil() {
   const profile = useProfile();
   const { reloadProfile, signOut } = useAuth();
@@ -689,6 +740,7 @@ export function Perfil() {
               </button>
             )}
           </div>
+          <PhotoField />
           {editing ? (
             <>
               {fields.map(([k, label, ph]) => (

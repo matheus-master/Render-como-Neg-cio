@@ -8,9 +8,16 @@ import { fmtBRL, fmtDay, fmtLongToday, fmtPeriod, initials } from '../../lib/for
 import { daysSince, LATE_DAYS, progressOf, useStaffOverview, type Overview, type StaffStudent } from '../../lib/staffData';
 import { supabase } from '../../lib/supabase';
 import { useToast } from '../../lib/toast';
+import { Avatar } from '../../components/Avatar';
 import { InstagramAntesDepois, instagramOf } from '../../components/InstagramAntesDepois';
 
-const STATUS_LABEL: Record<StaffStudent['status'], string> = { ativo: 'Ativo', onboarding: 'Aguardando onboarding', pausado: 'Pausado/Inativo' };
+const STATUS_LABEL: Record<StaffStudent['status'], string> = { ativo: 'Ativo', onboarding: 'Aguardando onboarding', pausado: 'Pausado/Inativo', encerrado: 'Mentoria encerrada' };
+
+const todayISO = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date());
+const plusMonths = (from: string, n: number) => { const d = new Date(from + 'T12:00:00Z'); d.setUTCMonth(d.getUTCMonth() + n); return d.toISOString().slice(0, 10); };
+/** Dias até o fim do acesso (negativo = já venceu); null = sem prazo. */
+export const accessLeft = (s: { access_until: string | null }) =>
+  s.access_until ? Math.round((new Date(s.access_until + 'T12:00:00Z').getTime() - new Date(todayISO() + 'T12:00:00Z').getTime()) / 86_400_000) : null;
 const GROUP_COLOR: Record<string, string> = { 'Zorango Tango': '#7A4FD0', 'Octa Performance': '#0E7C66' };
 
 /** Último relatório de cada aluno e se está atrasado (> 16 dias, contando da entrada se nunca enviou). */
@@ -150,13 +157,18 @@ export function Painel() {
               {filtered.map(({ s, rep, prog, docs }) => (
                 <Link key={s.id} to={`/equipe/aluno/${s.id}`} className="stu-row">
                   <div className="row" style={{ minWidth: 0 }}>
-                    <div className="av">{initials(s.full_name)}</div>
+                    <Avatar path={s.avatar_path} name={s.full_name} />
                     <div style={{ minWidth: 0 }}>
                       <div style={{ fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.full_name}</div>
                       <div className="row" style={{ gap: 6, fontSize: 12, color: 'var(--t3)' }}>
                         <span style={{ width: 7, height: 7, borderRadius: '50%', background: GROUP_COLOR[s.group_name || ''] || 'var(--t4)', flex: 'none' }} />
                         {s.group_name || 'Sem grupo'}
                         {s.status !== 'ativo' && <span>· {STATUS_LABEL[s.status]}</span>}
+                        {s.status !== 'encerrado' && accessLeft(s) !== null && accessLeft(s)! <= 15 && (
+                          <span style={{ color: accessLeft(s)! < 0 ? 'var(--err-t)' : 'var(--warn-t)', fontWeight: 600 }}>
+                            · {accessLeft(s)! < 0 ? 'acesso vencido' : accessLeft(s) === 0 ? 'acesso vence hoje' : `acesso vence em ${accessLeft(s)} d`}
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -213,6 +225,7 @@ export function AlunoFicha() {
   const toast = useToast();
   const initialTab = (new URLSearchParams(window.location.search).get('aba') as Tab) || 'resumo';
   const [tab, setTab] = useState<Tab>(initialTab);
+  const groups = useGroups();
 
   if (q.isLoading) return <div className="page"><div className="skel-card" style={{ height: 500 }} /></div>;
   if (q.isError || !q.data) return <div className="page"><ErrorState onRetry={q.refetch} /></div>;
@@ -236,7 +249,7 @@ export function AlunoFicha() {
     <div className="page">
       <BackLink to="/equipe">Painel</BackLink>
       <div className="card" style={{ display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap', marginTop: -8 }}>
-        <div className="avatar-btn" style={{ width: 52, height: 52, fontSize: 16 }}>{initials(s.full_name)}</div>
+        <Avatar path={s.avatar_path} name={s.full_name} className="avatar-btn" size={52} style={{ fontSize: 16 }} />
         <div style={{ flex: '1 1 260px', minWidth: 0 }}>
           <div className="h-flow" style={{ fontSize: 24 }}>{s.full_name}</div>
           <div style={{ fontSize: 14, color: 'var(--t3)', marginTop: 2 }}>
@@ -252,8 +265,9 @@ export function AlunoFicha() {
         </div>
         <label className="field" style={{ minWidth: 170 }}>
           <span>Grupo</span>
-          <select className="input md" style={{ height: 40 }} value={s.group_name || ''} onChange={(e) => updateProfile({ group_name: e.target.value })}>
-            {[...new Set(['Zorango Tango', 'Octa Performance', s.group_name || ''])].filter(Boolean).map((g) => <option key={g}>{g}</option>)}
+          <select className="input md" style={{ height: 40 }} value={s.group_name || ''} onChange={(e) => updateProfile({ group_name: e.target.value || null })}>
+            {!s.group_name && <option value="">Sem grupo</option>}
+            {[...new Set([...(groups.data || []).map((x) => x.name), s.group_name || ''])].filter(Boolean).map((g) => <option key={g}>{g}</option>)}
           </select>
         </label>
         <label className="field" style={{ minWidth: 200 }}>
@@ -262,6 +276,7 @@ export function AlunoFicha() {
             {Object.entries(STATUS_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
           </select>
         </label>
+        <AccessField s={s} onSave={updateProfile} />
       </div>
 
       <div style={{ display: 'flex', gap: 4, overflowX: 'auto', borderBottom: '1px solid var(--line)' }} role="tablist">
@@ -493,14 +508,63 @@ function StaffSessions({ red, studentName, onSaved }: { red: Overview['red'][num
 // ---------------------------------------------------------------------
 // Configurações
 // ---------------------------------------------------------------------
+/** Plano e prazo de acesso do aluno, com atalhos para renovar. */
+function AccessField({ s, onSave }: { s: StaffStudent; onSave: (p: Partial<StaffStudent>) => void }) {
+  const left = accessLeft(s);
+  const base = s.access_until && left !== null && left >= 0 ? s.access_until : todayISO();
+  return (
+    <div className="field" style={{ minWidth: 230 }}>
+      <span>
+        Acesso até{' '}
+        {left !== null && (
+          <b style={{ fontWeight: 600, color: left < 0 ? 'var(--err-t)' : left <= 15 ? 'var(--warn-t)' : 'var(--ok-t)' }}>
+            · {left < 0 ? `venceu há ${-left} d` : left === 0 ? 'vence hoje' : `faltam ${left} d`}
+          </b>
+        )}
+      </span>
+      <div className="row" style={{ gap: 6 }}>
+        <input className="input md" type="date" style={{ height: 40, flex: 1, minWidth: 0, padding: '0 8px' }} value={s.access_until || ''} onChange={(e) => onSave({ access_until: e.target.value || null })} />
+        <select className="input md" style={{ height: 40, width: 'auto', padding: '0 6px' }} value="" aria-label="Renovar acesso" onChange={(e) => { const n = Number(e.target.value); if (n) onSave({ access_until: plusMonths(base, n), plan: n === 12 ? '1 ano' : `${n} meses`, status: s.status === 'encerrado' ? 'ativo' : s.status }); }}>
+          <option value="">Renovar…</option>
+          <option value="3">+3 meses</option>
+          <option value="6">+6 meses</option>
+          <option value="12">+1 ano</option>
+        </select>
+      </div>
+      <span style={{ fontSize: 12, fontWeight: 400, color: 'var(--t3)' }}>
+        {s.plan ? `Plano: ${s.plan}. ` : ''}Sem data = acesso sem prazo. Depois do prazo o aluno continua vendo tudo, mas não envia material novo.
+      </span>
+    </div>
+  );
+}
+
+/** Grupos com a contagem de alunos. */
+function useGroups() {
+  return useQuery({
+    queryKey: ['groups'],
+    queryFn: async () => {
+      const [g, p] = await Promise.all([
+        supabase.from('groups').select('name, color').order('name'),
+        supabase.from('profiles').select('group_name').eq('role', 'aluno'),
+      ]);
+      const count = (n: string) => (p.data || []).filter((x) => x.group_name === n).length;
+      return ((g.data || []) as { name: string; color: string }[]).map((x) => ({ ...x, count: count(x.name) }));
+    },
+  });
+}
+
 export function Configuracoes() {
   const qc = useQueryClient();
   const toast = useToast();
   const codes = useQuery({ queryKey: ['class_codes'], queryFn: async () => (await supabase.from('class_codes').select('*').order('created_at')).data as { code: string; group_name: string; active: boolean }[] });
   const settings = useQuery({ queryKey: ['settings-all'], queryFn: async () => Object.fromEntries(((await supabase.from('settings').select('key, value')).data || []).map((r) => [r.key, r.value])) as Record<string, string> });
   const staff = useQuery({ queryKey: ['staff-list'], queryFn: async () => (await supabase.from('profiles').select('full_name, email').eq('role', 'staff').order('full_name')).data || [] });
+  const groups = useGroups();
   const [code, setCode] = useState('');
-  const [group, setGroup] = useState('Zorango Tango');
+  const [groupSel, setGroup] = useState<string | null>(null);
+  const group = groupSel ?? groups.data?.[0]?.name ?? '';
+  const [newGroup, setNewGroup] = useState('');
+  const [renaming, setRenaming] = useState<{ from: string; to: string } | null>(null);
   const [ics, setIcs] = useState<string | null>(null);
   const [calUrl, setCalUrl] = useState<string | null>(null);
   const icsVal = ics ?? settings.data?.calendar_ics_url ?? '';
@@ -519,6 +583,27 @@ export function Configuracoes() {
     if (error) return toast('Não deu para salvar.');
     qc.invalidateQueries({ queryKey: ['class_codes'] });
   };
+  const addGroup = async () => {
+    const name = newGroup.trim();
+    if (!name) return;
+    const palette = ['#7A4FD0', '#0E7C66', '#B5551B', '#1F5FAD', '#A23B72', '#6B7A1E'];
+    const { error } = await supabase.from('groups').insert({ name, color: palette[(groups.data?.length || 0) % palette.length] });
+    if (error) return toast(error.message.includes('duplicate') ? 'Já existe um grupo com esse nome.' : 'Não deu para criar o grupo.');
+    setNewGroup('');
+    toast('Grupo criado.');
+    qc.invalidateQueries({ queryKey: ['groups'] });
+  };
+  const renameGroup = async () => {
+    if (!renaming) return;
+    const to = renaming.to.trim();
+    if (!to || to === renaming.from) return setRenaming(null);
+    // O nome muda em cascata nos alunos, códigos e critérios.
+    const { error } = await supabase.from('groups').update({ name: to }).eq('name', renaming.from);
+    if (error) return toast(error.message.includes('duplicate') ? 'Já existe um grupo com esse nome.' : 'Não deu para renomear.');
+    setRenaming(null);
+    toast('Grupo renomeado. Os alunos continuam com o mesmo acesso.');
+    ['groups', 'class_codes', 'staff-overview'].forEach((k) => qc.invalidateQueries({ queryKey: [k] }));
+  };
   const saveCal = async () => {
     const { error } = await supabase.from('settings').upsert([
       { key: 'calendar_ics_url', value: icsVal.trim() },
@@ -535,8 +620,36 @@ export function Configuracoes() {
       <PageHead title="Configurações" sub="Códigos de turma, agenda da mentoria e equipe." />
       <div className="grid-320" style={{ alignItems: 'start' }}>
         <div className="card stack" style={{ gap: 12 }}>
+          <div className="h-card">Grupos</div>
+          <div style={{ fontSize: 14, color: 'var(--t3)', marginTop: -6 }}>Renomear ou trocar o aluno de grupo não mexe no acesso dele.</div>
+          {(groups.data || []).map((g) => (
+            <div key={g.name} className="between divrow" style={{ alignItems: 'center', padding: '8px 0', gap: 8 }}>
+              {renaming?.from === g.name ? (
+                <>
+                  <input className="input md" style={{ height: 36, flex: 1 }} autoFocus value={renaming.to} onChange={(e) => setRenaming({ ...renaming, to: e.target.value })} onKeyDown={(e) => { if (e.key === 'Enter') renameGroup(); if (e.key === 'Escape') setRenaming(null); }} />
+                  <button className="btn btn-primary btn-sm" onClick={renameGroup}>Salvar</button>
+                </>
+              ) : (
+                <>
+                  <div className="row" style={{ gap: 8 }}>
+                    <span style={{ width: 10, height: 10, borderRadius: 3, background: g.color, flex: 'none' }} />
+                    <span style={{ fontWeight: 600, fontSize: 14 }}>{g.name}</span>
+                    <span className="mono" style={{ fontSize: 11, color: 'var(--t3)' }}>{g.count} {g.count === 1 ? 'aluno' : 'alunos'}</span>
+                  </div>
+                  <button className="link" style={{ fontSize: 13 }} onClick={() => setRenaming({ from: g.name, to: g.name })}>Renomear</button>
+                </>
+              )}
+            </div>
+          ))}
+          <div className="row" style={{ gap: 8, marginTop: 4 }}>
+            <input className="input md" style={{ height: 40, flex: 1 }} placeholder="Nome do novo grupo" value={newGroup} onChange={(e) => setNewGroup(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && addGroup()} />
+            <button className="btn btn-primary btn-sm" disabled={!newGroup.trim()} onClick={addGroup}>Criar</button>
+          </div>
+        </div>
+
+        <div className="card stack" style={{ gap: 12 }}>
           <div className="h-card">Códigos de turma</div>
-          <div style={{ fontSize: 14, color: 'var(--t3)', marginTop: -6 }}>O aluno usa o código no primeiro acesso. O código define o grupo.</div>
+          <div style={{ fontSize: 14, color: 'var(--t3)', marginTop: -6 }}>O aluno usa o código só no primeiro acesso, para entrar no grupo certo. Desativar um código não tira o acesso de quem já entrou.</div>
           {(codes.data || []).map((c) => (
             <div key={c.code} className="between divrow" style={{ alignItems: 'center', padding: '8px 0' }}>
               <div>
@@ -549,8 +662,7 @@ export function Configuracoes() {
           <div className="row" style={{ gap: 8, flexWrap: 'wrap', marginTop: 4 }}>
             <input className="input md" style={{ height: 40, flex: '1 1 120px', textTransform: 'uppercase', letterSpacing: '.06em' }} placeholder="Ex.: ZT-2027" value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} />
             <select className="input md" style={{ height: 40, width: 'auto' }} value={group} onChange={(e) => setGroup(e.target.value)}>
-              <option>Zorango Tango</option>
-              <option>Octa Performance</option>
+              {(groups.data || []).map((g) => <option key={g.name}>{g.name}</option>)}
             </select>
             <button className="btn btn-primary btn-sm" disabled={!validCode} onClick={addCode}>Criar</button>
           </div>

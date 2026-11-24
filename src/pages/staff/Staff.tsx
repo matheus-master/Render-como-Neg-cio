@@ -8,9 +8,10 @@ import { Chip, ErrorState, VerdictChip, Mark } from '../../components/ui';
 import { Logo } from '../../components/StudentLayout';
 import { useAuth, useProfile } from '../../lib/auth';
 import { useQueue, useReviewItem, type QueueRow, type ReviewItem } from '../../lib/data';
-import { firstName, fmtDue, fmtDueRel, fmtLongToday, fmtSent, fmtTime, initials } from '../../lib/format';
+import { firstName, fmtDue, fmtDueRel, fmtLongToday, fmtSent, fmtTime } from '../../lib/format';
 import { apiPost, supabase } from '../../lib/supabase';
 import { useToast } from '../../lib/toast';
+import { Avatar } from '../../components/Avatar';
 
 const GROUP_COLOR: Record<string, string> = { 'Zorango Tango': '#7A4FD0', 'Octa Performance': '#0E7C66' };
 
@@ -57,7 +58,7 @@ export function StaffLayout() {
           <div className="sidenav-group">{links}</div>
         </nav>
         <div className="sidebar-user">
-          <div className="avatar-btn" style={{ width: 34, height: 34 }}>{initials(profile.full_name)}</div>
+          <Avatar path={profile.avatar_path} name={profile.full_name} className="avatar-btn" size={34} />
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: 14, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{firstName(profile.full_name)}</div>
             <div className="mono" style={{ fontSize: 11, color: 'var(--t3)' }}>Equipe RCN</div>
@@ -154,7 +155,7 @@ export function Fila() {
               return (
                 <div key={r.id} className="fila-grid">
                   <div className="row" style={{ minWidth: 0 }}>
-                    <div className="av">{initials(r.student.full_name)}</div>
+                    <Avatar path={r.student.avatar_path} name={r.student.full_name} />
                     <div style={{ minWidth: 0 }}>
                       <div style={{ fontWeight: 600 }}>{r.student.full_name}</div>
                       <div style={{ fontSize: 13, color: 'var(--t3)' }}>{r.student.studio || 'Studio não informado'}</div>
@@ -324,7 +325,7 @@ function ReviewScreen({ item, refetch }: { item: ReviewItem; refetch: () => unkn
       <div className="row" style={{ background: '#fff', borderBottom: '1px solid var(--b-card)', gap: 14, padding: '14px 28px', flexWrap: 'wrap' }}>
         <Link to="/equipe/fila" className="link"><Mark m="←" size={14} /> Fila</Link>
         <div style={{ width: 1, height: 24, background: 'var(--b-card)' }} />
-        <div className="av">{initials(item.student.full_name)}</div>
+        <Avatar path={item.student.avatar_path} name={item.student.full_name} />
         <div style={{ minWidth: 0 }}>
           <div style={{ fontWeight: 600, fontSize: 16 }}>
             {item.student.full_name} · {SLOTS[item.slot].title}
