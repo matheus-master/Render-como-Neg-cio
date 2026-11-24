@@ -9,6 +9,7 @@ import { daysSince, LATE_DAYS, progressOf, useStaffOverview, type Overview, type
 import { supabase } from '../../lib/supabase';
 import { useToast } from '../../lib/toast';
 import { Avatar } from '../../components/Avatar';
+import { StaffPlans, StalePlansCard } from '../../components/Planos';
 import { InstagramAntesDepois, instagramOf } from '../../components/InstagramAntesDepois';
 
 const STATUS_LABEL: Record<StaffStudent['status'], string> = { ativo: 'Ativo', onboarding: 'Aguardando onboarding', pausado: 'Pausado/Inativo', encerrado: 'Mentoria encerrada' };
@@ -107,6 +108,8 @@ export function Painel() {
           </button>
         ))}
       </div>
+
+      <StalePlansCard students={q.data!.students} />
 
       {redOpen.length > 0 && (
         <div className="card" style={{ borderColor: 'var(--err)', display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -346,7 +349,13 @@ export function AlunoFicha() {
 
       {tab === 'instagram' && <InstagramAntesDepois studentId={s.id} instagram={s.instagram} team />}
 
-      {tab === 'sessoes' && <StaffSessions red={red} studentName={s.full_name} onSaved={refresh} />}
+      {tab === 'sessoes' && (
+        <>
+          <StaffPlans studentId={s.id} name={s.full_name} phone={s.whatsapp} />
+          <div className="h-card" style={{ marginTop: 8 }}>Botão Vermelho</div>
+          <StaffSessions red={red} studentName={s.full_name} onSaved={refresh} />
+        </>
+      )}
     </div>
   );
 }

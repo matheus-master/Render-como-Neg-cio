@@ -5,6 +5,7 @@ import { accessOf, useAuth, useProfile } from '../lib/auth';
 import { useDocs, useGami } from '../lib/data';
 import { LevelUp } from './LevelUp';
 import { Avatar } from './Avatar';
+import { useMyEvents, useRespond } from '../lib/agenda';
 import { useIsMobile } from '../lib/useIsMobile';
 
 /** Menu lateral (computador), em dois grupos: o dia a dia e a mentoria. */
@@ -91,6 +92,39 @@ function AccessBanner() {
   return null;
 }
 
+/** Convites novos, mudanças e cancelamentos da agenda: aparecem em qualquer tela até o aluno responder. */
+function AgendaNotices() {
+  const q = useMyEvents();
+  const respond = useRespond();
+  const now = Date.now();
+  const list = (q.data || []).filter((e) => e.me.notice && new Date(e.ends_at).getTime() > now - 86_400_000).slice(0, 3);
+  if (!list.length) return null;
+  const when = (iso: string) => new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo', weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(iso));
+  return (
+    <div className="agenda-notices">
+      {list.map((e) => (
+        <div key={e.id} className={'agenda-notice ' + e.me.notice}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div className="label" style={{ color: 'inherit' }}>
+              {e.me.notice === 'novo' ? 'Novo na sua agenda' : e.me.notice === 'alterado' ? 'Mudança na agenda' : 'Evento cancelado'}
+            </div>
+            <div style={{ fontWeight: 600, fontSize: 15, marginTop: 2 }}>{e.title} · {when(e.starts_at)}</div>
+            {e.me.notice !== 'novo' && e.me.notice_text && <div style={{ fontSize: 13, marginTop: 2, opacity: 0.85 }}>{e.me.notice_text}</div>}
+          </div>
+          {e.me.notice === 'cancelado' ? (
+            <button className="btn btn-secondary btn-sm" onClick={() => respond.mutate({ eventId: e.id })}>Ok, entendi</button>
+          ) : (
+            <div className="row" style={{ gap: 6 }}>
+              <button className="btn btn-primary btn-sm" onClick={() => respond.mutate({ eventId: e.id, response: 'vou' })}>Vou</button>
+              <button className="btn btn-secondary btn-sm" onClick={() => respond.mutate({ eventId: e.id, response: 'nao_vou' })}>Não vou</button>
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default function StudentLayout() {
   const mobile = useIsMobile();
   const profile = useProfile();
@@ -156,6 +190,7 @@ export default function StudentLayout() {
 
       <main style={{ flex: 1, minWidth: 0 }}>
         <AccessBanner />
+        <AgendaNotices />
         <Outlet />
       </main>
       {session && <LevelUp uid={session.user.id} g={gami} />}

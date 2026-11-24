@@ -4,22 +4,21 @@ import { useMemo, useState } from 'react';
 import { ErrorState, PageHead } from '../components/ui';
 import { useAuth } from '../lib/auth';
 import { apiGet } from '../lib/supabase';
+import { EVENT_KINDS, kindInfo, openSigned, useMyEvents, useRespond, type MyEvent } from '../lib/agenda';
+import { Paperclip } from 'lucide-react';
 import { useIsMobile } from '../lib/useIsMobile';
 
-interface CalEvent { id: string; title: string; start: string; end: string; allDay: boolean; location: string | null; description: string | null; url: string | null }
+interface CalEvent { id: string; title: string; start: string; end: string; allDay: boolean; location: string | null; description: string | null; url: string | null; portal?: MyEvent }
 interface CalResp { configured: boolean; events: CalEvent[]; calendarUrl: string | null; error?: string }
 
 const TZ = 'America/Sao_Paulo';
 const WEEK = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'];
 
 /** Tipo do evento pelo título, para cor e legenda. */
-const KINDS = [
-  { key: 'aula', label: 'Aula ao vivo', re: /aula|ao vivo|live/i, color: 'var(--ink)', bg: 'var(--ink)', fg: '#fff' },
-  { key: 'lab', label: 'Laboratório RCN', re: /laborat/i, color: 'var(--gold)', bg: 'var(--gold)', fg: 'var(--ink)' },
-  { key: 'massa', label: 'Mão na Massa', re: /m[aã]o na massa/i, color: 'var(--ok)', bg: 'var(--ok)', fg: '#fff' },
-  { key: 'outro', label: 'Outros', re: /.*/, color: 'var(--t4)', bg: 'var(--alt3)', fg: 'var(--t)' },
-] as const;
-const kindOf = (title: string) => KINDS.find((k) => k.re.test(title))!;
+const RE: Record<string, RegExp> = { aula: /aula|ao vivo|live/i, lab: /laborat/i, massa: /m[aã]o na massa/i, direcionamento: /direcionamento/i, emergencia: /emerg|bot[aã]o vermelho/i };
+const KINDS = EVENT_KINDS.filter((k) => k.key !== 'emergencia');
+/** Tipo do evento: o que a equipe escolheu, ou pelo título (eventos do Google Agenda). */
+const kindOf = (e: CalEvent) => (e.portal ? kindInfo(e.portal.kind) : kindInfo(Object.keys(RE).find((k) => RE[k]!.test(e.title)) ?? 'outro'));
 
 /** Data local (São Paulo) em partes. */
 const local = (iso: string | Date) => {
@@ -54,7 +53,14 @@ export default function Calendario() {
   const [selDay, setSelDay] = useState<string | null>(null);
   const now = Date.now();
 
-  const events = q.data?.events || [];
+  const mine = useMyEvents();
+  const respond = useRespond();
+  const portal: CalEvent[] = (mine.data || []).map((e) => ({
+    id: 'p-' + e.id, title: e.title, start: e.starts_at, end: e.ends_at, allDay: false, location: e.location || null,
+    description: e.description || null, url: e.meet_url || null, portal: e,
+  }));
+  const events = useMemo(() => [...(q.data?.events || []), ...portal].sort((a, b) => a.start.localeCompare(b.start)), [q.data, mine.data]); // eslint-disable-line react-hooks/exhaustive-deps
+  const hasAny = !!q.data?.configured || portal.length > 0;
   const byDay = useMemo(() => {
     const map = new Map<string, CalEvent[]>();
     for (const e of events) {
@@ -68,7 +74,8 @@ export default function Calendario() {
     }
     return map;
   }, [events]);
-  const upcoming = events.filter((e) => new Date(e.end).getTime() >= now).slice(0, 8);
+  const upcoming = events.filter((e) => new Date(e.end).getTime() >= now && !e.portal?.canceled).slice(0, 8);
+  const openPortal = open?.portal ? (mine.data || []).find((x) => x.id === open.portal!.id) ?? open.portal : null;
 
   const first = new Date(Date.UTC(cursor.y, cursor.m, 1)).getUTCDay();
   const days = new Date(Date.UTC(cursor.y, cursor.m + 1, 0)).getUTCDate();
@@ -93,14 +100,14 @@ export default function Calendario() {
         }
       />
 
-      {q.isLoading ? (
+      {q.isLoading || mine.isLoading ? (
         <div className="cal-layout">
           <div className="skel-card" style={{ height: 520 }} />
           <div className="skel-card" style={{ height: 520 }} />
         </div>
-      ) : q.isError ? (
+      ) : q.isError && !portal.length ? (
         <ErrorState onRetry={q.refetch} />
-      ) : !q.data?.configured ? (
+      ) : !hasAny ? (
         <div className="hero" style={{ padding: '40px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, textAlign: 'center' }}>
           <div style={{ fontWeight: 600, fontSize: 26 }}>Calendário do mês</div>
           <div className="hero-sub" style={{ fontSize: 15, lineHeight: 1.5, maxWidth: 460 }}>A agenda da mentoria ainda não foi conectada ao portal. Enquanto isso, abra o calendário pelo botão abaixo.</div>
@@ -135,13 +142,13 @@ export default function Calendario() {
                   <button key={i} className={'cal-cell' + (isToday ? ' today' : '') + (past ? ' past' : '') + (selDay === k ? ' sel' : '')} onClick={() => setSelDay(selDay === k ? null : k)} aria-label={`${d}, ${evs.length} eventos`}>
                     <span className="cal-num">{d}</span>
                     {mobile ? (
-                      <span className="cal-dots">{evs.slice(0, 3).map((e) => <i key={e.id} style={{ background: kindOf(e.title).color }} />)}</span>
+                      <span className="cal-dots">{evs.slice(0, 3).map((e) => <i key={e.id} style={{ background: kindOf(e).color }} />)}</span>
                     ) : (
                       <span className="cal-evs">
                         {evs.slice(0, 3).map((e) => {
-                          const k2 = kindOf(e.title);
+                          const k2 = kindOf(e);
                           return (
-                            <span key={e.id} className="cal-ev" style={{ background: k2.bg, color: k2.fg }} onClick={(ev) => { ev.stopPropagation(); setOpen(e); }} role="button" tabIndex={0}>
+                            <span key={e.id} className={'cal-ev' + (e.portal?.canceled ? ' canceled' : '')} style={{ background: k2.bg, color: k2.fg }} onClick={(ev) => { ev.stopPropagation(); setOpen(e); }} role="button" tabIndex={0}>
                               {!e.allDay && <b>{local(e.start).time}</b>} {e.title}
                             </span>
                           );
@@ -172,8 +179,9 @@ export default function Calendario() {
               <div style={{ fontSize: 14, color: 'var(--t3)', padding: '20px 0' }}>{selEvents ? 'Nada marcado neste dia.' : 'Nenhum evento nos próximos meses.'}</div>
             )}
             {(selEvents ?? upcoming).map((e) => {
-              const k = kindOf(e.title);
+              const k = kindOf(e);
               const l = local(e.start);
+              const r = e.portal?.me.response;
               const live = isLiveSoon(e, now);
               return (
                 <button key={e.id} className="cal-item" onClick={() => setOpen(e)}>
@@ -186,6 +194,9 @@ export default function Calendario() {
                     <div className="row" style={{ gap: 8, fontSize: 13, color: 'var(--t3)', marginTop: 2 }}>
                       <i style={{ width: 8, height: 8, borderRadius: 2, background: k.color, display: 'inline-block', flex: 'none' }} />
                       {timeRange(e)}
+                      {r === 'vou' && <span style={{ color: 'var(--ok-t)', fontWeight: 600 }}>· você vai</span>}
+                      {r === 'nao_vou' && <span>· você não vai</span>}
+                      {r === 'pendente' && <span style={{ color: 'var(--ac)', fontWeight: 600 }}>· confirme presença</span>}
                     </div>
                   </div>
                   {live && e.url && (
@@ -205,7 +216,8 @@ export default function Calendario() {
           <div className="modal" role="dialog" aria-modal="true" aria-label={open.title} onClick={(e) => e.stopPropagation()} style={{ maxWidth: 480 }}>
             <div className="between" style={{ alignItems: 'flex-start' }}>
               <div>
-                <span className="chip" style={{ background: kindOf(open.title).bg, color: kindOf(open.title).fg, marginBottom: 8 }}>{kindOf(open.title).label}</span>
+                <span className="chip" style={{ background: kindOf(open).bg, color: kindOf(open).fg, marginBottom: 8 }}>{kindOf(open).label}</span>
+                {openPortal?.canceled && <span className="chip" style={{ background: 'var(--err-bg)', color: 'var(--err-t)', marginLeft: 6 }}>Cancelado</span>}
                 <div style={{ fontWeight: 600, fontSize: 20, letterSpacing: '-.02em', lineHeight: 1.25 }}>{open.title}</div>
               </div>
               <button className="rv-x" aria-label="Fechar" onClick={() => setOpen(null)}><X size={18} aria-hidden /></button>
@@ -219,6 +231,29 @@ export default function Calendario() {
             {open.description && (
               <div style={{ fontSize: 14, lineHeight: 1.55, color: 'var(--t2)', whiteSpace: 'pre-wrap', maxHeight: 220, overflowY: 'auto', background: 'var(--alt)', borderRadius: 8, padding: '10px 12px' }}>
                 {open.description.replace(/<[^>]+>/g, '')}
+              </div>
+            )}
+            {openPortal && openPortal.me.notice === 'alterado' && openPortal.me.notice_text && (
+              <div style={{ fontSize: 13, background: 'var(--warn-bg)', color: 'var(--warn-t)', borderRadius: 8, padding: '8px 10px' }}>{openPortal.me.notice_text}</div>
+            )}
+            {openPortal && openPortal.files.length > 0 && (
+              <div className="stack" style={{ gap: 6 }}>
+                <div className="label">Arquivos da sessão</div>
+                {openPortal.files.map((f) => (
+                  <button key={f.id} className="row link" style={{ gap: 8, fontSize: 14, textAlign: 'left' }} onClick={() => openSigned(f.file_path)}>
+                    <Paperclip size={14} aria-hidden /> {f.file_name}
+                  </button>
+                ))}
+              </div>
+            )}
+            {openPortal && !openPortal.canceled && new Date(openPortal.ends_at).getTime() > now && (
+              <div className="field">
+                <span>Você vai?</span>
+                <div className="seg" style={{ gridTemplateColumns: '1fr 1fr' }} role="radiogroup">
+                  {([['vou', 'Vou'], ['nao_vou', 'Não vou']] as const).map(([k, l]) => (
+                    <button key={k} role="radio" aria-checked={openPortal.me.response === k} className={openPortal.me.response === k ? 'on' : ''} onClick={() => respond.mutate({ eventId: openPortal.id, response: k })}>{l}</button>
+                  ))}
+                </div>
               </div>
             )}
             <div style={{ display: 'grid', gridTemplateColumns: open.url ? '1fr 1fr' : '1fr', gap: 10, marginTop: 4 }}>

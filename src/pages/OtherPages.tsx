@@ -1,6 +1,7 @@
 import { PasswordFields, passwordOk } from '../components/PasswordFields';
 import { InstagramAntesDepois, InstagramLink, instagramOf } from '../components/InstagramAntesDepois';
 import { Avatar } from '../components/Avatar';
+import { StudentPlans } from '../components/Planos';
 import { safeName } from '../lib/upload';
 import { useQueryClient } from '@tanstack/react-query';
 import { Fragment, useEffect, useRef, useState } from 'react';
@@ -421,9 +422,7 @@ export function Sessoes() {
         </div>
       )}
       <div style={{ fontWeight: 600, fontSize: 20, marginTop: 6 }}>Plano de ação</div>
-      <div className="dashed" style={{ padding: '28px 20px', fontSize: 15, color: 'var(--t3)' }}>
-        Seu plano de ação aparece aqui depois da sessão de direcionamento.
-      </div>
+      <StudentPlans />
       {confirm && (
         <div className="modal-backdrop" onClick={() => setConfirm(false)}>
           <div className="modal" role="alertdialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>

@@ -1,6 +1,6 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useState } from 'react';
-import { Inbox, LayoutDashboard, LogOut, Settings } from 'lucide-react';
+import { CalendarDays, Inbox, LayoutDashboard, LogOut, Settings } from 'lucide-react';
 import { Link, NavLink, Outlet, useNavigate, useParams } from 'react-router-dom';
 import { useIsMobile } from '../../lib/useIsMobile';
 import { forbiddenHits, SLOTS, VERDICTS, type Feedback, type Verdict } from '../../../shared/domain';
@@ -25,6 +25,7 @@ export function StaffLayout() {
   const items: [string, string, React.ReactNode, number?][] = [
     ['/equipe', 'Painel', <LayoutDashboard size={17} strokeWidth={1.8} aria-hidden key="p" />],
     ['/equipe/fila', 'Fila de revisão', <Inbox size={17} strokeWidth={1.8} aria-hidden key="f" />, pend],
+    ['/equipe/agenda', 'Agenda', <CalendarDays size={17} strokeWidth={1.8} aria-hidden key="a" />],
     ['/equipe/config', 'Configurações', <Settings size={17} strokeWidth={1.8} aria-hidden key="c" />],
   ];
   const logout = async () => { await signOut(); nav('/equipe/entrar'); };

@@ -17,6 +17,7 @@ import { FeedbackMentoria, Gamificacao, Perfil, Sessoes } from './pages/OtherPag
 import { NovoRelatorio, RelatorioDetalhe, Relatorios } from './pages/Relatorios';
 import { AlunoFicha, Configuracoes, Painel } from './pages/staff/Painel';
 import { Fila, Revisao, StaffLayout } from './pages/staff/Staff';
+import { Agenda } from './pages/staff/Agenda';
 import './styles.css';
 
 const qc = new QueryClient({ defaultOptions: { queries: { retry: 1, refetchOnWindowFocus: true, staleTime: 15_000 } } });
@@ -53,6 +54,7 @@ function App() {
         <Route path="fila" element={<Fila />} />
         <Route path="revisao/:id" element={<Revisao />} />
         <Route path="aluno/:id" element={<AlunoFicha />} />
+        <Route path="agenda" element={<Agenda />} />
         <Route path="config" element={<Configuracoes />} />
       </Route>
       <Route element={<Guard><StudentLayout /></Guard>}>
