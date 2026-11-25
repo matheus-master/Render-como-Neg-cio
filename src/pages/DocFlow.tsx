@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useState } from 'react';
 import { Link, Navigate, useLocation, useParams } from 'react-router-dom';
-import { isSlot, SLOT_ORDER, SLOTS, VERDICTS, type Feedback, type Slot } from '../../shared/domain';
+import { isSlot, POINT_SECS, SLOT_ORDER, SLOTS, VERDICTS, type Feedback, type Slot } from '../../shared/domain';
 import { BackLink, CheckIcon, ErrorState, PageSkeleton, VerdictChip, VersionChip, Mark } from '../components/ui';
 import { MaterialPreview } from '../components/MaterialPreview';
 import { useProfile } from '../lib/auth';
@@ -172,6 +172,50 @@ export function Status() {
 // ---------------------------------------------------------------------
 // Devolutiva
 // ---------------------------------------------------------------------
+/** Pontos agrupados por seção (devolutivas no formato da análise de documentos), com a página de cada item. */
+function PointsBySection({ pts }: { pts: Feedback['pts'] }) {
+  const groups = POINT_SECS.map((s) => ({ ...s, items: pts.filter((p) => (p.sec ?? 'obrigatorio') === s.k) })).filter((g) => g.items.length);
+  return (
+    <>
+      {groups.map((g) => (
+        <div key={g.k} className="stack" style={{ gap: 10 }}>
+          <div className="h-sec">{g.label}</div>
+          {g.k === 'portugues' ? (
+            <div className="card tight stack" style={{ gap: 0, padding: '4px 16px' }}>
+              {g.items.map((p, i) => (
+                <div key={i} className="pt-pt">
+                  {p.pg && <span className="pt-pg">{p.pg}</span>}
+                  <span><s>{p.d}</s> <b>→ {p.s}</b></span>
+                </div>
+              ))}
+            </div>
+          ) : g.k === 'sugestao' || g.k === 'observacao' ? (
+            <ul className="pt-list">
+              {g.items.map((p, i) => (
+                <li key={i}>
+                  {p.pg && p.pg !== 'geral' && <span className="pt-pg">{p.pg}</span>}
+                  <b>{p.t}.</b> {p.d}{p.s ? ` ${p.s}` : ''}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            g.items.map((p, i) => (
+              <div key={i} className="pt-card">
+                <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
+                  {p.pg && <span className="pt-pg">{p.pg}</span>}
+                  <span style={{ fontWeight: 600, fontSize: 16 }}>{p.t}</span>
+                </div>
+                {p.d && <div style={{ fontSize: 15, lineHeight: 1.5, color: 'var(--t2)' }}>{p.d}</div>}
+                {p.s && <div className="pt-do">→ {p.s}</div>}
+              </div>
+            ))
+          )}
+        </div>
+      ))}
+    </>
+  );
+}
+
 export function Devolutiva() {
   const { slot, q } = useSlotDocs();
   const gami = useGami();
@@ -273,7 +317,9 @@ export function Devolutiva() {
         </div>
       )}
 
-      {fb.pts.length > 0 && (
+      {fb.pts.length > 0 && fb.pts.some((p) => p.sec) ? (
+        <PointsBySection pts={fb.pts} />
+      ) : fb.pts.length > 0 && (
         <div className="stack" style={{ gap: 12 }}>
           <div className="h-sec">Pontos a ajustar</div>
           {fb.pts.map((p, i) => (

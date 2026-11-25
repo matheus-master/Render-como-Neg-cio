@@ -1,4 +1,4 @@
-import type { Feedback } from '../shared/domain';
+import { isPointSec, type Feedback } from '../shared/domain';
 import { markFailed, processSubmission } from './analyze';
 import { notifyReleased } from './email';
 import { PermanentError, type AnalysisMessage, type Env } from './env';
@@ -164,7 +164,7 @@ async function api(req: Request, url: URL, env: Env, ctx: ExecutionContext): Pro
     verdict: draft.verdict,
     sum: (draft.sum || '').trim(),
     strong: (draft.strong || []).map((s) => s.trim()).filter(Boolean),
-    pts: (draft.pts || []).map((p) => ({ t: p.t.trim(), d: p.d.trim(), s: p.s.trim() })).filter((p) => p.t),
+    pts: (draft.pts || []).map((p) => ({ t: p.t.trim(), d: p.d.trim(), s: p.s.trim(), ...(isPointSec(p.sec) ? { sec: p.sec } : {}), ...(p.pg?.trim() ? { pg: p.pg.trim().slice(0, 40) } : {}) })).filter((p) => p.t),
     steps: (draft.steps || []).map((s) => s.trim()).filter(Boolean),
   };
   if (!clean.sum) return json({ error: 'Escreva o resumo antes de liberar.' }, 400);

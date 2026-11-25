@@ -17,7 +17,20 @@ export const SLOTS: Record<Slot, { title: string; desc: string; tipo: 'Proposta'
 export const isSlot = (s: string | undefined): s is Slot => !!s && s in SLOTS;
 
 /** Devolutiva: formato de ai_draft, draft e released. */
-export interface FeedbackPoint { t: string; d: string; s: string }
+/** Seção de cada ponto da devolutiva (skill analise-documentos-rcn), na ordem em que aparecem. */
+export type PointSec = 'obrigatorio' | 'regras' | 'marca' | 'imagens' | 'portugues' | 'sugestao' | 'observacao';
+export const POINT_SECS: { k: PointSec; label: string }[] = [
+  { k: 'obrigatorio', label: 'Ajustes obrigatórios' },
+  { k: 'regras', label: 'Regras do Studio' },
+  { k: 'marca', label: 'Marca e visual' },
+  { k: 'imagens', label: 'Imagens' },
+  { k: 'portugues', label: 'Português' },
+  { k: 'sugestao', label: 'Sugestões (opcionais)' },
+  { k: 'observacao', label: 'Observações' },
+];
+export const isPointSec = (x: unknown): x is PointSec => POINT_SECS.some((s) => s.k === x);
+/** sec e pg são opcionais: devolutivas antigas não têm. */
+export interface FeedbackPoint { t: string; d: string; s: string; sec?: PointSec; pg?: string }
 export interface Feedback {
   verdict: Verdict;
   sum: string;
@@ -40,8 +53,14 @@ export const FEEDBACK_JSON_SCHEMA = {
       items: {
         type: 'object',
         additionalProperties: false,
-        required: ['t', 'd', 's'],
-        properties: { t: { type: 'string' }, d: { type: 'string' }, s: { type: 'string' } },
+        required: ['sec', 'pg', 't', 'd', 's'],
+        properties: {
+          sec: { type: 'string', enum: ['obrigatorio', 'regras', 'marca', 'imagens', 'portugues', 'sugestao', 'observacao'] },
+          pg: { type: 'string' },
+          t: { type: 'string' },
+          d: { type: 'string' },
+          s: { type: 'string' },
+        },
       },
     },
     steps: { type: 'array', items: { type: 'string' } },

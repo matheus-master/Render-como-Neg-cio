@@ -21,3 +21,11 @@ Cada agente tem uma pasta com um `SKILL.md`. O mesmo arquivo serve para duas coi
 - Como funciona: a equipe sobe os prints do perfil (ou usa os de antes/acompanhamento), a IA escreve a devolutiva no formato da skill, a equipe revisa/edita e **libera**. O aluno vê a liberada em **Perfil**.
 - No portal a IA não navega no Instagram: trabalha com os prints e lista no fim o que não deu para conferir por eles.
 - Servidor: `worker/instagram.ts` → `POST /api/agents/instagram` (só equipe). Rascunhos e liberadas ficam em `instagram_reviews`.
+
+## Análise de documentos (robô das devolutivas)
+
+- Skill: `agentes/analise-documentos/SKILL.md` (critérios da Taty, Laboratório de portfólio e aula de processos), usada sem alteração como instrução do robô.
+- O portal não gera a página HTML A4 da skill: o robô devolve um JSON que vira a tela de devolutiva. Cada ponto tem **seção** (Ajustes obrigatórios, Regras do Studio, Marca e visual, Imagens, Português, Sugestões, Observações) e **página**. Resultado: Aprovado = ok, Aprovado com ajustes = aj, Refazer = re.
+- Os documentos de referência internos (`worker/referencias.ts`) e os critérios extras que a equipe cadastrar continuam indo junto.
+- A equipe revisa e libera como antes; no editor, cada ponto tem seção e página.
+- Precisa dos segredos `ANTHROPIC_API_KEY` e `SUPABASE_SERVICE_ROLE_KEY` no Worker.

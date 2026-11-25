@@ -888,3 +888,14 @@ a.rep-row:hover { text-decoration: none; background: var(--alt); }
 .igia-edit { min-height: 420px; font-family: var(--mono); font-size: 13px; line-height: 1.55; }
 .igia-row { display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--b-card); margin-bottom: 6px; font-size: 14px; background: #fff; }
 .igia-row.on, .igia-row:hover { border-color: var(--ink); }
+
+/* Devolutiva por seção (análise de documentos) */
+.pt-card { background: #EEF2F7; border-radius: 16px; padding: 16px 18px; display: flex; flex-direction: column; gap: 8px; }
+.pt-pg { display: inline-flex; align-items: center; font-family: var(--mono); font-size: 11px; letter-spacing: .04em; background: var(--ac); color: #fff; padding: 3px 8px; border-radius: 999px; white-space: nowrap; margin-right: 6px; }
+.pt-do { font-weight: 600; color: var(--ac); font-size: 15px; line-height: 1.5; }
+.pt-pt { display: flex; gap: 8px; align-items: baseline; padding: 10px 0; border-top: 1px solid var(--b-div); font-size: 15px; line-height: 1.5; }
+.pt-pt:first-child { border-top: 0; }
+.pt-pt s { color: #6B4A4A; text-decoration-color: #6B4A4A; }
+.pt-pt b { color: var(--ac); font-weight: 600; }
+.pt-list { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 8px; font-size: 15px; line-height: 1.55; color: var(--t2); }
+.pt-list b { color: var(--t); font-weight: 600; }

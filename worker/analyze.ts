@@ -14,7 +14,15 @@ const FeedbackSchema = z.object({
   verdict: z.enum(['ok', 'aj', 're']),
   sum: z.string(),
   strong: z.array(z.string()),
-  pts: z.array(z.object({ t: z.string(), d: z.string(), s: z.string() })),
+  pts: z.array(
+    z.object({
+      sec: z.enum(['obrigatorio', 'regras', 'marca', 'imagens', 'portugues', 'sugestao', 'observacao']).optional(),
+      pg: z.string().optional(),
+      t: z.string(),
+      d: z.string(),
+      s: z.string(),
+    }),
+  ),
   steps: z.array(z.string()),
 });
 
@@ -72,7 +80,7 @@ export async function processSubmission(env: Env, submissionId: string): Promise
     betas: ['server-side-fallback-2026-07-01'],
     fallbacks: 'default',
     output_config: { effort: 'high', format: { type: 'json_schema', schema: FEEDBACK_JSON_SCHEMA as unknown as Record<string, unknown> } },
-    system: systemPrompt(),
+    system: [{ type: 'text', text: systemPrompt(), cache_control: { type: 'ephemeral' } }],
     messages: [
       {
         role: 'user',

@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { CalendarDays, Inbox, LayoutDashboard, LogOut, Settings } from 'lucide-react';
 import { Link, NavLink, Outlet, useNavigate, useParams } from 'react-router-dom';
 import { useIsMobile } from '../../lib/useIsMobile';
-import { forbiddenHits, SLOTS, VERDICTS, type Feedback, type Verdict } from '../../../shared/domain';
+import { forbiddenHits, POINT_SECS, SLOTS, VERDICTS, type Feedback, type PointSec, type Verdict } from '../../../shared/domain';
 import { Chip, ErrorState, VerdictChip, Mark } from '../../components/ui';
 import { Logo } from '../../components/StudentLayout';
 import { useAuth, useProfile } from '../../lib/auth';
@@ -220,7 +220,7 @@ interface Draft {
   verdict: Verdict | null;
   sum: string;
   strong: string[];
-  pts: { t: string; d: string; s: string }[];
+  pts: { t: string; d: string; s: string; sec?: PointSec; pg?: string }[];
   steps: string; // um por linha
 }
 const EMPTY: Draft = { verdict: null, sum: '', strong: [''], pts: [], steps: '' };
@@ -229,7 +229,7 @@ const toFeedback = (d: Draft): Feedback => ({
   verdict: d.verdict || 'aj',
   sum: d.sum.trim(),
   strong: d.strong.map((x) => x.trim()).filter(Boolean),
-  pts: d.pts.filter((p) => p.t.trim()).map((p) => ({ t: p.t.trim(), d: p.d.trim(), s: p.s.trim() })),
+  pts: d.pts.filter((p) => p.t.trim()).map((p) => ({ t: p.t.trim(), d: p.d.trim(), s: p.s.trim(), ...(p.sec ? { sec: p.sec } : {}), ...(p.pg?.trim() ? { pg: p.pg.trim() } : {}) })),
   steps: d.steps.split('\n').map((x) => x.trim()).filter(Boolean),
 });
 
@@ -423,7 +423,7 @@ function ReviewScreen({ item, refetch }: { item: ReviewItem; refetch: () => unkn
                 <div className="stack" style={{ gap: 10 }}>
                   <div className="between">
                     <div style={{ fontWeight: 600, fontSize: 15 }}>Pontos a ajustar</div>
-                    <button className="add" onClick={() => upd((d) => { d.pts.push({ t: '', d: '', s: '' }); })}>+ Adicionar ponto</button>
+                    <button className="add" onClick={() => upd((d) => { d.pts.push({ t: '', d: '', s: '', sec: 'obrigatorio', pg: '' }); })}>+ Adicionar ponto</button>
                   </div>
                   {draft.pts.length === 0 && <div style={{ fontSize: 14, color: 'var(--t3)' }}>Nenhum ponto a ajustar.</div>}
                   {draft.pts.map((p, i) => (
@@ -439,9 +439,16 @@ function ReviewScreen({ item, refetch }: { item: ReviewItem; refetch: () => unkn
                         />
                         <button className="rv-x" aria-label="Remover ponto" onClick={() => upd((d) => { d.pts.splice(i, 1); })}><Mark m="×" size={18} /></button>
                       </div>
-                      <Field value={p.d} min={56} placeholder="O que foi observado no material" onChange={(val) => upd((d) => { d.pts[i]!.d = val; })} />
-                      <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--ac)' }}>Sugestão ao aluno</div>
-                      <Field value={p.s} min={56} placeholder="sugiro…" onChange={(val) => upd((d) => { d.pts[i]!.s = val; })} />
+                      <div className="row" style={{ gap: 8 }}>
+                        <select className="rv-field" style={{ height: 36, padding: '0 8px', flex: 1, minWidth: 0 }} aria-label="Seção" value={p.sec || ''} onChange={(e) => { const v = e.target.value as PointSec | ''; upd((d) => { d.pts[i]!.sec = v || undefined; }); }}>
+                          <option value="">Sem seção</option>
+                          {POINT_SECS.map((x) => <option key={x.k} value={x.k}>{x.label}</option>)}
+                        </select>
+                        <input className="rv-field" style={{ height: 36, padding: '0 10px', width: 130 }} placeholder="pág. / cláusula" aria-label="Página" value={p.pg || ''} onChange={(e) => { const v = e.target.value; upd((d) => { d.pts[i]!.pg = v; }); }} />
+                      </div>
+                      <Field value={p.d} min={56} placeholder={p.sec === 'portugues' ? 'Trecho como está escrito' : 'O que está errado ou faltando'} onChange={(val) => upd((d) => { d.pts[i]!.d = val; })} />
+                      <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--ac)' }}>{p.sec === 'portugues' ? 'Correção' : 'O que fazer'}</div>
+                      <Field value={p.s} min={56} placeholder={p.sec === 'portugues' ? 'Trecho corrigido' : 'Orientação direta ao aluno'} onChange={(val) => upd((d) => { d.pts[i]!.s = val; })} />
                     </div>
                   ))}
                 </div>
