@@ -6,6 +6,7 @@ import { demoIcs, parseIcs } from './calendar';
 import { fetchLink } from './material';
 import { serveStatic } from './static';
 import { harveyChat } from './harvey';
+import { instagramReview } from './instagram';
 import { adminClient, getCaller, hasServiceKey, userClient } from './supabase';
 
 /** Depois disso em "analise", o envio vai para revisão sem rascunho (a equipe assume). */
@@ -81,6 +82,13 @@ async function api(req: Request, url: URL, env: Env, ctx: ExecutionContext): Pro
     const caller = await getCaller(env, req);
     if (!caller) return json({ error: 'Sessão expirada. Entre de novo.' }, 401);
     return harveyChat(req, env, caller, ctx);
+  }
+
+  // POST /api/agents/instagram · análise do Instagram do aluno (só equipe; resposta em SSE)
+  if (url.pathname === '/api/agents/instagram' && req.method === 'POST') {
+    const caller = await getCaller(env, req);
+    if (!caller) return json({ error: 'Sessão expirada. Entre de novo.' }, 401);
+    return instagramReview(req, env, caller, ctx);
   }
 
   // GET /api/calendar · eventos da agenda da mentoria (lidos do endereço iCal do Google Agenda)

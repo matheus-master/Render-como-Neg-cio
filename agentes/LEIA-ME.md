@@ -13,3 +13,11 @@ Cada agente tem uma pasta com um `SKILL.md`. O mesmo arquivo serve para duas coi
 - Conversas ficam em `agent_threads` / `agent_messages`. O aluno vê as dele; a equipe pode ler para acompanhar.
 - Limite diário por aluno: configuração `harvey_daily_limit` (padrão 60 mensagens).
 - Precisa só do segredo `ANTHROPIC_API_KEY` no Worker para funcionar.
+
+## Análise de Instagram (equipe)
+
+- Skill: `agentes/analise-instagram/SKILL.md` (critérios da Taty), usada sem alteração.
+- Tela: painel da equipe → ficha do aluno → aba **Instagram** → "Análise do Instagram com IA".
+- Como funciona: a equipe sobe os prints do perfil (ou usa os de antes/acompanhamento), a IA escreve a devolutiva no formato da skill, a equipe revisa/edita e **libera**. O aluno vê a liberada em **Perfil**.
+- No portal a IA não navega no Instagram: trabalha com os prints e lista no fim o que não deu para conferir por eles.
+- Servidor: `worker/instagram.ts` → `POST /api/agents/instagram` (só equipe). Rascunhos e liberadas ficam em `instagram_reviews`.

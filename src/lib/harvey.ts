@@ -101,3 +101,40 @@ export async function signedImages(paths: string[]) {
   const { data } = await supabase.storage.from('files').createSignedUrls(paths, 3600);
   return Object.fromEntries((data || []).filter((x) => x.signedUrl).map((x) => [x.path!, x.signedUrl]));
 }
+
+export { shrink as shrinkImage };
+
+/** POST que responde em SSE (agentes): chama onEvent a cada evento recebido. */
+export async function postSSE(path: string, body: unknown, onEvent: (event: string, data: Record<string, unknown>) => void): Promise<{ error?: string }> {
+  const { data } = await supabase.auth.getSession();
+  const res = await fetch(path, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${data.session?.access_token ?? ''}` },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok || !res.body) {
+    const j = (await res.json().catch(() => ({}))) as { error?: string };
+    return { error: j.error || 'Não deu para falar com a IA agora.' };
+  }
+  const reader = res.body.getReader();
+  const dec = new TextDecoder();
+  let buf = '';
+  let error: string | undefined;
+  for (;;) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    buf += dec.decode(value, { stream: true });
+    let i: number;
+    while ((i = buf.indexOf('\n\n')) >= 0) {
+      const chunk = buf.slice(0, i);
+      buf = buf.slice(i + 2);
+      const ev = /^event: (.*)$/m.exec(chunk)?.[1];
+      const raw = /^data: (.*)$/m.exec(chunk)?.[1];
+      if (!ev || !raw) continue;
+      const d = JSON.parse(raw) as Record<string, unknown>;
+      if (ev === 'error') error = String(d.error || 'Erro');
+      onEvent(ev, d);
+    }
+  }
+  return { error };
+}

@@ -1,6 +1,7 @@
 import { PasswordFields, passwordOk } from '../components/PasswordFields';
 import { InstagramAntesDepois, InstagramLink, instagramOf } from '../components/InstagramAntesDepois';
 import { Avatar } from '../components/Avatar';
+import { StudentInstagramReview } from '../components/InstagramIA';
 import { StudentPlans } from '../components/Planos';
 import { useMyEvents, useMyPlans } from '../lib/agenda';
 import { safeName } from '../lib/upload';
@@ -819,6 +820,7 @@ export function Perfil() {
           </button>
         </div>
       </div>
+      <StudentInstagramReview />
       <InstagramAntesDepois studentId={profile.id} instagram={profile.instagram} />
     </div>
   );

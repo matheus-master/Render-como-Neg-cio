@@ -11,6 +11,7 @@ import { useToast } from '../../lib/toast';
 import { Avatar } from '../../components/Avatar';
 import { StaffPlans, StalePlansCard } from '../../components/Planos';
 import { InstagramAntesDepois, instagramOf } from '../../components/InstagramAntesDepois';
+import { InstagramIA } from '../../components/InstagramIA';
 
 const STATUS_LABEL: Record<StaffStudent['status'], string> = { ativo: 'Ativo', onboarding: 'Aguardando onboarding', pausado: 'Pausado/Inativo', encerrado: 'Mentoria encerrada' };
 
@@ -347,7 +348,12 @@ export function AlunoFicha() {
 
       {tab === 'gamificacao' && <StaffGami o={o} studentId={s.id} onChanged={refresh} />}
 
-      {tab === 'instagram' && <InstagramAntesDepois studentId={s.id} instagram={s.instagram} team />}
+      {tab === 'instagram' && (
+        <>
+          <InstagramIA studentId={s.id} name={s.full_name} />
+          <InstagramAntesDepois studentId={s.id} instagram={s.instagram} team />
+        </>
+      )}
 
       {tab === 'sessoes' && (
         <>
