@@ -4,6 +4,8 @@
   "main": "worker/index.ts",
   "compatibility_date": "2026-10-01",
   "compatibility_flags": ["nodejs_compat"],
+  // Prompts dos agentes ficam em Markdown (agentes/*/SKILL.md) e entram no Worker como texto.
+  "rules": [{ "type": "Text", "globs": ["**/*.md"], "fallthrough": true }],
   // O site (React) é embutido no Worker pelo scripts/embed-assets.mjs (npm run build).
   "queues": {
     "producers": [{ "binding": "ANALYSIS_QUEUE", "queue": "rcn-analysis" }],

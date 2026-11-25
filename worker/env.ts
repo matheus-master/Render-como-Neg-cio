@@ -5,6 +5,8 @@ export interface Env {
   /** Opcional até ligar a análise automática. */
   SUPABASE_SERVICE_ROLE_KEY?: string;
   ANTHROPIC_API_KEY: string;
+  /** Só para testes locais com um servidor simulado da API. */
+  ANTHROPIC_BASE_URL?: string;
   PORTAL_URL: string;
   /** Opcional: sem ele, o e-mail de devolutiva liberada não é enviado. */
   RESEND_API_KEY?: string;

@@ -1,4 +1,4 @@
-import { BarChart3, CalendarDays, ChevronRight, FileText, House, LogOut, MessageSquareText, MoreHorizontal, Siren, Trophy, UserRound, type LucideIcon } from 'lucide-react';
+import { BarChart3, Briefcase, CalendarDays, ChevronRight, FileText, House, LogOut, MessageSquareText, MoreHorizontal, Siren, Trophy, UserRound, type LucideIcon } from 'lucide-react';
 import { useState } from 'react';
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { accessOf, useAuth, useProfile } from '../lib/auth';
@@ -17,6 +17,7 @@ const NAV: [string, string, LucideIcon][][] = [
     ['/gamificacao', 'Gamificação', Trophy],
   ],
   [
+    ['/harvey', 'Harvey · Vendas', Briefcase],
     ['/sessoes', 'Sessões', Siren],
     ['/calendario', 'Calendário', CalendarDays],
     ['/feedback', 'Feedback', MessageSquareText],
@@ -30,6 +31,7 @@ const TABS: [string, string, LucideIcon][] = [
   ['/relatorios', 'Relatórios', BarChart3],
 ];
 const MORE: [string, string][] = [
+  ['/harvey', 'Harvey · Vendas'],
   ['/sessoes', 'Sessões'],
   ['/calendario', 'Calendário'],
   ['/feedback', 'Feedback da mentoria'],

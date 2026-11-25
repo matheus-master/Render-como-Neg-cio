@@ -5,6 +5,7 @@ import { PermanentError, type AnalysisMessage, type Env } from './env';
 import { demoIcs, parseIcs } from './calendar';
 import { fetchLink } from './material';
 import { serveStatic } from './static';
+import { harveyChat } from './harvey';
 import { adminClient, getCaller, hasServiceKey, userClient } from './supabase';
 
 /** Depois disso em "analise", o envio vai para revisão sem rascunho (a equipe assume). */
@@ -73,7 +74,14 @@ async function enqueue(env: Env, submissionId: string) {
 }
 
 async function api(req: Request, url: URL, env: Env, ctx: ExecutionContext): Promise<Response> {
-  if (url.pathname === '/api/health') return json({ ok: true, ai: !!(env.ANTHROPIC_API_KEY && env.SUPABASE_SERVICE_ROLE_KEY), email: !!env.RESEND_API_KEY });
+  if (url.pathname === '/api/health') return json({ ok: true, ai: !!(env.ANTHROPIC_API_KEY && env.SUPABASE_SERVICE_ROLE_KEY), harvey: !!env.ANTHROPIC_API_KEY, email: !!env.RESEND_API_KEY });
+
+  // POST /api/agents/harvey · conversa com o agente de vendas (resposta em SSE)
+  if (url.pathname === '/api/agents/harvey' && req.method === 'POST') {
+    const caller = await getCaller(env, req);
+    if (!caller) return json({ error: 'Sessão expirada. Entre de novo.' }, 401);
+    return harveyChat(req, env, caller, ctx);
+  }
 
   // GET /api/calendar · eventos da agenda da mentoria (lidos do endereço iCal do Google Agenda)
   if (url.pathname === '/api/calendar' && req.method === 'GET') {
