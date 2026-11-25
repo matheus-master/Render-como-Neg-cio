@@ -1,9 +1,16 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { SLOT_ORDER, SLOTS } from '../../shared/domain';
-import { DocChip, ErrorState, PageSkeleton, Mark } from '../components/ui';
+import { DocChip, ErrorState, PageSkeleton, Mark, Num } from '../components/ui';
 import { useProfile } from '../lib/auth';
 import { useDocs, useGami, useReports, type DocState } from '../lib/data';
 import { dueLine, firstName, fmtBRL, fmtDay, fmtPeriod } from '../lib/format';
+
+/** "Bom dia" / "Boa tarde" / "Boa noite" no horário de Brasília. */
+const greeting = () => {
+  const h = Number(new Intl.DateTimeFormat('en-GB', { timeZone: 'America/Sao_Paulo', hour: '2-digit', hourCycle: 'h23' }).format(new Date()));
+  return h < 12 ? 'Bom dia' : h < 18 ? 'Boa tarde' : 'Boa noite';
+};
+const todayLabel = () => new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo', weekday: 'long', day: 'numeric', month: 'long' }).format(new Date());
 
 export function slotHref(d: DocState): string {
   if (d.status === 'none') return `/documentos/nova?slot=${d.slot}`;
@@ -52,7 +59,8 @@ export default function Inicio() {
     <div className="page">
       <div className="between" style={{ alignItems: 'flex-end', flexWrap: 'wrap', gap: 16 }}>
         <div>
-          <h1 className="h-page">Olá, {firstName(profile.full_name)}!</h1>
+          <div className="label" style={{ marginBottom: 10 }}>{todayLabel()}</div>
+          <h1 className="h-page">{greeting()}, {firstName(profile.full_name)}</h1>
           <div style={{ fontSize: 15, color: 'var(--t3)', marginTop: 6 }}>{[profile.studio, profile.group_name].filter(Boolean).join(' · ')}</div>
         </div>
         <Link to="/relatorios/novo" className="btn btn-primary" style={{ flex: '1 1 auto', maxWidth: 320 }}>
@@ -133,14 +141,14 @@ export default function Inicio() {
       <div className="home-stats">
         <Link to="/relatorios" className="card" style={{ color: 'inherit', textDecoration: 'none' }}>
           <div className="label">Último relatório</div>
-          <div style={{ fontWeight: 600, fontSize: 26, marginTop: 8 }}>{last ? fmtBRL(last.revenue) : '—'}</div>
+          <div style={{ fontWeight: 600, fontSize: 26, marginTop: 8 }}>{last ? <Num>{fmtBRL(last.revenue)}</Num> : '—'}</div>
           <div style={{ fontSize: 14, color: 'var(--t3)', marginTop: 2 }}>
             {last ? `Quinzena ${fmtPeriod(last.period_start, last.period_end)} · enviado ${fmtDay(last.created_at, false)}` : 'Envie seu primeiro relatório'}
           </div>
         </Link>
         <Link to="/relatorios" className="card" style={{ color: 'inherit', textDecoration: 'none' }}>
           <div className="label">Faturamento registrado</div>
-          <div style={{ fontWeight: 600, fontSize: 26, marginTop: 8 }}>{fmtBRL(total)}</div>
+          <div style={{ fontWeight: 600, fontSize: 26, marginTop: 8 }}><Num>{fmtBRL(total)}</Num></div>
           <div style={{ fontSize: 14, color: 'var(--t3)', marginTop: 2 }}>
             {reps.length ? `Soma de ${reps.length} relatório${reps.length > 1 ? 's' : ''}` : 'Nenhum relatório ainda'}
           </div>

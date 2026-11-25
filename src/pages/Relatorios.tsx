@@ -2,7 +2,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Pencil } from 'lucide-react';
 import { Fragment, useEffect, useRef, useState } from 'react';
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
-import { BackLink, ErrorState, PageHead, Mark } from '../components/ui';
+import { BackLink, ErrorState, PageHead, Mark, Num } from '../components/ui';
 import { useAuth } from '../lib/auth';
 import { useReports, type Report } from '../lib/data';
 import { fmtBRL, fmtDay, fmtPeriod } from '../lib/format';
@@ -222,7 +222,7 @@ function Evolution({ reps }: { reps: Report[] }) {
           {stats.map(([l, v]) => (
             <div key={l}>
               <div className="label">{l}</div>
-              <div className="evo-num">{v}</div>
+              <div className="evo-num"><Num>{v}</Num></div>
             </div>
           ))}
         </div>
@@ -319,7 +319,7 @@ export function RelatorioDetalhe() {
           <div className="between" style={{ padding: '16px 18px', borderBottom: '1px solid var(--line)', alignItems: 'baseline', flexWrap: 'wrap' }}>
             <div>
               <div className="label">Faturamento da quinzena</div>
-              <div className="evo-num" style={{ fontSize: 28 }}>{fmtBRL(r.revenue)}</div>
+              <div className="evo-num" style={{ fontSize: 28 }}><Num>{fmtBRL(r.revenue)}</Num></div>
             </div>
             {delta !== null && (
               <span className="chip" style={{ background: delta >= 0 ? 'var(--ok-bg)' : 'var(--err-bg)', color: delta >= 0 ? 'var(--ok-t)' : 'var(--err-t)' }}>

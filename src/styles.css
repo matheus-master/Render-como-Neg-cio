@@ -899,3 +899,103 @@ a.rep-row:hover { text-decoration: none; background: var(--alt); }
 .pt-pt b { color: var(--ac); font-weight: 600; }
 .pt-list { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 8px; font-size: 15px; line-height: 1.55; color: var(--t2); }
 .pt-list b { color: var(--t); font-weight: 600; }
+
+/* =====================================================================
+   Acabamento (polish): profundidade, movimento e detalhes.
+   Regra: sutil e funcional. Nada pisca, nada distrai; tudo desliga com
+   "reduzir movimento" do sistema.
+   ===================================================================== */
+
+/* Papel com luz: um brilho dourado bem leve no alto e um marinho no pé. */
+body {
+  background:
+    radial-gradient(900px 520px at 88% -140px, rgba(242, 183, 31, .075), transparent 70%),
+    radial-gradient(760px 560px at -8% 108%, rgba(11, 44, 95, .05), transparent 70%),
+    var(--bg);
+  background-attachment: fixed;
+  text-rendering: optimizeLegibility;
+}
+h1, .h-page, .h-flow, .h-card, .auth-h1, .auth-title { text-wrap: balance; }
+p, .sub, .auth-sub { text-wrap: pretty; }
+* { scrollbar-width: thin; scrollbar-color: color-mix(in oklab, var(--t4) 55%, transparent) transparent; }
+.evo-num, .kpi .evo-num, .hv-md td { font-variant-numeric: tabular-nums; }
+
+/* Cartões: borda mais fina e luz no topo; os clicáveis se elevam. */
+.card {
+  border-color: color-mix(in oklab, var(--line) 85%, #fff);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, .9) inset, 0 1px 2px rgba(14, 17, 22, .04), 0 10px 28px -16px rgba(14, 17, 22, .14);
+  transition: transform .22s cubic-bezier(.2, .8, .2, 1), box-shadow .22s, border-color .2s;
+}
+a.card:hover, button.card:hover, .kpi:hover, .cal-item:hover, .igia-row:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in oklab, var(--t4) 45%, var(--line));
+  box-shadow: 0 1px 0 rgba(255, 255, 255, .9) inset, 0 2px 4px rgba(14, 17, 22, .05), 0 18px 36px -18px rgba(14, 17, 22, .28);
+}
+a.card:active, button.card:active, .kpi:active { transform: translateY(0); }
+.skel-card { position: relative; overflow: hidden; }
+.skel-card::after { content: ''; position: absolute; inset: 0; background: linear-gradient(100deg, transparent 30%, rgba(14, 17, 22, .035) 50%, transparent 70%); background-size: 200% 100%; animation: shimmer 1.4s linear infinite; }
+
+/* Botões: volume discreto e resposta ao toque. */
+.btn { transition: background .15s, border-color .15s, transform .15s cubic-bezier(.2, .8, .2, 1), box-shadow .2s; }
+.btn-primary { box-shadow: inset 0 1px 0 rgba(255, 255, 255, .1), 0 1px 2px rgba(14, 17, 22, .25), 0 8px 18px -10px rgba(14, 17, 22, .55); }
+.btn-primary:hover:not(:disabled) { transform: translateY(-1px); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .12), 0 2px 4px rgba(14, 17, 22, .25), 0 14px 24px -12px rgba(14, 17, 22, .6); }
+.btn-gold { box-shadow: inset 0 1px 0 rgba(255, 255, 255, .35), 0 8px 20px -10px rgba(242, 183, 31, .8); }
+.btn-gold:hover:not(:disabled) { transform: translateY(-1px); filter: brightness(1.03); }
+.btn-secondary:hover:not(:disabled) { background: var(--alt); }
+.btn:active:not(:disabled) { transform: translateY(0) scale(.985); }
+.btn:disabled, .btn[aria-disabled='true'] { box-shadow: none; }
+.input:hover:not(:focus):not(:disabled), .textarea:hover:not(:focus):not(:disabled) { border-color: var(--b-btn); }
+.seg > button { transition: color .15s, background .2s, box-shadow .2s; }
+
+/* Menu lateral: item ativo com o ponto dourado da marca. */
+.sidenav a.active::after { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--gold); box-shadow: 0 0 0 3px rgba(242, 183, 31, .18); flex: none; }
+.sidenav a:not(.active):hover svg { transform: translateX(1px); }
+.sidenav a svg { transition: color .15s, transform .2s; }
+
+/* Barra de nível: um brilho que passa de tempos em tempos. */
+.level-widget .track > i:first-child { position: relative; overflow: hidden; }
+.level-widget .track > i:first-child::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .55), transparent); transform: translateX(-100%); animation: sheen 4.5s ease-in-out 1.2s infinite; }
+@keyframes sheen { 0%, 70% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
+
+/* Blocos escuros (hero): luz dourada vinda do canto. */
+.hero { isolation: isolate; }
+.hero::after { content: ''; position: absolute; right: -120px; top: -160px; width: 420px; height: 420px; border-radius: 50%; background: radial-gradient(closest-side, rgba(242, 183, 31, .16), transparent); pointer-events: none; z-index: -1; }
+
+/* Estados vazios: papel pontilhado. */
+.dashed { background-image: radial-gradient(color-mix(in oklab, var(--t4) 22%, transparent) 1px, transparent 1px); background-size: 14px 14px; background-color: color-mix(in oklab, #fff 55%, transparent); }
+
+/* Janelas e avisos: entram suaves, com o fundo desfocado. */
+.sheet-backdrop, .modal-backdrop { backdrop-filter: blur(3px) saturate(1.1); animation: fade-in .18s ease-out both; }
+.modal { box-shadow: 0 30px 70px -20px rgba(14, 17, 22, .45); animation: pop-in .24s cubic-bezier(.2, .9, .3, 1.15) both; }
+.toast { animation: toast-in .32s cubic-bezier(.2, .9, .3, 1.1) both; border: 1px solid rgba(255, 255, 255, .08); }
+@keyframes fade-in { from { opacity: 0; } }
+@keyframes pop-in { from { opacity: 0; transform: translateY(8px) scale(.97); } }
+@keyframes toast-in { from { opacity: 0; transform: translateY(14px) scale(.98); } }
+
+/* Celular: barra de baixo com o ponto do item ativo. */
+.tabbar .on::before { content: ''; position: absolute; top: -6px; left: 50%; width: 18px; height: 3px; border-radius: 0 0 3px 3px; background: var(--ink); transform: translateX(-50%); }
+
+/* Movimento de entrada (só para quem não pediu menos movimento). */
+@media (prefers-reduced-motion: no-preference) {
+  .page > *, .staff-wrap > *, .flow > * { animation: rise .5s cubic-bezier(.2, .8, .2, 1) both; }
+  /* Janelas e avisos não entram com a página: têm a própria animação, imediata. */
+  .page > .modal-backdrop, .page > .sheet-backdrop, .staff-wrap > .modal-backdrop, .flow > .modal-backdrop { animation: fade-in .18s ease-out both !important; animation-delay: 0s !important; }
+  .page > :nth-child(2), .staff-wrap > :nth-child(2), .flow > :nth-child(2) { animation-delay: .04s; }
+  .page > :nth-child(3), .staff-wrap > :nth-child(3), .flow > :nth-child(3) { animation-delay: .08s; }
+  .page > :nth-child(4), .staff-wrap > :nth-child(4), .flow > :nth-child(4) { animation-delay: .12s; }
+  .page > :nth-child(5), .staff-wrap > :nth-child(5), .flow > :nth-child(5) { animation-delay: .16s; }
+  .page > :nth-child(n+6), .staff-wrap > :nth-child(n+6), .flow > :nth-child(n+6) { animation-delay: .2s; }
+  .track > i, .fn-track i, .sc-track i { transform-origin: left; animation: grow-x .9s cubic-bezier(.2, .8, .2, 1) .15s both; }
+  .evo-bar { transform-origin: bottom; animation: grow-y .8s cubic-bezier(.2, .8, .2, 1) both; }
+  .evo-col:nth-child(2) .evo-bar { animation-delay: .05s; } .evo-col:nth-child(3) .evo-bar { animation-delay: .1s; }
+  .evo-col:nth-child(4) .evo-bar { animation-delay: .15s; } .evo-col:nth-child(5) .evo-bar { animation-delay: .2s; }
+  .evo-col:nth-child(n+6) .evo-bar { animation-delay: .25s; }
+  .task-state .on, .plan-item.done .plan-box { animation: tick .3s cubic-bezier(.2, .9, .3, 1.4); }
+}
+@keyframes rise { from { opacity: 0; transform: translateY(10px); } }
+@keyframes grow-x { from { transform: scaleX(0); } }
+@keyframes grow-y { from { transform: scaleY(0); } }
+@keyframes tick { 50% { transform: scale(1.06); } }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+}

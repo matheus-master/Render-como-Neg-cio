@@ -1,5 +1,6 @@
 import { AlertTriangle, ArrowLeft, ArrowRight, ArrowUp, Check, ChevronRight, Lock, Mail, Play, Plus, RotateCcw, Star, X } from 'lucide-react';
 import type { CSSProperties, ReactNode } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { VERDICTS, type Verdict } from '../../shared/domain';
 import type { DocState } from '../lib/data';
@@ -160,4 +161,34 @@ export function CheckIcon({ bg = 'var(--ok-bg)', fg = 'var(--ok)', mark = '✓',
       <Mark m={mark} size={Math.round(size * 0.58)} />
     </div>
   );
+}
+
+/**
+ * Número que "conta" até o valor quando aparece (900 ms, desacelerando no fim).
+ * Aceita texto já formatado ("R$ 11.450", "295", "42%"): anima só a parte numérica.
+ */
+export function Num({ children }: { children: string | number }) {
+  const text = String(children);
+  const [shown, setShown] = useState(text);
+  useEffect(() => {
+    const m = /\d[\d.]*(?:,\d+)?/.exec(text);
+    const reduce = typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    if (!m || reduce) return setShown(text);
+    const raw = m[0];
+    const decimals = raw.includes(',') ? raw.split(',')[1]!.length : 0;
+    const target = Number(raw.replace(/\./g, '').replace(',', '.'));
+    if (!Number.isFinite(target) || target === 0) return setShown(text);
+    const fmt = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+    const t0 = performance.now();
+    let raf = 0;
+    const tick = (t: number) => {
+      const k = Math.min(1, (t - t0) / 900);
+      const e = 1 - Math.pow(1 - k, 3);
+      setShown(text.slice(0, m.index) + (k < 1 ? fmt(target * e) : raw) + text.slice(m.index + raw.length));
+      if (k < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [text]);
+  return <>{shown}</>;
 }

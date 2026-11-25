@@ -9,7 +9,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Fragment, useEffect, useRef, useState } from 'react';
 import { Pencil } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Chip, ErrorState, PageHead, PageSkeleton, Mark } from '../components/ui';
+import { Chip, ErrorState, PageHead, PageSkeleton, Mark, Num } from '../components/ui';
 import { useAuth, useProfile } from '../lib/auth';
 import { useGami, useRedButton, type Level, type Task, useSurvey, useSetTaskStatus } from '../lib/data';
 import { fmtDate, fmtDay } from '../lib/format';
@@ -111,7 +111,7 @@ export function Gamificacao() {
             <div className="card">
               <div className="label">XP neste nível</div>
               <div style={{ fontWeight: 600, fontSize: 28, marginTop: 8 }}>
-                {xpDone} <span style={{ fontSize: 15, color: 'var(--t3)', fontWeight: 600 }}>/ {xpMax}</span>
+                <Num>{xpDone}</Num> <span style={{ fontSize: 15, color: 'var(--t3)', fontWeight: 600 }}>/ {xpMax}</span>
               </div>
               <div style={{ height: 8, borderRadius: 4, background: 'var(--alt3)', overflow: 'hidden', marginTop: 10, display: 'flex' }}>
                 <div style={{ width: pct(xpDone) + '%', height: '100%', background: 'var(--ac)', transition: 'width .4s' }} />
@@ -122,7 +122,7 @@ export function Gamificacao() {
             <div className="card">
               <div className="label">Tarefas principais</div>
               <div style={{ fontWeight: 600, fontSize: 28, marginTop: 8 }}>
-                {done} <span style={{ fontSize: 15, color: 'var(--t3)', fontWeight: 600 }}>/ {mainCount}</span>
+                <Num>{done}</Num> <span style={{ fontSize: 15, color: 'var(--t3)', fontWeight: 600 }}>/ {mainCount}</span>
               </div>
               <div style={{ fontSize: 14, color: 'var(--t3)', marginTop: 4 }}>
                 {started > 0 ? `${started} em andamento` : lvl?.goal ? `Meta de faturamento: ${lvl.goal}` : 'Comece por uma tarefa'}
@@ -130,7 +130,7 @@ export function Gamificacao() {
             </div>
             <div className="card">
               <div className="label">XP total conquistado</div>
-              <div style={{ fontWeight: 600, fontSize: 28, marginTop: 8 }}>{g.xpTotal}</div>
+              <div style={{ fontWeight: 600, fontSize: 28, marginTop: 8 }}><Num>{g.xpTotal}</Num></div>
               <div style={{ fontSize: 14, color: 'var(--t3)', marginTop: 4 }}>Somando todos os níveis</div>
             </div>
           </div>

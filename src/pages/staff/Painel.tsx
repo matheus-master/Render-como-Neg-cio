@@ -3,7 +3,7 @@ import { AlertTriangle, ArrowRight, FileText, Search, Siren, Users, Wallet } fro
 import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { SLOT_ORDER, SLOTS } from '../../../shared/domain';
-import { BackLink, Chip, ErrorState, Mark, PageHead, VerdictChip } from '../../components/ui';
+import { BackLink, Chip, ErrorState, Mark, PageHead, VerdictChip, Num } from '../../components/ui';
 import { fmtBRL, fmtDay, fmtLongToday, fmtPeriod, initials } from '../../lib/format';
 import { daysSince, LATE_DAYS, progressOf, useStaffOverview, type Overview, type StaffStudent } from '../../lib/staffData';
 import { supabase } from '../../lib/supabase';
@@ -104,7 +104,7 @@ export function Painel() {
               {icon}
               <span className="label" style={{ color: 'inherit' }}>{label}</span>
             </div>
-            <div className="evo-num" style={{ fontSize: 32, marginTop: 10 }}>{value}</div>
+            <div className="evo-num" style={{ fontSize: 32, marginTop: 10 }}><Num>{value}</Num></div>
             {sub && <div style={{ fontSize: 12, color: 'var(--t3)', marginTop: 4 }}>{sub}</div>}
           </button>
         ))}
@@ -307,7 +307,7 @@ export function AlunoFicha() {
               ['Reuniões feitas', String(reps.reduce((a, r) => a + r.meetings, 0))],
               ['Projetos fechados', String(reps.reduce((a, r) => a + r.closed, 0))],
             ].map(([l, v]) => (
-              <div key={l} className="card"><div className="label">{l}</div><div className="evo-num" style={{ fontSize: 26, marginTop: 6 }}>{v}</div></div>
+              <div key={l} className="card"><div className="label">{l}</div><div className="evo-num" style={{ fontSize: 26, marginTop: 6 }}><Num>{v}</Num></div></div>
             ))}
           </div>
           {reps[0] && (
