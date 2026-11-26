@@ -1,17 +1,15 @@
 -- Demonstração da plataforma de aulas (para apresentar).
--- Cria a turma "Demonstração", põe só a conta de teste mastertime.im+aluno nela e publica 4 cursos de exemplo
--- (vídeos abertos da Blender Foundation) visíveis só para essa turma. Alunos reais não veem nada.
+-- Publica 4 cursos de exemplo (vídeos abertos da Blender Foundation) para TODAS as turmas,
+-- e deixa progresso de exemplo na conta de teste mastertime.im+aluno.
 -- Rodar no SQL Editor do Supabase. Para tirar: supabase/demo/aulas-demonstracao-remover.sql
 
 begin;
-insert into groups (name, color) values ('Demonstração', '#5E85AA') on conflict (name) do nothing;
-update profiles set group_name = 'Demonstração' where email = 'mastertime.im+aluno@gmail.com';
 
 insert into courses (id, title, subtitle, description, category, accent, featured, groups, published, position, created_at) values
- ('d0000000-0000-4000-8000-000000000001','Vendas para escritórios de arquitetura','Do primeiro contato ao contrato assinado','Como abordar escritórios, apresentar o portfólio e conduzir a negociação até o fechamento, sem baixar o preço.','Vendas','#1F3A5E',true,'{Demonstração}',true,1, now() - interval '40 days'),
- ('d0000000-0000-4000-8000-000000000002','Instagram que traz cliente','Posicionamento e conteúdo para o render','Bio, destaques, calendário e os posts que geram conversa com arquitetos e construtoras.','Vendas','#8E3B2E',false,'{Demonstração}',true,2, now() - interval '3 days'),
- ('d0000000-0000-4000-8000-000000000003','Precificação sem achismo','Calcule o preço de cada projeto com segurança','Custos, margem, hora técnica e como apresentar o valor ao cliente sem medo.','Precificação','#2F5B56',false,'{Demonstração}',true,3, now() - interval '40 days'),
- ('d0000000-0000-4000-8000-000000000004','Proposta e contrato','Feche com segurança e receba em dia','Modelo de proposta, cláusulas essenciais, sinal e cronograma de entregas.','Gestão do estúdio','#386A94',false,'{Demonstração}',true,4, now() - interval '20 days');
+ ('d0000000-0000-4000-8000-000000000001','Vendas para escritórios de arquitetura','Do primeiro contato ao contrato assinado','Como abordar escritórios, apresentar o portfólio e conduzir a negociação até o fechamento, sem baixar o preço.','Vendas','#1F3A5E',true,'{}',true,1, now() - interval '40 days'),
+ ('d0000000-0000-4000-8000-000000000002','Instagram que traz cliente','Posicionamento e conteúdo para o render','Bio, destaques, calendário e os posts que geram conversa com arquitetos e construtoras.','Vendas','#8E3B2E',false,'{}',true,2, now() - interval '3 days'),
+ ('d0000000-0000-4000-8000-000000000003','Precificação sem achismo','Calcule o preço de cada projeto com segurança','Custos, margem, hora técnica e como apresentar o valor ao cliente sem medo.','Precificação','#2F5B56',false,'{}',true,3, now() - interval '40 days'),
+ ('d0000000-0000-4000-8000-000000000004','Proposta e contrato','Feche com segurança e receba em dia','Modelo de proposta, cláusulas essenciais, sinal e cronograma de entregas.','Gestão do estúdio','#386A94',false,'{}',true,4, now() - interval '20 days');
 
 insert into course_modules (id, course_id, title, position) values
  ('d1000000-0000-4000-8000-000000000011','d0000000-0000-4000-8000-000000000001','Prospecção',1),
@@ -35,7 +33,6 @@ insert into lessons (id, course_id, module_id, title, description, video_url, du
  ('d2000000-0000-4000-8000-000000000401','d0000000-0000-4000-8000-000000000004','d1000000-0000-4000-8000-000000000041','A proposta que fecha','Estrutura e linguagem da proposta.','https://youtu.be/WhWc3b3KhnY',20,'[]',true,1, now() - interval '20 days'),
  ('d2000000-0000-4000-8000-000000000402','d0000000-0000-4000-8000-000000000004','d1000000-0000-4000-8000-000000000041','Cláusulas essenciais','O que não pode faltar no contrato.','https://youtu.be/R6MlUcmOul8',18,'[]',true,2, now() - interval '20 days');
 
--- Progresso da conta de teste, para a vitrine já mostrar "Continuar assistindo" e "Você concluiu"
 insert into lesson_progress (student_id, lesson_id, course_id, watched_at, completed_at)
 select p.id, x.lesson::uuid, x.course::uuid, now() - x.ago::interval, case when x.done then now() - x.ago::interval end
 from profiles p, (values
