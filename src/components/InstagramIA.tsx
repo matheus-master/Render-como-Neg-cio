@@ -1,3 +1,4 @@
+import { AgentAvatar } from './Agents';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Check, Copy, ImagePlus, Sparkles, Trash2 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
@@ -135,7 +136,7 @@ export function InstagramIA({ studentId, name }: { studentId: string; name: stri
       <div>
         <div className="row" style={{ gap: 8 }}>
           <Sparkles size={17} aria-hidden style={{ color: 'var(--gold)' }} />
-          <div className="h-card">Análise do Instagram com IA</div>
+          <div className="row" style={{ gap: 12 }}><AgentAvatar k="donna" size={40} /><div><div className="h-card">Donna · análise do Instagram</div><div style={{ fontSize: 13, color: 'var(--t3)' }}>A agente de social media do time Suits</div></div></div>
         </div>
         <div style={{ fontSize: 14, color: 'var(--t3)', marginTop: 4, lineHeight: 1.5 }}>
           Suba prints do perfil (topo com bio e destaques, grade, stories, um Reels com legenda). A IA escreve a devolutiva no padrão da Taty; você revisa e libera para {first}.

@@ -1,5 +1,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowUp, BarChart3, Check, Clock, Copy, ImagePlus, Lock, MessageCircle, MessageSquarePlus, PanelLeft, Target, Trash2, Wand2, X } from 'lucide-react';
+import { AgentAvatar } from '../components/Agents';
+import { Link } from 'react-router-dom';
+import { ArrowUp, ChevronLeft, BarChart3, Check, Clock, Copy, ImagePlus, Lock, MessageCircle, MessageSquarePlus, PanelLeft, Target, Trash2, Wand2, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -184,7 +186,8 @@ export default function Harvey() {
       <section className="hv-main">
         <header className="hv-head">
           {mobile && <button className="rv-x" aria-label="Conversas" onClick={() => setShowList(true)}><PanelLeft size={18} aria-hidden /></button>}
-          <div className="hv-badge" aria-hidden>H</div>
+          {!mobile && <Link to="/suits" className="hv-back" aria-label="Voltar para Suits"><ChevronLeft size={18} aria-hidden /> Suits</Link>}
+          <AgentAvatar k="harvey" size={40} />
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontWeight: 600, fontSize: 17 }}>Harvey</div>
             <div style={{ fontSize: 13, color: 'var(--t3)' }}>
@@ -200,7 +203,7 @@ export default function Harvey() {
           {empty ? (
             <div className="hv-empty">
               <div className="hv-hello">
-                <div className="hv-badge big" aria-hidden>H</div>
+                <AgentAvatar k="harvey" size={72} />
                 <h1>Em que venda a gente trabalha hoje?</h1>
                 <p>Mande o print da conversa com o cliente, conte a situação ou peça uma análise dos seus números. O Harvey usa os seus relatórios do portal quando precisa de dados.</p>
               </div>
@@ -239,7 +242,7 @@ export default function Harvey() {
                   </div>
                 ) : (
                   <div key={m.id} className="hv-bot">
-                    <div className="hv-badge sm" aria-hidden>H</div>
+                    <span className="hv-av-sm"><AgentAvatar k="harvey" size={30} /></span>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <Answer text={m.content} />
                       <CopyAll text={m.content} />
@@ -249,7 +252,7 @@ export default function Harvey() {
               )}
               {live && (
                 <div className="hv-bot">
-                  <div className="hv-badge sm" aria-hidden>H</div>
+                  <span className="hv-av-sm"><AgentAvatar k="harvey" size={30} /></span>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     {live.answer ? <Answer text={live.answer} /> : <div className="hv-typing"><i /><i /><i /> <span>Harvey está analisando…</span></div>}
                   </div>

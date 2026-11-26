@@ -158,7 +158,7 @@ export function Fila() {
   const dueTone = (r: QueueRow) => (new Date(r.due_at).getTime() < now ? 'red' : fmtDueRel(r.due_at).today ? 'amber' : 'blue') as 'red' | 'amber' | 'blue';
   const action = (k: RowKind) => (k === 'draft' ? 'Continuar' : k === 'lib' ? 'Ver' : k === 'run' && ai ? 'Abrir' : 'Escrever');
   const status = (r: QueueRow, k: RowKind) =>
-    k === 'lib' ? `Liberada por ${firstName(r.fb.reviewer?.full_name || '') || 'equipe'}` : k === 'draft' ? `Rascunho de ${firstName(r.fb.saver?.full_name || '')}` : k === 'run' && ai ? 'Análise da IA em andamento' : 'Aguardando a equipe';
+    k === 'lib' ? `Liberada por ${firstName(r.fb.reviewer?.full_name || '') || 'equipe'}` : k === 'draft' ? `Rascunho de ${firstName(r.fb.saver?.full_name || '')}` : k === 'run' && ai ? 'Mike está analisando' : 'Aguardando a equipe';
 
   return (
     <Screen>
@@ -456,7 +456,7 @@ function ReviewScreen({ item, refetch }: { item: ReviewItem; refetch: () => unkn
             {generating ? (
               <div className="card stack" style={{ alignItems: 'center', gap: 12, padding: '40px 20px', textAlign: 'center' }}>
                 <div className="spinner" />
-                <div style={{ fontWeight: 600, fontSize: 16 }}>Gerando o rascunho da devolutiva…</div>
+                <div style={{ fontWeight: 600, fontSize: 16 }}>Mike está preparando o rascunho da devolutiva…</div>
                 <div style={{ fontSize: 15, color: 'var(--t3)' }}>Leva de 2 a 5 minutos. Você já pode ler o material ao lado.</div>
                 <button className="btn btn-secondary btn-sm" style={{ marginTop: 6 }} onClick={() => { setScratch(true); setDraft(EMPTY); setMode('file'); }}>
                   Não esperar: subir a devolutiva em arquivo
@@ -464,7 +464,7 @@ function ReviewScreen({ item, refetch }: { item: ReviewItem; refetch: () => unkn
               </div>
             ) : failed ? (
               <div className="card stack" style={{ gap: 12, padding: 24 }}>
-                <div style={{ fontWeight: 600, fontSize: 16 }}>Não foi possível gerar o rascunho</div>
+                <div style={{ fontWeight: 600, fontSize: 16 }}>O Mike não conseguiu gerar o rascunho</div>
                 <div style={{ fontSize: 15, color: 'var(--t2)', lineHeight: 1.45 }}>{item.fb.ai_error || 'A análise falhou.'}</div>
                 <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
                   <button className="btn btn-primary" onClick={() => { setScratch(true); setDraft(EMPTY); setMode('file'); }}>Subir a devolutiva em arquivo</button>

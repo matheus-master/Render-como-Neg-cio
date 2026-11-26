@@ -14,6 +14,7 @@ import NovaAnalise from './pages/NovaAnalise';
 import Lote from './pages/Lote';
 import Calendario from './pages/Calendario';
 import Harvey from './pages/Harvey';
+import Suits from './pages/Suits';
 import { FeedbackMentoria, Gamificacao, Perfil, Sessoes } from './pages/OtherPages';
 import { NovoRelatorio, RelatorioDetalhe, Relatorios } from './pages/Relatorios';
 import { AlunoFicha, Configuracoes, Painel } from './pages/staff/Painel';
@@ -76,6 +77,7 @@ function App() {
         <Route path="feedback" element={<FeedbackMentoria />} />
         <Route path="perfil" element={<Perfil />} />
         <Route path="harvey" element={<Harvey />} />
+        <Route path="suits" element={<Suits />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>

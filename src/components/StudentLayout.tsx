@@ -16,7 +16,7 @@ const TOP: [string, string, LucideIcon][] = [
   ['/relatorios', 'Relatórios', BarChart3],
   ['/gamificacao', 'Gamificação', Trophy],
   ['/calendario', 'Agenda', CalendarDays],
-  ['/harvey', 'Harvey', Briefcase],
+  ['/suits', 'Suits', Briefcase],
   ['/sessoes', 'Ajuda', LifeBuoy],
 ];
 /** Barra do celular: destinos com palavra + o "Enviar" no meio. */
@@ -28,7 +28,7 @@ const TABS_R: [string, string, LucideIcon][] = [['/gamificacao', 'Gamificação'
 const MORE: [string, string, LucideIcon, string][] = [
   ['/relatorios', 'Relatórios', BarChart3, 'Números da quinzena'],
   ['/calendario', 'Agenda', CalendarDays, 'Aulas e sessões'],
-  ['/harvey', 'Harvey', Briefcase, 'Ajuda numa venda'],
+  ['/suits', 'Suits', Briefcase, 'Seu time de IA'],
   ['/sessoes', 'Sessões e ajuda', LifeBuoy, 'Botão Vermelho'],
   ['/feedback', 'Feedback', MessageSquareText, 'Avalie a mentoria'],
   ['/perfil', 'Perfil', UserRound, 'Seus dados'],
@@ -166,7 +166,7 @@ export default function StudentLayout() {
   const inNova = pathname.startsWith('/documentos/nova');
   const isOn = (p: string) => (p === '/' ? pathname === '/' : pathname.startsWith(p));
   const onTab = (p: string) => isOn(p) && !more && !send;
-  const inMore = MORE.some(([p]) => isOn(p));
+  const inMore = MORE.some(([p]) => isOn(p)) || pathname.startsWith('/harvey');
   const logout = async () => {
     setMore(false);
     await signOut();
@@ -197,13 +197,13 @@ export default function StudentLayout() {
           <Logo white />
           <nav className="tn-links" aria-label="Menu principal">
             {TOP.map(([to, label, Icon]) => (
-              <NavLink key={to} to={to} end={to === '/'} className={({ isActive }) => 'tn-item' + (isActive ? ' on' : '')} title={label}>
+              <NavLink key={to} to={to} end={to === '/'} className={({ isActive }) => 'tn-item' + (isActive || (to === '/suits' && pathname.startsWith('/harvey')) ? ' on' : '')} title={label}>
                 {({ isActive }) => (
                   <>
                     <span className="tn-ico">
                       <Icon size={21} strokeWidth={isActive ? 2.3 : 1.8} aria-hidden />
                       {counts[to] > 0 && <span className="tn-count" aria-label={`${counts[to]} novos`}>{counts[to]}</span>}
-                      {to === '/harvey' && <span className="tn-ai" aria-label="com inteligência artificial">IA</span>}
+                      {to === '/suits' && <span className="tn-ai" aria-label="com inteligência artificial">IA</span>}
                     </span>
                     <span className="tn-label">{label}</span>
                   </>
@@ -285,7 +285,7 @@ export default function StudentLayout() {
               {MORE.map(([to, label, Icon, sub]) => (
                 <Link key={to} to={to} onClick={() => setMore(false)} className={'more-tile' + (isOn(to) ? ' on' : '')}>
                   <Tile Icon={Icon} tone={to === '/sessoes' ? 'red' : 'blue'} />
-                  <b>{label}{to === '/harvey' && <span className="tn-ai inline">IA</span>}</b>
+                  <b>{label}{to === '/suits' && <span className="tn-ai inline">IA</span>}</b>
                   <span>{sub}</span>
                 </Link>
               ))}
