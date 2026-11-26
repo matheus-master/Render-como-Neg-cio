@@ -10,7 +10,7 @@ import { Tile } from './kit';
 import { useMyEvents, useRespond } from '../lib/agenda';
 import { useIsMobile } from '../lib/useIsMobile';
 
-/** Menu do topo (computador): uma palavra embaixo de cada ícone. Perfil, Feedback e Sair ficam no menu da conta. */
+/** Menu do topo (computador): uma palavra embaixo de cada ícone. Perfil e Sair ficam no menu da conta. */
 const TOP: [string, string, LucideIcon][] = [
   ['/', 'Início', House],
   ['/aulas', 'Aulas', MonitorPlay],
@@ -19,6 +19,7 @@ const TOP: [string, string, LucideIcon][] = [
   ['/gamificacao', 'Gamificação', Trophy],
   ['/calendario', 'Agenda', CalendarDays],
   ['/suits', 'Suits', Briefcase],
+  ['/feedback', 'Feedback', MessageSquareText],
   ['/sessoes', 'Ajuda', LifeBuoy],
 ];
 /** Barra do celular: destinos com palavra + o "Enviar" no meio. */
@@ -42,6 +43,7 @@ const SEND: [string, string, LucideIcon, string][] = [
   ['/documentos/lote', 'Vários de uma vez', FileStack, 'Todos os arquivos juntos'],
   ['/relatorios/novo', 'Relatório da quinzena', BarChart3, 'Faturamento, prospecção e conquistas'],
   ['/harvey', 'Conversa para o Harvey', Briefcase, 'Print do WhatsApp com o cliente'],
+  ['/feedback', 'Feedback da mentoria', MessageSquareText, 'Conte o que está funcionando e o que melhorar'],
   ['/sessoes', 'Pedido de ajuda', LifeBuoy, 'Botão Vermelho: sessão de emergência'],
 ];
 
