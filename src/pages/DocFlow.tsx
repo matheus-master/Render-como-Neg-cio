@@ -1,9 +1,10 @@
 import { Fragment, useEffect, useState } from 'react';
 import { Link, Navigate, useLocation, useParams } from 'react-router-dom';
-import { isSlot, POINT_SECS, SLOT_ORDER, SLOTS, VERDICTS, type Feedback, type Slot } from '../../shared/domain';
+import { isSlot, POINT_SECS, SLOT_ORDER, SLOTS, VERDICTS, type Feedback, type FeedbackFile, type Slot } from '../../shared/domain';
+import { openSigned, signedUrl } from '../lib/agenda';
 import { CheckIcon, ErrorState, PageSkeleton, VerdictChip, VersionChip } from '../components/ui';
 import { Check, Clock, FileStack, FileText, FileUp, History, House, Mail, RotateCcw, TriangleAlert } from 'lucide-react';
-import { Actions, BigButton, Confirm, DetailCard, DoneRow, HelpCard, Note, Pill, ReadAloud, Row, Screen, ScreenHead, Section, Side, Workspace } from '../components/kit';
+import { Actions, BigButton, Confirm, DetailCard, DoneRow, HelpCard, Note, Pill, ReadAloud, Row, Screen, ScreenHead, Section, Side, Tile, Workspace } from '../components/kit';
 import { MaterialPreview } from '../components/MaterialPreview';
 import { useProfile } from '../lib/auth';
 import { useDocs, useFeatures, useGami, useMarkSeen, useSetChecks } from '../lib/data';
@@ -214,6 +215,32 @@ function PointsBySection({ pts }: { pts: Feedback['pts'] }) {
   );
 }
 
+/** Devolutiva em arquivo (PDF/Word comentado pela equipe): abrir, baixar e ver o PDF aqui mesmo. */
+function DevolutivaArquivo({ file }: { file: FeedbackFile }) {
+  const [url, setUrl] = useState<string | null>(null);
+  useEffect(() => {
+    let on = true;
+    signedUrl(file.path).then((u) => on && setUrl(u));
+    return () => { on = false; };
+  }, [file.path]);
+  const pdf = /\.pdf$/i.test(file.name);
+  const img = /\.(png|jpe?g|webp|gif)$/i.test(file.name);
+  return (
+    <Section title="Devolutiva completa">
+      <div className="k-row dev-file-row">
+        <Tile Icon={FileText} />
+        <span className="k-row-main">
+          <b>{file.name}</b>
+          <span className="k-row-sub">Arquivo da equipe com os ajustes comentados</span>
+        </span>
+        <button className="btn btn-primary btn-sm" onClick={() => openSigned(file.path)}>Abrir</button>
+      </div>
+      {url && pdf && <iframe className="dev-file-frame" src={url} title="Devolutiva completa" />}
+      {url && img && <img className="dev-file-img" src={url} alt="Devolutiva completa" />}
+    </Section>
+  );
+}
+
 export function Devolutiva() {
   const { slot, q } = useSlotDocs();
   const gami = useGami();
@@ -267,7 +294,7 @@ export function Devolutiva() {
       <Side>
       <DetailCard Icon={VIcon} tone={vt} eyebrow={`Devolutiva · versão ${lv.version}`} title={`${v.label}: ${v.meaning}`}>
         <blockquote className="quote" style={{ margin: 0 }}>{fb.sum}</blockquote>
-        <div className="k-row-sub dev-counts">{fb.pts.length ? `${fb.pts.length} ponto${fb.pts.length > 1 ? 's' : ''} a ajustar` : 'Nenhum ponto a ajustar'} · {doneN} de {checks.length} passos feitos</div>
+        <div className="k-row-sub dev-counts">{fb.file && !fb.pts.length ? 'Os ajustes estão no arquivo da devolutiva' : `${fb.pts.length ? `${fb.pts.length} ponto${fb.pts.length > 1 ? 's' : ''} a ajustar` : 'Nenhum ponto a ajustar'} · ${doneN} de ${checks.length} passos feitos`}</div>
         <BigButton a={{ label: fb.verdict === 'ok' ? 'Enviar outra versão' : 'Enviar nova versão', to: `/documentos/nova?slot=${slot}`, Icon: FileUp }} />
         <button onClick={() => setLegend(!legend)} className="link" style={{ alignSelf: 'flex-start', fontSize: 15 }}>
           {legend ? 'Esconder o significado dos vereditos' : 'O que significa cada veredito?'}
@@ -286,6 +313,7 @@ export function Devolutiva() {
       </Side>
 
         <div className="dev-main">
+          {fb.file && <DevolutivaArquivo file={fb.file} />}
           {fb.verdict === 'ok' && SLOTS[slot].task && (
             <DoneRow title={`+${task?.xp ?? 100} XP na Gamificação`} sub={`Tarefa concluída: ${task?.title ?? SLOTS[slot].task}`} to="/gamificacao" />
           )}

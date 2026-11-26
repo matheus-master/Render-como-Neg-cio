@@ -31,13 +31,19 @@ export const POINT_SECS: { k: PointSec; label: string }[] = [
 export const isPointSec = (x: unknown): x is PointSec => POINT_SECS.some((s) => s.k === x);
 /** sec e pg são opcionais: devolutivas antigas não têm. */
 export interface FeedbackPoint { t: string; d: string; s: string; sec?: PointSec; pg?: string }
+/** Devolutiva em arquivo (PDF/Word comentado), em files/devolutivas/{submission_id}/... */
+export interface FeedbackFile { path: string; name: string }
 export interface Feedback {
   verdict: Verdict;
   sum: string;
   strong: string[];
   pts: FeedbackPoint[];
   steps: string[];
+  /** Só nas devolutivas escritas pela equipe em arquivo (sem rascunho da IA). */
+  file?: FeedbackFile;
 }
+/** Texto padrão quando a equipe sobe o arquivo e não escreve recado. */
+export const FILE_SUMMARY = 'A devolutiva completa está no arquivo anexo.';
 
 /** JSON Schema da saída estruturada pedida à IA. */
 export const FEEDBACK_JSON_SCHEMA = {

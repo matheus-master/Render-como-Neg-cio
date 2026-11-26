@@ -1,9 +1,11 @@
 import { useQueryClient } from '@tanstack/react-query';
-import { useEffect, useMemo, useState } from 'react';
-import { CalendarDays, Check, ChevronDown, FileText, Inbox, LayoutDashboard, LogOut, PenLine, Settings, type LucideIcon } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { CalendarDays, Check, ChevronDown, FileText, Inbox, LayoutDashboard, LogOut, PenLine, Settings, Upload, type LucideIcon } from 'lucide-react';
 import { Link, Outlet, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useIsMobile } from '../../lib/useIsMobile';
-import { forbiddenHits, POINT_SECS, SLOTS, VERDICTS, type Feedback, type PointSec, type Verdict } from '../../../shared/domain';
+import { FILE_SUMMARY, forbiddenHits, MAX_UPLOAD_BYTES, POINT_SECS, SLOTS, VERDICTS, type Feedback, type FeedbackFile, type PointSec, type Verdict } from '../../../shared/domain';
+import { safeName, uploadWithProgress } from '../../lib/upload';
+import { openSigned } from '../../lib/agenda';
 import { ErrorState, VerdictChip, Mark } from '../../components/ui';
 import { DoneRow, NextUp, Note, Pill, Row, Screen, ScreenHead, Section, Side, Workspace } from '../../components/kit';
 import { Logo } from '../../components/StudentLayout';
@@ -254,9 +256,10 @@ interface Draft {
   strong: string[];
   pts: { t: string; d: string; s: string; sec?: PointSec; pg?: string }[];
   steps: string; // um por linha
+  file?: FeedbackFile | null;
 }
 const EMPTY: Draft = { verdict: null, sum: '', strong: [''], pts: [], steps: '' };
-const toDraft = (f: Feedback | null): Draft => (f ? { verdict: f.verdict, sum: f.sum, strong: [...f.strong], pts: f.pts.map((p) => ({ ...p })), steps: f.steps.join('\n') } : EMPTY);
+const toDraft = (f: Feedback | null): Draft => (f ? { verdict: f.verdict, sum: f.sum === FILE_SUMMARY ? '' : f.sum, strong: [...f.strong], pts: f.pts.map((p) => ({ ...p })), steps: f.steps.join('\n'), file: f.file ?? null } : EMPTY);
 const toFeedback = (d: Draft): Feedback => ({
   verdict: d.verdict || 'aj',
   sum: d.sum.trim(),
@@ -297,10 +300,21 @@ function ReviewScreen({ item, refetch }: { item: ReviewItem; refetch: () => unkn
   const [releaseErr, setReleaseErr] = useState(false);
   const student = firstName(item.student.full_name);
   const hasDraft = !!item.fb.draft || scratch;
+  // Sem rascunho da IA, a equipe sobe a devolutiva em arquivo (veredito + arquivo + recado).
+  // O formulário completo fica para o rascunho da IA ou para quem preferir escrever ponto por ponto.
+  const [mode, setMode] = useState<'file' | 'form'>(() => {
+    const f = released ? item.fb.released : item.fb.draft;
+    return f && !f.file ? 'form' : 'file';
+  });
+  const [up, setUp] = useState<number | null>(null);
+  const fileIn = useRef<HTMLInputElement>(null);
 
   // O rascunho da IA chegou enquanto a tela estava aberta.
   useEffect(() => {
-    if (item.fb.draft && !scratch && draft === EMPTY) setDraft(toDraft(item.fb.draft));
+    if (item.fb.draft && !scratch && draft === EMPTY) {
+      setDraft(toDraft(item.fb.draft));
+      setMode(item.fb.draft.file ? 'file' : 'form');
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [item.fb.draft]);
 
@@ -314,7 +328,10 @@ function ReviewScreen({ item, refetch }: { item: ReviewItem; refetch: () => unkn
     setReleaseErr(false);
   };
 
-  const fbNow = toFeedback(draft);
+  const fbNow: Feedback =
+    mode === 'file'
+      ? { verdict: draft.verdict || 'aj', sum: draft.sum.trim(), strong: [], pts: [], steps: [], ...(draft.file ? { file: draft.file } : {}) }
+      : toFeedback(draft);
   const texts = [draft.sum, ...draft.strong, ...draft.pts.flatMap((p) => [p.t, p.d, p.s]), draft.steps];
   const found = texts.flatMap(forbiddenHits);
   const nFields = texts.filter((t) => forbiddenHits(t).length).length;
@@ -338,7 +355,8 @@ function ReviewScreen({ item, refetch }: { item: ReviewItem; refetch: () => unkn
   const approve = async () => {
     if (busy) return;
     if (!draft.verdict) return toast('Escolha um veredito antes de liberar.');
-    if (!draft.sum.trim()) return toast('Escreva o resumo antes de liberar.');
+    if (mode === 'file' && !draft.file) return toast('Suba o arquivo da devolutiva antes de liberar.');
+    if (mode === 'form' && !draft.sum.trim()) return toast('Escreva o resumo antes de liberar.');
     setBusy(true);
     await saveDraft(true); // as edições ficam salvas mesmo se a liberação falhar
     try {
@@ -351,6 +369,35 @@ function ReviewScreen({ item, refetch }: { item: ReviewItem; refetch: () => unkn
     } finally {
       setBusy(false);
     }
+  };
+
+  const uploadFile = async (f: File) => {
+    if (f.size > MAX_UPLOAD_BYTES) return toast('O arquivo passa de 50 MB. Exporte em PDF ou divida em partes.');
+    setUp(0);
+    try {
+      const path = `devolutivas/${item.id}/${Date.now()}_${safeName(f.name)}`;
+      await uploadWithProgress('files', path, f, setUp).promise;
+      const old = draft.file?.path;
+      const next: Draft = { ...draft, file: { path, name: f.name } };
+      setDraft(next);
+      setReleaseErr(false);
+      // Já guarda no rascunho: se a tela fechar, o arquivo continua ligado a esta devolutiva.
+      const { error } = await supabase
+        .from('feedbacks')
+        .update({ draft: { verdict: next.verdict || 'aj', sum: next.sum.trim(), strong: [], pts: [], steps: [], file: next.file }, draft_saved_by: profile.id, draft_saved_at: new Date().toISOString() })
+        .eq('submission_id', item.id);
+      setSaved(!error);
+      if (old) supabase.storage.from('files').remove([old]);
+    } catch {
+      toast('O envio do arquivo não foi concluído. Tente de novo.');
+    } finally {
+      setUp(null);
+    }
+  };
+  const removeFile = () => {
+    const old = draft.file?.path;
+    upd((d) => { d.file = null; });
+    if (old) supabase.storage.from('files').remove([old]);
   };
 
   const regenerate = async () => {
@@ -366,7 +413,19 @@ function ReviewScreen({ item, refetch }: { item: ReviewItem; refetch: () => unkn
   const meta = [item.student.studio, item.student.group_name, `versão ${item.version}`, `enviada ${fmtSent(item.created_at)}`, released ? 'liberada' : `vence ${fmtDue(item.due_at)}`].filter(Boolean).join(' · ');
   const generating = ai && !hasDraft && ['pending', 'queued'].includes(item.fb.ai_status) && !released;
   const failed = ai && !hasDraft && item.fb.ai_status === 'failed' && !released;
-  const manual = !ai && !hasDraft && !released; // robô desligado: a equipe escreve a devolutiva
+  const verdictPicker = (
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
+      {(['ok', 'aj', 're'] as const).map((k) => {
+        const x = VERDICTS[k], on = draft.verdict === k;
+        return (
+          <button key={k} aria-pressed={on} className={'rv-verdict' + (on ? ' on' : '')} onClick={() => upd((d) => { d.verdict = k; })} style={on ? { background: x.bg, color: x.fg, borderColor: x.strong } : undefined}>
+            <Mark m={x.mark} size={18} />
+            {x.label}
+          </button>
+        );
+      })}
+    </div>
+  );
 
   return (
     <>
@@ -394,21 +453,13 @@ function ReviewScreen({ item, refetch }: { item: ReviewItem; refetch: () => unkn
               </div>
             </div>
 
-            {manual ? (
-              <div className="card stack" style={{ gap: 12, padding: 24 }}>
-                <div style={{ fontWeight: 600, fontSize: 16 }}>Escreva a devolutiva</div>
-                <div style={{ fontSize: 15, color: 'var(--t2)', lineHeight: 1.45 }}>
-                  A análise automática está desligada, então o rascunho não vem pronto. Leia o material ao lado e escreva a devolutiva: veredito, resumo, pontos a ajustar e próximos passos.
-                </div>
-                <button className="btn btn-primary" style={{ alignSelf: 'flex-start' }} onClick={() => { setScratch(true); setDraft(EMPTY); }}>Escrever devolutiva</button>
-              </div>
-            ) : generating ? (
+            {generating ? (
               <div className="card stack" style={{ alignItems: 'center', gap: 12, padding: '40px 20px', textAlign: 'center' }}>
                 <div className="spinner" />
                 <div style={{ fontWeight: 600, fontSize: 16 }}>Gerando o rascunho da devolutiva…</div>
                 <div style={{ fontSize: 15, color: 'var(--t3)' }}>Leva de 2 a 5 minutos. Você já pode ler o material ao lado.</div>
-                <button className="btn btn-secondary btn-sm" style={{ marginTop: 6 }} onClick={() => { setScratch(true); setDraft(EMPTY); }}>
-                  Não esperar: escrever do zero
+                <button className="btn btn-secondary btn-sm" style={{ marginTop: 6 }} onClick={() => { setScratch(true); setDraft(EMPTY); setMode('file'); }}>
+                  Não esperar: subir a devolutiva em arquivo
                 </button>
               </div>
             ) : failed ? (
@@ -416,25 +467,70 @@ function ReviewScreen({ item, refetch }: { item: ReviewItem; refetch: () => unkn
                 <div style={{ fontWeight: 600, fontSize: 16 }}>Não foi possível gerar o rascunho</div>
                 <div style={{ fontSize: 15, color: 'var(--t2)', lineHeight: 1.45 }}>{item.fb.ai_error || 'A análise falhou.'}</div>
                 <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                  <button className="btn btn-primary" onClick={() => { setScratch(true); setDraft(EMPTY); }}>Escrever do zero</button>
+                  <button className="btn btn-primary" onClick={() => { setScratch(true); setDraft(EMPTY); setMode('file'); }}>Subir a devolutiva em arquivo</button>
                   <button className="btn btn-secondary" onClick={regenerate}>Gerar de novo</button>
                 </div>
               </div>
+            ) : mode === 'file' ? (
+              <fieldset disabled={released} className="rv-filemode">
+                <div className="rv-step">
+                  <div className="rv-h"><span className="rv-n">1</span> Veredito</div>
+                  {verdictPicker}
+                </div>
+                <div className="rv-step">
+                  <div className="rv-h"><span className="rv-n">2</span> Arquivo da devolutiva</div>
+                  <input ref={fileIn} type="file" hidden accept=".pdf,.doc,.docx,.ppt,.pptx,image/*" onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) uploadFile(f); }} />
+                  {up !== null ? (
+                    <div className="rv-drop busy">
+                      <div className="spinner" />
+                      <b>Enviando… {up}%</b>
+                      <div className="track" style={{ height: 6, borderRadius: 3, width: '100%', maxWidth: 320 }}><i style={{ width: up + '%' }} /></div>
+                    </div>
+                  ) : draft.file ? (
+                    <div className="rv-filecard">
+                      <span className="rv-fileico"><FileText size={22} aria-hidden /></span>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <b>{draft.file.name}</b>
+                        <span>{released ? `Liberado para ${student}` : `${student} só vê depois que você liberar`}</span>
+                      </div>
+                      <a href="#" role="button" className="btn btn-secondary btn-sm" onClick={(e) => { e.preventDefault(); openSigned(draft.file!.path); }}>Abrir</a>
+                      {!released && <button type="button" className="btn btn-secondary btn-sm" onClick={() => fileIn.current?.click()}>Trocar</button>}
+                      {!released && <button type="button" className="rv-x" aria-label="Remover arquivo" onClick={removeFile}><Mark m="×" size={18} /></button>}
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      className="rv-drop"
+                      onClick={() => fileIn.current?.click()}
+                      onDragOver={(e) => e.preventDefault()}
+                      onDrop={(e) => { e.preventDefault(); const f = e.dataTransfer.files?.[0]; if (f) uploadFile(f); }}
+                    >
+                      <span className="rv-fileico"><Upload size={22} aria-hidden /></span>
+                      <b>Arraste o arquivo aqui ou clique para escolher</b>
+                      <span>O PDF ou Word com os seus comentários · até 50 MB</span>
+                    </button>
+                  )}
+                </div>
+                <div className="rv-step">
+                  <div className="rv-h"><span className="rv-n">3</span> Recado para {student} <span className="rv-opt">opcional</span></div>
+                  <Field value={draft.sum} min={64} placeholder={`Ex.: ${student}, deixei os ajustes comentados no arquivo. Comece pelo prazo e pelas revisões.`} onChange={(v) => upd((d) => { d.sum = v; })} />
+                </div>
+                {!released && (
+                  <button type="button" className="link" style={{ alignSelf: 'flex-start', fontSize: 14 }} onClick={() => { setMode('form'); setScratch(true); }}>
+                    Prefiro escrever ponto por ponto
+                  </button>
+                )}
+              </fieldset>
             ) : (
               <fieldset disabled={released} style={{ border: 0, padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 20, minWidth: 0 }}>
+                {!released && (
+                  <button type="button" className="link" style={{ alignSelf: 'flex-start', fontSize: 14 }} onClick={() => setMode('file')}>
+                    Usar um arquivo em vez disso
+                  </button>
+                )}
                 <div className="stack" style={{ gap: 8 }}>
                   <div style={{ fontWeight: 600, fontSize: 15 }}>Veredito</div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
-                    {(['ok', 'aj', 're'] as const).map((k) => {
-                      const x = VERDICTS[k], on = draft.verdict === k;
-                      return (
-                        <button key={k} aria-pressed={on} onClick={() => upd((d) => { d.verdict = k; })} style={{ height: 48, borderRadius: 8, display: 'flex', gap: 8, alignItems: 'center', justifyContent: 'center', fontWeight: 600, fontSize: 15, background: on ? x.bg : '#fff', color: on ? x.fg : 'var(--t2)', border: on ? '2px solid ' + x.strong : '1px solid var(--b-input)' }}>
-                          <span><Mark m={x.mark} size={18} /></span>
-                          {x.label}
-                        </button>
-                      );
-                    })}
-                  </div>
+                  {verdictPicker}
                   <Field value={draft.sum} min={64} placeholder="Resumo do veredito, em uma ou duas frases" onChange={(v) => upd((d) => { d.sum = v; })} />
                 </div>
 
@@ -495,7 +591,7 @@ function ReviewScreen({ item, refetch }: { item: ReviewItem; refetch: () => unkn
             )}
           </div>
 
-          {!released && hasDraft && (
+          {!released && (hasDraft || mode === 'file') && !generating && (
             <div style={{ position: 'sticky', bottom: 0, background: '#fff', borderTop: '1px solid var(--b-card)' }}>
               {found.length > 0 && (
                 <div className="row" style={{ gap: 10, padding: '10px 28px', borderBottom: '1px solid var(--b-div)', fontSize: 14, lineHeight: 1.4, color: '#5C3F00', background: '#FFF9EA' }}>
@@ -518,7 +614,7 @@ function ReviewScreen({ item, refetch }: { item: ReviewItem; refetch: () => unkn
                 </div>
                 <button className="btn btn-secondary" onClick={() => saveDraft()}>Salvar rascunho</button>
                 <button className="btn btn-primary" style={{ padding: '0 22px' }} disabled={busy} onClick={approve}>
-                  {busy ? 'Liberando…' : 'Aprovar e liberar'}
+                  {busy ? 'Liberando…' : mode === 'file' ? 'Liberar devolutiva' : 'Aprovar e liberar'}
                 </button>
               </div>
             </div>
