@@ -1,10 +1,13 @@
 import { useQueryClient, useQuery } from '@tanstack/react-query';
-import { AlertTriangle, ArrowRight, FileText, Search, Siren, Users, Wallet } from 'lucide-react';
+import { ArrowRight, Check, FileText, PenLine, Search, Siren } from 'lucide-react';
+import { NextUp, Pill, Row, Screen, ScreenHead, Section, Side, Workspace } from '../../components/kit';
+import { useQueue } from '../../lib/data';
+import { useProfile } from '../../lib/auth';
 import { useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { SLOT_ORDER, SLOTS } from '../../../shared/domain';
-import { BackLink, Chip, ErrorState, Mark, PageHead, VerdictChip, Num } from '../../components/ui';
-import { fmtBRL, fmtDay, fmtLongToday, fmtPeriod, initials } from '../../lib/format';
+import { Chip, ErrorState, Mark, PageHead, VerdictChip } from '../../components/ui';
+import { firstName, fmtBRL, fmtDay, fmtDueRel, fmtLongToday, fmtPeriod, initials } from '../../lib/format';
 import { daysSince, LATE_DAYS, progressOf, useStaffOverview, type Overview, type StaffStudent } from '../../lib/staffData';
 import { supabase } from '../../lib/supabase';
 import { useToast } from '../../lib/toast';
@@ -44,14 +47,15 @@ const pendingDocs = (o: Overview, id: string) => {
 // ---------------------------------------------------------------------
 export function Painel() {
   const q = useStaffOverview();
-  const nav = useNavigate();
+  const queue = useQueue();
+  const me = useProfile();
   const [search, setSearch] = useState('');
   const [grp, setGrp] = useState('Todos');
   const [status, setStatus] = useState<'todos' | StaffStudent['status']>('ativo');
   const [onlyLate, setOnlyLate] = useState(false);
 
-  if (q.isLoading) return <div className="page"><div className="skel" style={{ height: 120 }} /><div className="skel-card" style={{ height: 420 }} /></div>;
-  if (q.isError || !q.data) return <div className="page"><ErrorState onRetry={q.refetch} /></div>;
+  if (q.isLoading) return <Screen><ScreenHead title="Painel." /><div className="skel-card" style={{ height: 420 }} /></Screen>;
+  if (q.isError || !q.data) return <Screen><ScreenHead title="Painel." /><ErrorState onRetry={q.refetch} /></Screen>;
   const o = q.data;
 
   const rows = o.students.map((s) => ({ s, rep: reportInfo(o, s), prog: progressOf(o, s.id), docs: pendingDocs(o, s.id) }));
@@ -87,50 +91,64 @@ export function Painel() {
     .sort((a, b) => b.at.localeCompare(a.at))
     .slice(0, 12);
 
-  const kpis: [React.ReactNode, string, string, string | null][] = [
-    [<Users size={18} key="u" />, 'Alunos ativos', String(ativos.length), `${o.students.length} no total`],
-    [<AlertTriangle size={18} key="a" />, 'Relatórios atrasados', String(late.length), `mais de ${LATE_DAYS} dias sem relatório`],
-    [<FileText size={18} key="f" />, 'Devolutivas para revisar', String(toReview), 'em análise ou aguardando revisão'],
-    [<Wallet size={18} key="w" />, 'Faturamento (15 dias)', fmtBRL(recent.reduce((a, r) => a + r.revenue, 0)), [...byGroup].map(([g, v]) => `${g}: ${fmtBRL(v)}`).join(' · ') || 'nenhum relatório'],
-  ];
+  const pending = (queue.data || []).filter((r) => r.status !== 'pronta').sort((a, b) => a.due_at.localeCompare(b.due_at));
+  const first = pending[0];
+  const h = Number(new Intl.DateTimeFormat('en-GB', { timeZone: 'America/Sao_Paulo', hour: '2-digit', hourCycle: 'h23' }).format(new Date()));
+  const hello = h < 12 ? 'Bom dia' : h < 18 ? 'Boa tarde' : 'Boa noite';
 
   return (
-    <div className="page">
-      <PageHead title="Painel" sub={fmtLongToday()} />
-      <div className="kpi-grid">
-        {kpis.map(([icon, label, value, sub], i) => (
-          <button key={label} className="card kpi" onClick={() => (i === 1 ? setOnlyLate(true) : i === 2 ? nav('/equipe/fila') : undefined)}>
-            <div className="row" style={{ gap: 8, color: i === 1 && late.length ? 'var(--err)' : 'var(--t3)' }}>
-              {icon}
-              <span className="label" style={{ color: 'inherit' }}>{label}</span>
-            </div>
-            <div className="evo-num" style={{ fontSize: 32, marginTop: 10 }}><Num>{value}</Num></div>
-            {sub && <div style={{ fontSize: 12, color: 'var(--t3)', marginTop: 4 }}>{sub}</div>}
-          </button>
-        ))}
-      </div>
+    <Screen>
+      <ScreenHead
+        title={`${hello}, ${firstName(me.full_name)}.`}
+        accent={toReview ? `${toReview} devolutiva${toReview === 1 ? '' : 's'} esperando.` : 'Fila em dia.'}
+        date={fmtLongToday()}
+        meta={[
+          { k: 'Alunos ativos', v: `${ativos.length} de ${o.students.length}` },
+          { k: 'Relatórios atrasados', v: late.length ? `${late.length} · mais de ${LATE_DAYS} dias` : 'Nenhum' },
+          { k: 'Devolutivas para revisar', v: String(toReview) },
+          { k: 'Faturamento (15 dias)', v: fmtBRL(recent.reduce((a, r) => a + r.revenue, 0)) },
+        ]}
+      />
+      <Workspace>
+        {first ? (
+          <NextUp
+            label="Próxima devolutiva"
+            when={fmtDueRel(first.due_at).text}
+            Icon={PenLine}
+            title={first.student.full_name}
+            kind={`${SLOTS[first.slot].title} · versão ${first.version}`}
+            meta={[first.student.group_name, first.student.studio].filter(Boolean).join(' · ')}
+            primary={{ label: first.fb.draft_saved_at ? 'Continuar o rascunho' : 'Escrever devolutiva', to: `/equipe/revisao/${first.id}` }}
+            later={{ label: pending.length > 1 ? `Ver a fila (${pending.length})` : 'Ver a fila', to: '/equipe/fila' }}
+          />
+        ) : (
+          <NextUp
+            label="Hoje"
+            Icon={Check}
+            title="Nenhuma devolutiva esperando"
+            kind={late.length ? `${late.length} aluno${late.length === 1 ? '' : 's'} com relatório atrasado` : 'Tudo em dia por aqui.'}
+            primary={late.length ? { label: 'Ver relatórios atrasados', onClick: () => setOnlyLate(true) } : { label: 'Abrir a agenda', to: '/equipe/agenda' }}
+          />
+        )}
 
-      <StalePlansCard students={q.data!.students} />
+        {redOpen.length > 0 && (
+          <Section title="Botão Vermelho acionado" right={<span className="k-count">{redOpen.length}</span>}>
+            {redOpen.map((r) => (
+              <Row
+                key={r.student_id}
+                Icon={Siren}
+                tone="red"
+                when={fmtDay(r.used_at)}
+                title={name(r.student_id)}
+                sub={r.reason ? `"${r.reason.slice(0, 110)}${r.reason.length > 110 ? '…' : ''}"` : 'Sem motivo informado'}
+                to={`/equipe/aluno/${r.student_id}?aba=sessoes`}
+                right={<Pill tone={r.staff_status === 'agendado' ? 'blue' : 'red'}>{r.staff_status === 'agendado' ? 'Agendado' : 'Solicitado'}</Pill>}
+              />
+            ))}
+          </Section>
+        )}
 
-      {redOpen.length > 0 && (
-        <div className="card" style={{ borderColor: 'var(--err)', display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <div className="row" style={{ gap: 8, color: 'var(--err)' }}>
-            <Siren size={18} aria-hidden />
-            <span className="h-card" style={{ color: 'var(--err-t)' }}>Botão Vermelho acionado</span>
-          </div>
-          {redOpen.map((r) => (
-            <Link key={r.student_id} to={`/equipe/aluno/${r.student_id}?aba=sessoes`} className="between" style={{ alignItems: 'center', color: 'inherit', padding: '6px 0', borderTop: '1px solid var(--b-div)' }}>
-              <span style={{ fontSize: 14 }}>
-                <b>{name(r.student_id)}</b> · {fmtDay(r.used_at)} {r.reason ? `· "${r.reason.slice(0, 90)}${r.reason.length > 90 ? '…' : ''}"` : ''}
-              </span>
-              <Chip tone={r.staff_status === 'agendado' ? 'soft' : 'err'}>{r.staff_status}</Chip>
-            </Link>
-          ))}
-        </div>
-      )}
-
-      <div className="painel-split">
-        <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+        <div className="card stu-panel" style={{ padding: 0, overflow: 'hidden' }}>
           <div className="row" style={{ padding: '14px 16px', gap: 10, flexWrap: 'wrap', borderBottom: '1px solid var(--line)' }}>
             <div style={{ position: 'relative', flex: '1 1 220px' }}>
               <Search size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--t4)' }} aria-hidden />
@@ -196,6 +214,10 @@ export function Painel() {
           </div>
         </div>
 
+        <Side>
+          <StalePlansCard students={q.data!.students} />
+        </Side>
+        <Side>
         <div className="card" style={{ padding: '18px 18px 8px' }}>
           <div className="h-card" style={{ marginBottom: 10 }}>Atividade recente</div>
           {events.length === 0 && <div style={{ fontSize: 14, color: 'var(--t3)', padding: '12px 0' }}>Nada ainda.</div>}
@@ -211,8 +233,9 @@ export function Painel() {
             </Link>
           ))}
         </div>
-      </div>
-    </div>
+        </Side>
+      </Workspace>
+    </Screen>
   );
 }
 
@@ -231,11 +254,11 @@ export function AlunoFicha() {
   const [tab, setTab] = useState<Tab>(initialTab);
   const groups = useGroups();
 
-  if (q.isLoading) return <div className="page"><div className="skel-card" style={{ height: 500 }} /></div>;
-  if (q.isError || !q.data) return <div className="page"><ErrorState onRetry={q.refetch} /></div>;
+  if (q.isLoading) return <Screen><ScreenHead back="/equipe" title="Aluno" /><div className="skel-card" style={{ height: 500 }} /></Screen>;
+  if (q.isError || !q.data) return <Screen><ScreenHead back="/equipe" title="Aluno" /><ErrorState onRetry={q.refetch} /></Screen>;
   const o = q.data;
   const s = o.students.find((x) => x.id === id);
-  if (!s) return <div className="page"><BackLink to="/equipe">Painel</BackLink><div className="dashed">Aluno não encontrado.</div></div>;
+  if (!s) return <Screen><ScreenHead back="/equipe" title="Aluno não encontrado" /><div className="dashed">Esse aluno não existe mais ou o link está incompleto.</div></Screen>;
   const prog = progressOf(o, s.id);
   const reps = o.reports.filter((r) => r.student_id === s.id);
   const subs = o.subs.filter((x) => x.student_id === s.id);
@@ -249,45 +272,61 @@ export function AlunoFicha() {
     refresh();
   };
 
-  return (
-    <div className="page">
-      <BackLink to="/equipe">Painel</BackLink>
-      <div className="card" style={{ display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap', marginTop: -8 }}>
-        <Avatar path={s.avatar_path} name={s.full_name} className="avatar-btn" size={52} style={{ fontSize: 16 }} />
-        <div style={{ flex: '1 1 260px', minWidth: 0 }}>
-          <div className="h-flow" style={{ fontSize: 24 }}>{s.full_name}</div>
-          <div style={{ fontSize: 14, color: 'var(--t3)', marginTop: 2 }}>
-            {[s.studio, s.city, s.email, s.whatsapp].filter(Boolean).join(' · ')}
-            {instagramOf(s.instagram) && (
-              <>
-                {' · '}
-                <a className="link" href={instagramOf(s.instagram)!.url} target="_blank" rel="noreferrer">@{instagramOf(s.instagram)!.handle} ↗</a>
-              </>
-            )}
-          </div>
-          <div className="mono" style={{ fontSize: 11, color: 'var(--t3)', marginTop: 4 }}>desde {fmtDay(s.created_at, false)}</div>
-        </div>
-        <label className="field" style={{ minWidth: 170 }}>
-          <span>Grupo</span>
-          <select className="input md" style={{ height: 40 }} value={s.group_name || ''} onChange={(e) => updateProfile({ group_name: e.target.value || null })}>
-            {!s.group_name && <option value="">Sem grupo</option>}
-            {[...new Set([...(groups.data || []).map((x) => x.name), s.group_name || ''])].filter(Boolean).map((g) => <option key={g}>{g}</option>)}
-          </select>
-        </label>
-        <label className="field" style={{ minWidth: 200 }}>
-          <span>Situação</span>
-          <select className="input md" style={{ height: 40 }} value={s.status} onChange={(e) => updateProfile({ status: e.target.value as StaffStudent['status'] })}>
-            {Object.entries(STATUS_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-          </select>
-        </label>
-        <AccessField s={s} onSave={updateProfile} />
-      </div>
+  const fat = reps.reduce((a, r) => a + r.revenue, 0);
+  const ig = instagramOf(s.instagram);
+  const wa = s.whatsapp ? `https://wa.me/${s.whatsapp.replace(/\D/g, '').replace(/^(?!55)/, '55')}` : null;
 
-      <div style={{ display: 'flex', gap: 4, overflowX: 'auto', borderBottom: '1px solid var(--line)' }} role="tablist">
+  return (
+    <Screen>
+      <ScreenHead
+        back="/equipe"
+        title={s.full_name}
+        date={[s.studio, s.city, s.group_name].filter(Boolean).join(' · ') || 'Studio não informado'}
+        status={<Pill tone={s.status === 'ativo' ? 'blue' : 'gray'}>{STATUS_LABEL[s.status]}</Pill>}
+        meta={[
+          { k: 'Nível', v: `${prog.current?.name ?? '—'} · ${prog.pct}%` },
+          { k: 'Relatórios', v: `${reps.length} enviado${reps.length === 1 ? '' : 's'}` },
+          { k: 'Faturamento total', v: fmtBRL(fat) },
+          { k: 'Projetos fechados', v: String(reps.reduce((a, r) => a + r.closed, 0)) },
+        ]}
+      />
+      <Workspace>
+      <Side>
+        <div className="card fi-contact">
+          <div className="row" style={{ gap: 14 }}>
+            <Avatar path={s.avatar_path} name={s.full_name} className="avatar-btn" size={56} style={{ fontSize: 16 }} />
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontWeight: 900, fontSize: 18 }}>{firstName(s.full_name)}</div>
+              <div className="k-row-sub">desde {fmtDay(s.created_at, false)}</div>
+            </div>
+          </div>
+          <div className="fi-lines">
+            <div><span>E-mail</span><b>{s.email}</b></div>
+            <div><span>WhatsApp</span>{wa ? <a className="link" href={wa} target="_blank" rel="noreferrer">{s.whatsapp} ↗</a> : <b>—</b>}</div>
+            <div><span>Instagram</span>{ig ? <a className="link" href={ig.url} target="_blank" rel="noreferrer">@{ig.handle} ↗</a> : <b>—</b>}</div>
+          </div>
+          <label className="field">
+            <span>Grupo</span>
+            <select className="input md" value={s.group_name || ''} onChange={(e) => updateProfile({ group_name: e.target.value || null })}>
+              {!s.group_name && <option value="">Sem grupo</option>}
+              {[...new Set([...(groups.data || []).map((x) => x.name), s.group_name || ''])].filter(Boolean).map((g) => <option key={g}>{g}</option>)}
+            </select>
+          </label>
+          <label className="field">
+            <span>Situação</span>
+            <select className="input md" value={s.status} onChange={(e) => updateProfile({ status: e.target.value as StaffStudent['status'] })}>
+              {Object.entries(STATUS_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+            </select>
+          </label>
+          <AccessField s={s} onSave={updateProfile} />
+        </div>
+      </Side>
+
+      <div className="g-levels fi-tabs" role="tablist">
         {TABS.map(([k, label]) => (
-          <button key={k} role="tab" aria-selected={tab === k} onClick={() => setTab(k)} style={{ padding: '11px 14px', fontSize: 14, fontWeight: tab === k ? 600 : 500, whiteSpace: 'nowrap', color: tab === k ? 'var(--t)' : 'var(--t3)', borderBottom: tab === k ? '2px solid var(--ink)' : '2px solid transparent', marginBottom: -1 }}>
+          <button key={k} role="tab" aria-selected={tab === k} className={'g-level' + (tab === k ? ' on' : '')} onClick={() => setTab(k)}>
             {label}
-            {k === 'relatorios' && reps.length > 0 && <span className="mono" style={{ marginLeft: 6, fontSize: 11, color: 'var(--t3)' }}>{reps.length}</span>}
+            {k === 'relatorios' && reps.length > 0 && <span className="fi-n">{reps.length}</span>}
           </button>
         ))}
       </div>
@@ -299,16 +338,6 @@ export function AlunoFicha() {
             <div style={{ fontWeight: 600, fontSize: 30, letterSpacing: '-.03em' }}>{prog.current?.name}</div>
             <div className="track" style={{ height: 6 }}><i style={{ width: prog.pct + '%' }} /></div>
             <div className="hero-sub mono" style={{ fontSize: 12 }}>{prog.xpLevel}/{prog.xpMax} XP neste nível · {prog.xpTotal} XP no total</div>
-          </div>
-          <div className="kpi-grid">
-            {[
-              ['Relatórios', String(reps.length)],
-              ['Faturamento total', fmtBRL(reps.reduce((a, r) => a + r.revenue, 0))],
-              ['Reuniões feitas', String(reps.reduce((a, r) => a + r.meetings, 0))],
-              ['Projetos fechados', String(reps.reduce((a, r) => a + r.closed, 0))],
-            ].map(([l, v]) => (
-              <div key={l} className="card"><div className="label">{l}</div><div className="evo-num" style={{ fontSize: 26, marginTop: 6 }}><Num>{v}</Num></div></div>
-            ))}
           </div>
           {reps[0] && (
             <div className="card">
@@ -362,7 +391,8 @@ export function AlunoFicha() {
           <StaffSessions red={red} studentName={s.full_name} onSaved={refresh} />
         </>
       )}
-    </div>
+      </Workspace>
+    </Screen>
   );
 }
 

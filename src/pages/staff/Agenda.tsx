@@ -1,8 +1,10 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { CalendarPlus, Paperclip, Video, X } from 'lucide-react';
+import { CalendarDays, CalendarPlus, Paperclip, Video, X } from 'lucide-react';
 import { useMemo, useRef, useState } from 'react';
 import { Avatar } from '../../components/Avatar';
-import { ErrorState, Mark, PageHead } from '../../components/ui';
+import { ErrorState, Mark } from '../../components/ui';
+import { NextUp, Row, Screen, ScreenHead, Section, Side, Workspace } from '../../components/kit';
+import { whenLabel } from '../Inicio';
 import { cancelEvent, EVENT_KINDS, kindInfo, openSigned, saveEvent, useStaffEvents, type EventForm, type StaffEvent } from '../../lib/agenda';
 import { useStaffOverview } from '../../lib/staffData';
 import { supabase } from '../../lib/supabase';
@@ -30,16 +32,53 @@ export function Agenda() {
   const byDay = new Map<string, StaffEvent[]>();
   for (const e of list) (byDay.get(dateKey(e.starts_at)) || byDay.set(dateKey(e.starts_at), []).get(dateKey(e.starts_at))!).push(e);
 
+  const upcoming = (ev.data || []).filter((e) => !e.canceled && new Date(e.ends_at).getTime() >= now).sort((a, b) => a.starts_at.localeCompare(b.starts_at));
+  const nextEv = upcoming[0];
+  const week = upcoming.filter((e) => new Date(e.starts_at).getTime() - now < 7 * 86_400_000);
+  const count = (e: StaffEvent) => { const c = { vou: 0, nao_vou: 0, pendente: 0 } as Record<string, number>; e.attendees.forEach((a) => c[a.response]++); return c; };
+  const sum = (k: string) => upcoming.reduce((a, e) => a + count(e)[k]!, 0);
+  const waiting = upcoming.filter((e) => count(e).pendente > 0);
+  const unseenNotices = upcoming.reduce((a, e) => a + e.attendees.filter((x) => x.notice && x.notice !== 'novo').length, 0);
   const audienceLabel = (e: StaffEvent) =>
     e.audience === 'todos' ? 'Todos os alunos' : e.audience === 'grupo' ? `Grupo ${e.group_name}` : e.attendees.length === 1 ? (students.find((s) => s.id === e.attendees[0]!.student_id)?.full_name ?? '1 aluno') : `${e.attendees.length} alunos`;
 
   return (
-    <div className="page">
-      <PageHead
-        title="Agenda"
-        sub="Aulas, laboratórios e sessões. O que você marca aqui aparece no calendário de cada aluno convidado, e ele confirma presença."
-        right={<button className="btn btn-primary" onClick={() => setEdit('novo')}><CalendarPlus size={16} aria-hidden /> Novo evento</button>}
+    <Screen>
+      <ScreenHead
+        title="Agenda."
+        accent="O aluno vê e confirma presença."
+        sub="Aulas, laboratórios e sessões. O que você marca aqui aparece no calendário de cada aluno convidado."
+        right={<button className="btn btn-gold" onClick={() => setEdit('novo')}><CalendarPlus size={18} aria-hidden /> Novo evento</button>}
+        meta={[
+          { k: 'Próximos 7 dias', v: `${week.length} evento${week.length === 1 ? '' : 's'}` },
+          { k: 'Confirmações', v: `${sum('vou')} vão` },
+          { k: 'Sem resposta', v: `${sum('pendente')} convite${sum('pendente') === 1 ? '' : 's'}` },
+          { k: 'Mudanças não vistas', v: String(unseenNotices) },
+        ]}
       />
+      <Workspace>
+      {nextEv ? (
+        <NextUp
+          label="Próximo evento"
+          when={whenLabel(nextEv.starts_at)}
+          Icon={CalendarDays}
+          title={nextEv.title}
+          kind={`${kindInfo(nextEv.kind).label} · ${audienceLabel(nextEv)}`}
+          meta={`${count(nextEv).vou} vão · ${count(nextEv).pendente} sem resposta${count(nextEv).nao_vou ? ` · ${count(nextEv).nao_vou} não vão` : ''}`}
+          primary={{ label: 'Abrir o evento', onClick: () => setEdit(nextEv) }}
+          later={{ label: 'Marcar outro evento', onClick: () => setEdit('novo') }}
+        />
+      ) : (
+        !ev.isLoading && <NextUp label="Agenda" Icon={CalendarDays} title="Nada marcado" kind="Marque a próxima aula, laboratório ou sessão." primary={{ label: 'Novo evento', onClick: () => setEdit('novo') }} />
+      )}
+      <Side>
+        <Section title="Esperando resposta">
+          {waiting.length === 0 && <div className="k-row-sub">Todos os convites foram respondidos.</div>}
+          {waiting.slice(0, 6).map((e) => (
+            <Row key={e.id} Icon={CalendarDays} tone="amber" when={whenLabel(e.starts_at)} title={e.title} sub={`${count(e).pendente} sem resposta · ${count(e).vou} vão`} onClick={() => setEdit(e)} />
+          ))}
+        </Section>
+      </Side>
       <div className="seg" style={{ gridTemplateColumns: '1fr 1fr', maxWidth: 300 }} role="tablist">
         <button role="tab" aria-selected={tab === 'prox'} className={tab === 'prox' ? 'on' : ''} onClick={() => setTab('prox')}>Próximos</button>
         <button role="tab" aria-selected={tab === 'pass'} className={tab === 'pass' ? 'on' : ''} onClick={() => setTab('pass')}>Passados</button>
@@ -99,6 +138,7 @@ export function Agenda() {
         </div>
       )}
 
+      </Workspace>
       {edit && (
         <EventModal
           key={edit === 'novo' ? 'novo' : edit.id}
@@ -108,7 +148,7 @@ export function Agenda() {
           onClose={() => setEdit(null)}
         />
       )}
-    </div>
+    </Screen>
   );
 }
 

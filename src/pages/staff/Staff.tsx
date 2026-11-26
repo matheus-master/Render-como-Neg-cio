@@ -1,10 +1,11 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useState } from 'react';
-import { CalendarDays, Inbox, LayoutDashboard, LogOut, Settings } from 'lucide-react';
-import { Link, NavLink, Outlet, useNavigate, useParams } from 'react-router-dom';
+import { CalendarDays, Check, ChevronDown, FileText, Inbox, LayoutDashboard, LogOut, PenLine, Settings, type LucideIcon } from 'lucide-react';
+import { Link, Outlet, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useIsMobile } from '../../lib/useIsMobile';
 import { forbiddenHits, POINT_SECS, SLOTS, VERDICTS, type Feedback, type PointSec, type Verdict } from '../../../shared/domain';
-import { Chip, ErrorState, VerdictChip, Mark } from '../../components/ui';
+import { ErrorState, VerdictChip, Mark } from '../../components/ui';
+import { DoneRow, NextUp, Note, Pill, Row, Screen, ScreenHead, Section, Side, Workspace } from '../../components/kit';
 import { Logo } from '../../components/StudentLayout';
 import { useAuth, useProfile } from '../../lib/auth';
 import { useFeatures, useQueue, useReviewItem, type QueueRow, type ReviewItem } from '../../lib/data';
@@ -13,7 +14,6 @@ import { apiPost, supabase } from '../../lib/supabase';
 import { useToast } from '../../lib/toast';
 import { Avatar } from '../../components/Avatar';
 
-const GROUP_COLOR: Record<string, string> = { 'Zorango Tango': '#7A4FD0', 'Octa Performance': '#0E7C66' };
 
 export function StaffLayout() {
   const profile = useProfile();
@@ -21,53 +21,107 @@ export function StaffLayout() {
   const q = useQueue();
   const nav = useNavigate();
   const mobile = useIsMobile();
-  const pend = (q.data || []).filter((r) => r.status !== 'pronta').length; // com o robô desligado, 'em análise' também espera a equipe
-  const items: [string, string, React.ReactNode, number?][] = [
-    ['/equipe', 'Painel', <LayoutDashboard size={17} strokeWidth={1.8} aria-hidden key="p" />],
-    ['/equipe/fila', 'Fila de revisão', <Inbox size={17} strokeWidth={1.8} aria-hidden key="f" />, pend],
-    ['/equipe/agenda', 'Agenda', <CalendarDays size={17} strokeWidth={1.8} aria-hidden key="a" />],
-    ['/equipe/config', 'Configurações', <Settings size={17} strokeWidth={1.8} aria-hidden key="c" />],
+  const { pathname } = useLocation();
+  const [me, setMe] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+  const pending = (q.data || []).filter((r) => r.status !== 'pronta').sort((a, b) => a.due_at.localeCompare(b.due_at)); // com o robô desligado, 'em análise' também espera a equipe
+  const pend = pending.length;
+  const items: [string, string, LucideIcon, number?][] = [
+    ['/equipe', 'Painel', LayoutDashboard],
+    ['/equipe/fila', 'Fila', Inbox, pend],
+    ['/equipe/agenda', 'Agenda', CalendarDays],
+    ['/equipe/config', 'Ajustes', Settings],
   ];
-  const logout = async () => { await signOut(); nav('/equipe/entrar'); };
-  const SHORT: Record<string, string> = { 'Fila de revisão': 'Fila', Configurações: 'Ajustes' };
-  const links = items.map(([to, label, icon, badge]) => (
-    <NavLink key={to} to={to} end={to === '/equipe'} aria-label={label} className={({ isActive }) => (isActive || (to === '/equipe/fila' && location.pathname.startsWith('/equipe/revisao')) ? 'active' : '')}>
-      {icon}
-      <span style={{ flex: 1 }}>{mobile ? SHORT[label] ?? label : label}</span>
-      {!!badge && <span className="badge">{badge}</span>}
-    </NavLink>
-  ));
+  const isOn = (to: string) => (to === '/equipe' ? pathname === '/equipe' || pathname.startsWith('/equipe/aluno') : pathname.startsWith(to) || (to === '/equipe/fila' && pathname.startsWith('/equipe/revisao')));
+  const logout = async () => { setMe(false); await signOut(); nav('/equipe/entrar'); };
+  const next = () => nav(pending[0] ? `/equipe/revisao/${pending[0].id}` : '/equipe/fila');
+
+  useEffect(() => {
+    if (mobile) return;
+    const on = () => setScrolled(window.scrollY > 8);
+    on();
+    window.addEventListener('scroll', on, { passive: true });
+    return () => window.removeEventListener('scroll', on);
+  }, [mobile]);
+  useEffect(() => setMe(false), [pathname]);
+  useEffect(() => {
+    if (!me) return;
+    const k = (e: KeyboardEvent) => e.key === 'Escape' && setMe(false);
+    window.addEventListener('keydown', k);
+    return () => window.removeEventListener('keydown', k);
+  }, [me]);
+
   if (mobile) {
     return (
-      <div className="app">
+      <div className="app has-tabbar">
         <header className="mheader">
           <Logo to="/equipe" />
-          <button className="btn-out-light" onClick={logout}>Sair</button>
+          <button className="btn btn-gold btn-sm" onClick={next}>{pend ? `Próxima devolutiva · ${pend}` : 'Fila em dia'}</button>
         </header>
-        <nav className="sidenav staff-mnav" aria-label="Menu da equipe">{links}</nav>
         <main style={{ flex: 1, display: 'flex', flexDirection: 'column' }}><Outlet /></main>
+        <nav className="tabbar" style={{ gridTemplateColumns: 'repeat(5, 1fr)' }}>
+          {items.map(([to, label, Icon, badge]) => (
+            <Link key={to} to={to} className={isOn(to) ? 'on' : ''}>
+              <span className="ico">
+                <Icon size={22} strokeWidth={isOn(to) ? 2.2 : 1.8} aria-hidden />
+                {!!badge && <span className="dot">{badge}</span>}
+              </span>
+              {label}
+            </Link>
+          ))}
+          <button onClick={logout}>
+            <span className="ico"><LogOut size={22} strokeWidth={1.8} aria-hidden /></span>
+            Sair
+          </button>
+        </nav>
       </div>
     );
   }
   return (
-    <div className="app with-sidebar">
-      <aside className="sidebar">
-        <div style={{ padding: '4px 10px 0' }}>
-          <Logo to="/equipe" />
-          <span className="chip" style={{ background: 'var(--ink)', color: 'var(--gold)', marginTop: 10 }}>Equipe</span>
+    <div className="app with-topnav staff-app">
+      <header className={'topnav-bar' + (scrolled ? ' scrolled' : '')}>
+        <div className="tn-brand">
+          <Logo to="/equipe" white />
+          <span className="tn-tag">Equipe</span>
         </div>
-        <nav className="sidenav" aria-label="Menu da equipe">
-          <div className="sidenav-group">{links}</div>
+        <nav className="tn-links" aria-label="Menu da equipe">
+          {items.map(([to, label, Icon, badge]) => (
+            <Link key={to} to={to} className={'tn-item' + (isOn(to) ? ' on' : '')} title={label}>
+              <span className="tn-ico">
+                <Icon size={21} strokeWidth={isOn(to) ? 2.3 : 1.8} aria-hidden />
+                {!!badge && <span className="tn-count">{badge}</span>}
+              </span>
+              <span className="tn-label">{label === 'Fila' ? 'Fila de revisão' : label}</span>
+            </Link>
+          ))}
         </nav>
-        <div className="sidebar-user">
-          <Avatar path={profile.avatar_path} name={profile.full_name} className="avatar-btn" size={34} />
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 14, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{firstName(profile.full_name)}</div>
-            <div className="mono" style={{ fontSize: 11, color: 'var(--t3)' }}>Equipe RCN</div>
-          </div>
-          <button className="rv-x" onClick={logout} aria-label="Sair" title="Sair"><LogOut size={17} aria-hidden /></button>
+        <button className="tn-send" onClick={next} title={pending[0] ? `${pending[0].student.full_name} · ${SLOTS[pending[0].slot].title}` : undefined}>
+          <PenLine size={19} strokeWidth={2.4} aria-hidden /> {pend ? 'Próxima devolutiva' : 'Fila em dia'}
+        </button>
+        <div className="tn-me">
+          <button className={'tn-me-btn' + (me ? ' open' : '')} aria-haspopup="menu" aria-expanded={me} onClick={() => setMe(!me)}>
+            <span className="tn-ring" style={{ ['--p' as string]: '100%' }}>
+              <Avatar path={profile.avatar_path} name={profile.full_name} className="avatar-btn" size={38} />
+            </span>
+            <span className="tn-me-txt"><b>{firstName(profile.full_name)}</b><small>Equipe RCN</small></span>
+            <ChevronDown size={17} className="tn-chev" aria-hidden />
+          </button>
+          {me && (
+            <>
+              <div className="tn-scrim" onClick={() => setMe(false)} />
+              <div className="tn-menu" role="menu">
+                <div className="tn-menu-head">
+                  <Avatar path={profile.avatar_path} name={profile.full_name} className="avatar-btn" size={44} />
+                  <div style={{ minWidth: 0 }}><b>{profile.full_name}</b><span>{profile.email}</span></div>
+                </div>
+                <Link to="/equipe/config" role="menuitem"><Settings size={19} aria-hidden /> Ajustes e grupos</Link>
+                <div className="tn-menu-sep" />
+                <button role="menuitem" onClick={logout}><LogOut size={19} aria-hidden /> Sair</button>
+              </div>
+            </>
+          )}
         </div>
-      </aside>
+      </header>
       <main style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
         <Outlet />
       </main>
@@ -87,129 +141,107 @@ export function Fila() {
   const [tab, setTab] = useState<'pend' | 'lib'>('pend');
   const [grp, setGrp] = useState<string>('Todos');
   const rows = q.data || [];
-  const pend = rows.filter((r) => r.status !== 'pronta');
+  const pend = rows.filter((r) => r.status !== 'pronta').sort((a, b) => a.due_at.localeCompare(b.due_at));
   const lib = rows.filter((r) => r.status === 'pronta').sort((a, b) => (b.fb.released_at || '').localeCompare(a.fb.released_at || ''));
   const pendCount = pend.length;
   const ai = useFeatures().data?.ai ?? false;
   const groups = [...new Set(rows.map((r) => r.student.group_name).filter(Boolean) as string[])].sort();
-  const todayDue = pend.filter((r) => fmtDueRel(r.due_at).today).sort((a, b) => a.due_at.localeCompare(b.due_at));
+  const now = Date.now();
+  const late = pend.filter((r) => new Date(r.due_at).getTime() < now);
+  const todayDue = pend.filter((r) => fmtDueRel(r.due_at).today && new Date(r.due_at).getTime() >= now);
+  const week = lib.filter((r) => r.fb.released_at && now - new Date(r.fb.released_at).getTime() < 7 * 86_400_000);
   const list = (tab === 'pend' ? pend : lib).filter((r) => grp === 'Todos' || r.student.group_name === grp);
+  const first = pend[0];
+  const open = (r: QueueRow) => nav(`/equipe/revisao/${r.id}`);
+  const dueTone = (r: QueueRow) => (new Date(r.due_at).getTime() < now ? 'red' : fmtDueRel(r.due_at).today ? 'amber' : 'blue') as 'red' | 'amber' | 'blue';
+  const action = (k: RowKind) => (k === 'draft' ? 'Continuar' : k === 'lib' ? 'Ver' : k === 'run' && ai ? 'Abrir' : 'Escrever');
+  const status = (r: QueueRow, k: RowKind) =>
+    k === 'lib' ? `Liberada por ${firstName(r.fb.reviewer?.full_name || '') || 'equipe'}` : k === 'draft' ? `Rascunho de ${firstName(r.fb.saver?.full_name || '')}` : k === 'run' && ai ? 'Análise da IA em andamento' : 'Aguardando a equipe';
 
   return (
-    <div className="staff-wrap">
-      <div className="between" style={{ alignItems: 'flex-end', gap: 16, flexWrap: 'wrap' }}>
-        <div>
-          <h1 className="h-page">Fila de revisão</h1>
-          <div style={{ fontSize: 15, color: 'var(--t3)', marginTop: 6 }}>{fmtLongToday()}</div>
-        </div>
-        <div className="row card tight" style={{ gap: 16, padding: '14px 20px' }}>
-          <div style={{ fontWeight: 600, fontSize: 40, lineHeight: 1, color: 'var(--ac)' }}>{pendCount}</div>
-          <div>
-            <div style={{ fontWeight: 600, fontSize: 15 }}>devolutiva{pendCount === 1 ? '' : 's'} pendente{pendCount === 1 ? '' : 's'}</div>
-            {todayDue.length > 0 && (
-              <div style={{ fontSize: 14, color: 'var(--warn-t)', fontWeight: 600 }}>
-                {todayDue.length} vence{todayDue.length > 1 ? 'm' : ''} hoje{todayDue.length === 1 ? ` às ${fmtTime(todayDue[0]!.due_at)}` : ''}
-              </div>
-            )}
+    <Screen>
+      <ScreenHead
+        title="Fila de revisão."
+        accent={pendCount ? `${pendCount} esperando.` : 'Tudo em dia.'}
+        date={fmtLongToday()}
+        meta={[
+          { k: 'Pendentes', v: `${pendCount} devolutiva${pendCount === 1 ? '' : 's'}` },
+          { k: 'Vencem hoje', v: todayDue.length ? `${todayDue.length} · a próxima às ${fmtTime(todayDue[0]!.due_at)}` : 'Nenhuma' },
+          { k: 'Vencidas', v: late.length ? `${late.length} fora do prazo` : 'Nenhuma' },
+          { k: 'Liberadas em 7 dias', v: String(week.length) },
+        ]}
+      />
+      <Workspace>
+        {first ? (
+          <NextUp
+            label="Próxima devolutiva"
+            when={fmtDueRel(first.due_at).text}
+            Icon={PenLine}
+            title={first.student.full_name}
+            kind={`${SLOTS[first.slot].title} · versão ${first.version}`}
+            meta={[first.student.group_name, first.student.studio].filter(Boolean).join(' · ')}
+            primary={{ label: kindOf(first) === 'draft' ? 'Continuar o rascunho' : 'Escrever devolutiva', to: `/equipe/revisao/${first.id}` }}
+          />
+        ) : (
+          !q.isLoading && <NextUp label="Fila" Icon={Check} title="Nenhuma devolutiva esperando" kind="Quando um aluno enviar material, ele aparece aqui na ordem do prazo." />
+        )}
+
+        <div className="row" style={{ gap: 10, flexWrap: 'wrap' }}>
+          <div className="seg sm">
+            <button className={tab === 'pend' ? 'on' : ''} onClick={() => setTab('pend')}>Pendentes · {pendCount}</button>
+            <button className={tab === 'lib' ? 'on' : ''} onClick={() => setTab('lib')}>Liberadas</button>
           </div>
+          {['Todos', ...groups].map((g) => (
+            <button key={g} className={'pill' + (grp === g ? ' on' : '')} onClick={() => setGrp(g)}>
+              {g === 'Todos' ? 'Todos os grupos' : g}
+            </button>
+          ))}
         </div>
-      </div>
 
-      <div className="row" style={{ gap: 10, flexWrap: 'wrap' }}>
-        <div className="seg sm">
-          <button className={tab === 'pend' ? 'on' : ''} onClick={() => setTab('pend')}>Pendentes · {pendCount}</button>
-          <button className={tab === 'lib' ? 'on' : ''} onClick={() => setTab('lib')}>Liberadas</button>
-        </div>
-        <div style={{ width: 1, height: 24, background: '#D3D6DB', margin: '0 4px' }} />
-        {['Todos', ...groups].map((g) => (
-          <button key={g} className={'pill' + (grp === g ? ' on' : '')} onClick={() => setGrp(g)}>
-            {g === 'Todos' ? 'Todos os grupos' : g}
-          </button>
-        ))}
-      </div>
-
-      {q.isError ? (
-        <ErrorState onRetry={q.refetch} />
-      ) : (
-        <div className="card" style={{ padding: 0, borderRadius: 10, overflowX: 'auto' }}>
-          <div className="fila-table" style={{ fontSize: 15 }}>
-            <div className="fila-grid fila-head">
-              <div>Aluno</div>
-              <div>Grupo</div>
-              <div>Tipo</div>
-              <div>Enviado · prazo</div>
-              <div>Status</div>
-              <div />
-            </div>
-            {q.isLoading &&
-              [0, 1, 2].map((i) => (
-                <div key={i} className="fila-grid">
-                  <div className="skel" style={{ height: 36 }} />
-                  <div className="skel light" style={{ height: 14 }} />
-                  <div className="skel light" style={{ height: 14 }} />
-                  <div className="skel light" style={{ height: 14 }} />
-                  <div className="skel light" style={{ height: 14 }} />
-                  <div />
-                </div>
-              ))}
+        {q.isError ? (
+          <ErrorState onRetry={q.refetch} />
+        ) : q.isLoading ? (
+          <div className="skel-card" style={{ height: 260 }} />
+        ) : list.length === 0 ? (
+          <Note>{tab === 'pend' && grp === 'Todos' ? 'Tudo em dia. Nenhuma devolutiva esperando revisão.' : 'Nada por aqui com esse filtro.'}</Note>
+        ) : (
+          <Section title={tab === 'pend' ? 'Por ordem de prazo' : 'Liberadas'} right={<span className="k-count">{list.length}</span>}>
             {list.map((r) => {
               const k = kindOf(r);
-              const due = fmtDueRel(r.due_at);
-              const open = () => nav(`/equipe/revisao/${r.id}`);
               return (
-                <div key={r.id} className="fila-grid">
-                  <div className="row" style={{ minWidth: 0 }}>
-                    <Avatar path={r.student.avatar_path} name={r.student.full_name} />
-                    <div style={{ minWidth: 0 }}>
-                      <div style={{ fontWeight: 600 }}>{r.student.full_name}</div>
-                      <div style={{ fontSize: 13, color: 'var(--t3)' }}>{r.student.studio || 'Studio não informado'}</div>
-                    </div>
-                  </div>
-                  <div className="row" style={{ gap: 8, fontSize: 14 }}>
-                    <span style={{ width: 8, height: 8, borderRadius: '50%', background: GROUP_COLOR[r.student.group_name || ''] || '#AEB3BC', flex: 'none' }} />
-                    {r.student.group_name || '—'}
-                  </div>
-                  <div>
-                    {SLOTS[r.slot].tipo} <span className="muted">· v{r.version}</span>
-                  </div>
-                  <div>
-                    <div>{fmtSent(r.created_at)}</div>
-                    {k === 'lib' ? (
-                      <div style={{ fontSize: 13, color: 'var(--t3)' }}>liberada por {firstName(r.fb.reviewer?.full_name || '') || 'equipe'}</div>
-                    ) : (
-                      <div style={{ fontSize: 13, color: due.today ? 'var(--warn-t)' : 'var(--t3)', fontWeight: due.today ? 600 : 400 }}>{due.text}</div>
-                    )}
-                  </div>
-                  <div>
-                    {k === 'lib' ? (
-                      <VerdictChip v={r.fb.verdict!} />
-                    ) : k === 'draft' ? (
-                      <Chip tone="ink">Rascunho · {firstName(r.fb.saver?.full_name || '')}</Chip>
-                    ) : k === 'wait' ? (
-                      <Chip tone="soft">Aguardando revisão</Chip>
-                    ) : (
-                      ai ? <Chip live style={{ border: 0, paddingLeft: 0 }}>Análise em andamento</Chip> : <Chip tone="soft">Aguardando a equipe</Chip>
-                    )}
-                  </div>
-                  <div>
-                    {k === 'draft' && <button className="btn btn-primary btn-sm btn-block" onClick={open}>Continuar</button>}
-                    {k === 'wait' && <button className="btn btn-outline btn-sm btn-block" onClick={open}>Revisar</button>}
-                    {k === 'lib' && <button className="btn btn-outline btn-sm btn-block" onClick={open}>Ver</button>}
-                    {k === 'run' && <button className={'btn btn-sm btn-block ' + (ai ? 'btn-secondary' : 'btn-outline')} onClick={open}>{ai ? 'Abrir' : 'Escrever'}</button>}
-                  </div>
-                </div>
+                <Row
+                  key={r.id}
+                  Icon={k === 'lib' ? Check : k === 'draft' ? PenLine : FileText}
+                  tone={k === 'lib' ? 'mint' : k === 'draft' ? 'amber' : 'blue'}
+                  when={k === 'lib' ? `Liberada ${fmtSent(r.fb.released_at || r.created_at)}` : <span className={'due-' + dueTone(r)}>{fmtDueRel(r.due_at).text}</span>}
+                  title={r.student.full_name}
+                  sub={`${SLOTS[r.slot].title} · v${r.version} · ${r.student.group_name || 'sem grupo'} · ${status(r, k)}`}
+                  onClick={() => open(r)}
+                  right={
+                    <span className="row" style={{ gap: 10, flex: 'none' }}>
+                      {k === 'lib' ? <VerdictChip v={r.fb.verdict!} /> : <Pill tone={dueTone(r)}>{dueTone(r) === 'red' ? 'Vencida' : dueTone(r) === 'amber' ? 'Vence hoje' : 'No prazo'}</Pill>}
+                      <span className={'btn btn-sm ' + (k === 'draft' ? 'btn-primary' : 'btn-soft')}>{action(k)}</span>
+                    </span>
+                  }
+                />
               );
             })}
-          </div>
-        </div>
-      )}
-      {!q.isLoading && !q.isError && list.length === 0 && (
-        <div className="dashed" style={{ borderRadius: 10, padding: 28, fontSize: 15, color: 'var(--t3)' }}>
-          {tab === 'pend' && grp === 'Todos' ? 'Tudo em dia. Nenhuma devolutiva esperando revisão.' : 'Nada por aqui com esse filtro.'}
-        </div>
-      )}
-      <div style={{ fontSize: 14, color: 'var(--t3)' }}>Ordenado por prazo: o que vence primeiro fica no topo.</div>
-    </div>
+          </Section>
+        )}
+
+        <Side>
+          <Section title="Liberadas recentemente">
+            {lib.slice(0, 5).map((r) => (
+              <DoneRow key={r.id} title={r.student.full_name} sub={`${SLOTS[r.slot].title} · ${r.fb.verdict ? VERDICTS[r.fb.verdict].label : ''} · ${fmtSent(r.fb.released_at || r.created_at)}`} to={`/equipe/revisao/${r.id}`} />
+            ))}
+            {lib.length === 0 && <div className="k-row-sub">Nenhuma ainda.</div>}
+          </Section>
+        </Side>
+        <Side>
+          <Note tone="blue">A fila é ordenada pelo prazo: o que vence primeiro fica no topo. O prazo do aluno é de 48h a partir do envio.</Note>
+        </Side>
+      </Workspace>
+    </Screen>
   );
 }
 

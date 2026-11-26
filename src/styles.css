@@ -1730,3 +1730,30 @@ a.k-row:hover, button.k-row:hover { text-decoration: none; transform: translateY
   .tn-ai:not(.inline)::after { content: ''; position: absolute; inset: 0; border-radius: inherit; background: linear-gradient(110deg, transparent 30%, rgba(255, 255, 255, .55) 50%, transparent 70%); background-size: 220% 100%; animation: ai-shine 4s ease-in-out 1.5s infinite; }
 }
 @keyframes ai-shine { 0%, 75% { background-position: 120% 0; } 100% { background-position: -120% 0; } }
+
+/* ---------- Equipe no novo padrão ---------- */
+.tn-brand { display: flex; align-items: center; gap: 12px; flex: none; }
+.tn-tag { font-weight: 900; font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--gold); border: 1.5px solid rgba(227, 164, 64, .55); border-radius: 999px; padding: 4px 10px; }
+.staff-app .tn-links { flex: 0 1 auto; margin-right: auto; }
+.staff-app .tn-item { min-width: 110px; }
+.due-red { color: var(--err-t); }
+.due-amber { color: #8A5A12; }
+.due-blue { color: var(--t); }
+.fi-contact { display: flex; flex-direction: column; gap: 16px; padding: 20px !important; }
+.fi-lines { display: flex; flex-direction: column; gap: 10px; padding: 14px 0; border-top: 1px solid var(--b-div); border-bottom: 1px solid var(--b-div); }
+.fi-lines > div { display: flex; justify-content: space-between; gap: 12px; font-size: 14.5px; }
+.fi-lines span { color: var(--t3); flex: none; }
+.fi-lines b { font-weight: 700; text-align: right; overflow-wrap: anywhere; }
+.fi-contact .field { gap: 6px; }
+.fi-contact .input { height: 46px; font-size: 15px; }
+.fi-tabs .g-level { padding: 0 16px; }
+.fi-n { font-size: 12px; font-weight: 900; background: rgba(255, 255, 255, .2); border-radius: 999px; padding: 1px 7px; }
+.g-level:not(.on) .fi-n { background: var(--alt2); color: var(--t3); }
+@media (min-width: 761px) {
+  .with-topnav .ws.single { grid-template-columns: minmax(0, 1fr); }
+  .with-topnav .ws .stu-panel { overflow: hidden; }
+  .with-topnav .ws .stu-row { padding: 12px 18px; }
+  .with-topnav .ws .stu-head { padding: 10px 18px; }
+  .with-topnav .staff-wrap { max-width: 1344px; }
+}
+@media (max-width: 760px) { .mheader .btn-gold { height: 38px; } }

@@ -26,6 +26,7 @@ export function Workspace({ children }: { children: ReactNode }) {
   const items = Children.toArray(children);
   if (mobile) return <div className="ws">{items}</div>;
   const side = (c: unknown) => isValidElement(c) && c.type === Side;
+  if (!items.some(side)) return <div className="ws single"><div className="ws-main">{items}</div></div>;
   return (
     <div className="ws">
       <div className="ws-main">{items.filter((c) => !side(c))}</div>
