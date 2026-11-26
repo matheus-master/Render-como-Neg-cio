@@ -1,5 +1,6 @@
-import { BarChart3, Briefcase, CalendarDays, ChevronDown, ChevronRight, FileStack, FileText, FileUp, House, LifeBuoy, LogOut, MessageSquareText, MoreHorizontal, Plus, Trophy, UserRound, X, type LucideIcon } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { BarChart3, Briefcase, CalendarDays, ChevronDown, ChevronRight, FileStack, FileText, FileUp, House, LifeBuoy, LogOut, MessageSquareText, MoreHorizontal, Plus, Sparkles, Trophy, UserRound, X, type LucideIcon } from 'lucide-react';
+import { lazy, Suspense, useEffect, useState } from 'react';
+const AvatarBuilder = lazy(() => import('./AvatarBuilder'));
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { accessOf, useAuth, useProfile } from '../lib/auth';
 import { useDocs, useGami } from '../lib/data';
@@ -139,6 +140,7 @@ export default function StudentLayout() {
   const [more, setMore] = useState(false);
   const [send, setSend] = useState(false);
   const [me, setMe] = useState(false);
+  const [builder, setBuilder] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const events = useMyEvents();
   const badge = unseen.length;
@@ -244,6 +246,7 @@ export default function StudentLayout() {
                       <small>{left > 0 ? `${left === 1 ? 'Falta 1 tarefa' : `Faltam ${left} tarefas`}${nextLevel ? ` para ${nextLevel.name}` : ''}` : 'Nível completo'}</small>
                     </Link>
                   )}
+                  <button role="menuitem" onClick={() => { setMe(false); setBuilder(true); }}><Sparkles size={19} aria-hidden /> {profile.avatar_config ? 'Editar meu avatar' : 'Criar meu avatar'}</button>
                   <Link to="/perfil" role="menuitem"><UserRound size={19} aria-hidden /> Meu perfil</Link>
                   <Link to="/feedback" role="menuitem"><MessageSquareText size={19} aria-hidden /> Feedback da mentoria</Link>
                   <div className="tn-menu-sep" />
@@ -295,6 +298,7 @@ export default function StudentLayout() {
         </div>
       )}
       {send && <SendSheet onClose={() => setSend(false)} desktop={!mobile} />}
+      {builder && <Suspense fallback={null}><AvatarBuilder onClose={() => setBuilder(false)} /></Suspense>}
     </div>
   );
 }

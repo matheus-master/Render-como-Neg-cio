@@ -6,8 +6,9 @@ import { StudentPlans } from '../components/Planos';
 import { useMyEvents, useMyPlans } from '../lib/agenda';
 import { safeName } from '../lib/upload';
 import { useQueryClient } from '@tanstack/react-query';
-import { useEffect, useRef, useState } from 'react';
-import { ArrowRight, CalendarDays, Check, Circle, FileUp, House, LifeBuoy, Lock, Pencil, RotateCcw, Star, Timer, Trophy } from 'lucide-react';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
+const AvatarBuilder = lazy(() => import('../components/AvatarBuilder'));
+import { ArrowRight, CalendarDays, Check, Circle, FileUp, House, LifeBuoy, Lock, Pencil, RotateCcw, Sparkles, Star, Timer, Trophy } from 'lucide-react';
 import { Actions, BigButton, Confirm, DetailCard, DoneRow, HelpCard, NextUp, Note, Pill, Row, Screen, ScreenHead, Section, Side, Tile, Workspace } from '../components/kit';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ErrorState, PageHead, PageSkeleton, Mark, Num } from '../components/ui';
@@ -673,6 +674,7 @@ function PhotoField() {
   const qc = useQueryClient();
   const input = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
+  const [builder, setBuilder] = useState(false);
   const pick = async (f: File | undefined) => {
     if (!f) return;
     if (!f.type.startsWith('image/')) return toast('Escolha uma imagem (JPG ou PNG).');
@@ -682,7 +684,7 @@ function PhotoField() {
     const up = await supabase.storage.from('files').upload(path, f, { contentType: f.type });
     if (up.error) { setBusy(false); return toast('Não deu para enviar a foto. Tente de novo.'); }
     const old = profile.avatar_path;
-    const { error } = await supabase.from('profiles').update({ avatar_path: path }).eq('id', profile.id);
+    const { error } = await supabase.from('profiles').update({ avatar_path: path, avatar_config: null }).eq('id', profile.id);
     if (!error && old) await supabase.storage.from('files').remove([old]);
     setBusy(false);
     if (error) return toast('Não deu para salvar a foto.');
@@ -693,7 +695,7 @@ function PhotoField() {
   const remove = async () => {
     const old = profile.avatar_path;
     if (!old) return;
-    await supabase.from('profiles').update({ avatar_path: null }).eq('id', profile.id);
+    await supabase.from('profiles').update({ avatar_path: null, avatar_config: null }).eq('id', profile.id);
     await supabase.storage.from('files').remove([old]);
     reloadProfile();
   };
@@ -702,13 +704,21 @@ function PhotoField() {
       <Avatar path={profile.avatar_path} name={profile.full_name} className="avatar-btn" size={64} style={{ fontSize: 18 }} />
       <div className="stack" style={{ gap: 6 }}>
         <input ref={input} type="file" accept="image/*" hidden onChange={(e) => { pick(e.target.files?.[0]); e.target.value = ''; }} />
-        <div className="row" style={{ gap: 8 }}>
+        <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
+          <button className="btn btn-primary btn-sm" onClick={() => setBuilder(true)}>
+            <Sparkles size={14} aria-hidden /> {profile.avatar_config ? 'Editar meu avatar' : 'Criar meu avatar'}
+          </button>
           <button className="btn btn-secondary btn-sm" disabled={busy} onClick={() => input.current?.click()}>
-            {busy ? 'Enviando…' : profile.avatar_path ? 'Trocar foto' : 'Adicionar foto'}
+            {busy ? 'Enviando…' : profile.avatar_path && !profile.avatar_config ? 'Trocar foto' : 'Usar uma foto'}
           </button>
           {profile.avatar_path && !busy && <button className="link" style={{ fontSize: 13 }} onClick={remove}>Remover</button>}
         </div>
-        <span style={{ fontSize: 12, color: 'var(--t3)' }}>Aparece para a equipe RCN.</span>
+        <span style={{ fontSize: 12, color: 'var(--t3)' }}>Monte um personagem do seu jeito ou use uma foto. Aparece para a equipe RCN.</span>
+        {builder && (
+          <Suspense fallback={null}>
+            <AvatarBuilder onClose={() => setBuilder(false)} />
+          </Suspense>
+        )}
       </div>
     </div>
   );

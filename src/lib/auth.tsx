@@ -16,6 +16,8 @@ export interface Profile {
   email_notify: boolean;
   created_at: string;
   avatar_path: string | null;
+  /** Escolhas do avatar em personagem (para editar depois). */
+  avatar_config?: Record<string, string> | null;
   access_until: string | null;
   plan: string;
   status: 'ativo' | 'onboarding' | 'pausado' | 'encerrado';

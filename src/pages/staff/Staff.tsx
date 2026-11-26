@@ -1,6 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query';
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { CalendarDays, Check, ChevronDown, FileText, Inbox, LayoutDashboard, LogOut, PenLine, Settings, Upload, type LucideIcon } from 'lucide-react';
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
+const AvatarBuilder = lazy(() => import('../../components/AvatarBuilder'));
+import { CalendarDays, Check, ChevronDown, FileText, Inbox, LayoutDashboard, LogOut, PenLine, Settings, Sparkles, Upload, type LucideIcon } from 'lucide-react';
 import { Link, Outlet, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useIsMobile } from '../../lib/useIsMobile';
 import { FILE_SUMMARY, forbiddenHits, MAX_UPLOAD_BYTES, POINT_SECS, SLOTS, VERDICTS, type Feedback, type FeedbackFile, type PointSec, type Verdict } from '../../../shared/domain';
@@ -25,6 +26,7 @@ export function StaffLayout() {
   const mobile = useIsMobile();
   const { pathname } = useLocation();
   const [me, setMe] = useState(false);
+  const [builder, setBuilder] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const pending = (q.data || []).filter((r) => r.status !== 'pronta').sort((a, b) => a.due_at.localeCompare(b.due_at)); // com o robô desligado, 'em análise' também espera a equipe
   const pend = pending.length;
@@ -116,6 +118,7 @@ export function StaffLayout() {
                   <Avatar path={profile.avatar_path} name={profile.full_name} className="avatar-btn" size={44} />
                   <div style={{ minWidth: 0 }}><b>{profile.full_name}</b><span>{profile.email}</span></div>
                 </div>
+                  <button role="menuitem" onClick={() => { setMe(false); setBuilder(true); }}><Sparkles size={19} aria-hidden /> {profile.avatar_config ? 'Editar meu avatar' : 'Criar meu avatar'}</button>
                 <Link to="/equipe/config" role="menuitem"><Settings size={19} aria-hidden /> Ajustes e grupos</Link>
                 <div className="tn-menu-sep" />
                 <button role="menuitem" onClick={logout}><LogOut size={19} aria-hidden /> Sair</button>
@@ -127,6 +130,7 @@ export function StaffLayout() {
       <main style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
         <Outlet />
       </main>
+      {builder && <Suspense fallback={null}><AvatarBuilder onClose={() => setBuilder(false)} /></Suspense>}
     </div>
   );
 }
