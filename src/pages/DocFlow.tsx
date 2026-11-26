@@ -3,7 +3,7 @@ import { Link, Navigate, useLocation, useParams } from 'react-router-dom';
 import { isSlot, POINT_SECS, SLOT_ORDER, SLOTS, VERDICTS, type Feedback, type Slot } from '../../shared/domain';
 import { CheckIcon, ErrorState, PageSkeleton, VerdictChip, VersionChip } from '../components/ui';
 import { Check, Clock, FileStack, FileText, FileUp, History, House, Mail, RotateCcw, TriangleAlert } from 'lucide-react';
-import { Actions, BigButton, Confirm, DetailCard, DoneRow, HelpCard, Note, Pill, ReadAloud, Row, Screen, ScreenHead, Section } from '../components/kit';
+import { Actions, BigButton, Confirm, DetailCard, DoneRow, HelpCard, Note, Pill, ReadAloud, Row, Screen, ScreenHead, Section, Side, Workspace } from '../components/kit';
 import { MaterialPreview } from '../components/MaterialPreview';
 import { useProfile } from '../lib/auth';
 import { useDocs, useFeatures, useGami, useMarkSeen, useSetChecks } from '../lib/data';
@@ -116,6 +116,8 @@ export function Status() {
   return (
     <Screen>
       <ScreenHead back="/documentos" title={SLOTS[slot].title} accent={stage === 3 ? 'Devolutiva pronta.' : late ? 'Devolutiva em breve.' : `Devolutiva até ${fmtDueShort(lv.due_at)}.`} date={`Enviado ${fmtDay(lv.created_at)}`} status={pill} />
+      <Workspace>
+      <Side>
       <DetailCard
         Icon={FileText}
         eyebrow={`${SLOTS[slot].tipo} · versão ${lv.version}`}
@@ -127,6 +129,7 @@ export function Status() {
       >
         {stage !== 3 && <Note>Você não precisa ficar nesta tela. {where}</Note>}
       </DetailCard>
+      </Side>
 
       <section className="k-steps">
         {steps.map(([label, st], i) => {
@@ -158,7 +161,8 @@ export function Status() {
         )}
         <BigButton a={{ label: 'Ver meus documentos', to: '/documentos', Icon: FileText }} variant="soft" />
       </Actions>
-      {others}
+      <Side>{others}</Side>
+      </Workspace>
     </Screen>
   );
 }
@@ -259,6 +263,8 @@ export function Devolutiva() {
         status={<Pill tone={vt}>{v.label}</Pill>}
         lede={fb.sum}
       />
+      <Workspace>
+      <Side>
       <DetailCard Icon={VIcon} tone={vt} eyebrow={`Devolutiva · versão ${lv.version}`} title={`${v.label}: ${v.meaning}`}>
         <blockquote className="quote" style={{ margin: 0 }}>{fb.sum}</blockquote>
         <div className="k-row-sub dev-counts">{fb.pts.length ? `${fb.pts.length} ponto${fb.pts.length > 1 ? 's' : ''} a ajustar` : 'Nenhum ponto a ajustar'} · {doneN} de {checks.length} passos feitos</div>
@@ -277,7 +283,8 @@ export function Devolutiva() {
           </div>
         )}
       </DetailCard>
-      <div className="dev-split">
+      </Side>
+
         <div className="dev-main">
           {fb.verdict === 'ok' && SLOTS[slot].task && (
             <DoneRow title={`+${task?.xp ?? 100} XP na Gamificação`} sub={`Tarefa concluída: ${task?.title ?? SLOTS[slot].task}`} to="/gamificacao" />
@@ -329,10 +336,12 @@ export function Devolutiva() {
           </Actions>
           <HelpCard sub="O Harvey te ajuda a aplicar os ajustes e a apresentar a proposta ao cliente." to="/harvey" />
         </div>
+        <Side>
         <aside className="dev-doc">
           <MaterialPreview v={lv} title={SLOTS[slot].title} defaultOpen />
         </aside>
-      </div>
+        </Side>
+      </Workspace>
     </Screen>
   );
 }

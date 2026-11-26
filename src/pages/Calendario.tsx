@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { CalendarDays, CalendarPlus, Check, ChevronLeft, ChevronRight, Clock, ExternalLink, MapPin, Video, X } from 'lucide-react';
-import { BigButton, NextUp, Note, Row, Screen, ScreenHead, Section } from '../components/kit';
+import { BigButton, NextUp, Note, Row, Screen, ScreenHead, Section, Side, Workspace } from '../components/kit';
 import { whenLabel } from './Inicio';
 import { useMemo, useState } from 'react';
 import { ErrorState } from '../components/ui';
@@ -53,7 +53,7 @@ export default function Calendario() {
   const [cursor, setCursor] = useState({ y: today.y, m: today.m });
   const [open, setOpen] = useState<CalEvent | null>(null);
   const [selDay, setSelDay] = useState<string | null>(null);
-  const [showMonth, setShowMonth] = useState(false);
+  const [showMonth, setShowMonth] = useState(() => !window.matchMedia('(max-width: 760px)').matches);
   const now = Date.now();
 
   const mine = useMyEvents();
@@ -128,7 +128,7 @@ export default function Calendario() {
           )}
         </div>
       ) : (
-        <>
+        <Workspace>
           {nextEv ? (
             <NextUp
               label={nextLive ? 'Acontecendo agora' : 'Próximo'}
@@ -148,11 +148,13 @@ export default function Calendario() {
             <Note>Nada marcado por enquanto. Quando a equipe marcar uma aula ou sessão, ela aparece aqui.</Note>
           )}
           {rest.length > 0 && (
+            <Side>
             <Section title="Mais adiante">
               {rest.map((e) => (
                 <Row key={e.id} Icon={e.url ? Video : CalendarDays} tone={kindOf(e).key === 'massa' ? 'mint' : kindOf(e).key === 'emergencia' ? 'red' : kindOf(e).key === 'lab' ? 'amber' : 'blue'} when={whenLabel(e.start)} title={e.title} sub={kindOf(e).label + resp(e)} onClick={() => setOpen(e)} />
               ))}
             </Section>
+            </Side>
           )}
           <BigButton a={{ label: showMonth ? 'Esconder o calendário do mês' : 'Ver o calendário do mês', Icon: CalendarDays, onClick: () => setShowMonth(!showMonth) }} variant="soft" />
           {showMonth && (
@@ -248,7 +250,7 @@ export default function Calendario() {
           </div>
         </div>
           )}
-        </>
+        </Workspace>
       )}
 
       {open && (

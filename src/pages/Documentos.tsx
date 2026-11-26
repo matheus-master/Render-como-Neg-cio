@@ -1,7 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { Fragment, useRef, useState } from 'react';
 import { Clock, FilePen, FileStack, FileUp, History, Mail, Paperclip } from 'lucide-react';
-import { Actions, BigButton, DoneRow, NextUp, Pill, Row, Screen, ScreenHead, Section } from '../components/kit';
+import { Actions, BigButton, DoneRow, NextUp, Pill, Row, Screen, ScreenHead, Section, Side, Workspace } from '../components/kit';
 import { NewBadge } from './Inicio';
 import { Link, useSearchParams } from 'react-router-dom';
 import { MAX_UPLOAD_BYTES, SLOT_ORDER, SLOTS, VERDICTS } from '../../shared/domain';
@@ -61,6 +61,7 @@ function ListTab({ docs }: { docs: ReturnType<typeof useDocs>['docs'] }) {
           { k: 'Para enviar', v: toSend.length ? `${toSend.length} materiais` : 'Tudo enviado' },
         ]}
       />
+      <Workspace>
       {unseen ? (
         <NextUp label="Devolutiva nova" when="Chegou" Icon={Mail} title={SLOTS[unseen.slot].title} kind={`Versão ${unseen.latest!.version}${unseen.latest?.verdict ? ' · ' + VERDICTS[unseen.latest.verdict].label : ''}`} primary={{ label: 'Abrir devolutiva', to: `/documentos/${unseen.slot}/devolutiva` }} />
       ) : fix ? (
@@ -69,10 +70,12 @@ function ListTab({ docs }: { docs: ReturnType<typeof useDocs>['docs'] }) {
         <NextUp label={fresh ? 'Comece por aqui' : 'Próximo'} Icon={FileUp} title={fresh ? 'Envie seu primeiro material' : SLOTS[first.slot].title} kind={fresh ? 'Proposta, contrato, portfólio ou apresentação' : SLOTS[first.slot].desc} meta="PDF, Word, link ou texto · devolutiva em até 48h" primary={{ label: 'Enviar material', to: fresh ? '/documentos/nova' : `/documentos/nova?slot=${first.slot}` }} />
       ) : null}
 
+      <Side>
       <Actions>
         <BigButton a={{ label: 'Enviar material para análise', to: '/documentos/nova', Icon: FileUp }} />
         <BigButton a={{ label: 'Enviar vários de uma vez', to: '/documentos/lote', Icon: FileStack }} variant="secondary" />
       </Actions>
+      </Side>
 
       {withTeam.length > 0 && (
         <Section title="Com a equipe">
@@ -98,6 +101,7 @@ function ListTab({ docs }: { docs: ReturnType<typeof useDocs>['docs'] }) {
         </Section>
       )}
 
+      <Side>
       {approved.length > 0 && (
         <Section title="Aprovados">
           {approved.map((d) => (
@@ -110,6 +114,8 @@ function ListTab({ docs }: { docs: ReturnType<typeof useDocs>['docs'] }) {
         <OtherFiles />
         {all.some((d) => d.versions.length) && <Row Icon={History} tone="gray" title="Histórico de versões" sub="Compare a evolução de cada material" to="/documentos?tab=hist" />}
       </Section>
+      </Side>
+      </Workspace>
     </>
   );
 }

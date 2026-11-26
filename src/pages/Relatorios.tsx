@@ -1,6 +1,6 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { BarChart3, FileText, MessageSquareText, Pencil, TrendingUp } from 'lucide-react';
-import { DoneRow, NextUp, Pill, Row, Screen, ScreenHead, Section } from '../components/kit';
+import { DoneRow, NextUp, Pill, Row, Screen, ScreenHead, Section, Side, Workspace } from '../components/kit';
 import { Fragment, useEffect, useRef, useState } from 'react';
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
 import { BackLink, ErrorState, Mark, Num } from '../components/ui';
@@ -44,7 +44,7 @@ export function Relatorios() {
       ) : q.isError ? (
         <ErrorState onRetry={q.refetch} />
       ) : (
-        <>
+        <Workspace>
           {due ? (
             <NextUp
               label="Próximo relatório"
@@ -58,16 +58,19 @@ export function Relatorios() {
           ) : (
             <DoneRow title="Relatório desta quinzena enviado" sub={`Quinzena ${fmtPeriod(last!.period_start, last!.period_end)} · o próximo abre em ${14 - days!} dia${14 - days! === 1 ? '' : 's'}`} to={`/relatorios/${last!.id}`} />
           )}
-
           {reps.length > 0 && (
-            <>
+            <div className="m-only">
               <Section title="Seus números">
                 <Row Icon={BarChart3} tone="mint" when="Última quinzena" title={fmtBRL(last!.revenue)} sub={`${last!.closed} projeto${last!.closed === 1 ? '' : 's'} fechado${last!.closed === 1 ? '' : 's'} · ${last!.proposals} propostas`} to={`/relatorios/${last!.id}`} />
                 <Row Icon={TrendingUp} when="Total registrado" title={fmtBRL(total)} sub={`Soma de ${reps.length} relatório${reps.length > 1 ? 's' : ''}`} />
               </Section>
-              <FunnelCard reps={reps} />
-              <Evolution reps={reps} />
-              <Journey reps={reps} />
+            </div>
+          )}
+          {reps.length > 0 && <FunnelCard reps={reps} />}
+          {reps.length > 0 && <Evolution reps={reps} />}
+          {reps.length > 0 && <Journey reps={reps} />}
+          {reps.length > 0 && (
+            <Side>
               <Section title="Histórico" right={<span className="k-count">{reps.length}</span>}>
                 {reps.map((r) => (
                   <Row
@@ -82,9 +85,9 @@ export function Relatorios() {
                   />
                 ))}
               </Section>
-            </>
+            </Side>
           )}
-        </>
+        </Workspace>
       )}
     </Screen>
   );

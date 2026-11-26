@@ -1,6 +1,6 @@
 import { BarChart3, Briefcase, CalendarDays, Check, FilePen, FileUp, Mail, TrendingUp, Trophy, type LucideIcon } from 'lucide-react';
 import { SLOT_ORDER, SLOTS, VERDICTS } from '../../shared/domain';
-import { ActionGrid, DoneRow, NextUp, Pill, Row, Screen, ScreenHead, Section } from '../components/kit';
+import { ActionGrid, DoneRow, NextUp, Pill, Row, Screen, ScreenHead, Section, Side, Workspace } from '../components/kit';
 import { ErrorState, PageSkeleton } from '../components/ui';
 import { useProfile } from '../lib/auth';
 import { kindInfo, useMyEvents } from '../lib/agenda';
@@ -137,6 +137,7 @@ export default function Inicio() {
         ]}
       />
 
+      <Workspace>
       {next ? (
         <NextUp
           label="Próximo"
@@ -152,6 +153,7 @@ export default function Inicio() {
         <NextUp label="Hoje" Icon={Check} title="Tudo em dia por aqui" kind="Nada pendente agora." primary={{ label: 'Ver minhas tarefas', to: '/gamificacao' }} />
       )}
 
+      <Side>
       <Section title="O que você quer fazer?">
         <ActionGrid
           items={[
@@ -162,6 +164,7 @@ export default function Inicio() {
           ]}
         />
       </Section>
+      </Side>
 
       {later.length > 1 && (
         <Section title="Mais tarde">
@@ -171,16 +174,21 @@ export default function Inicio() {
         </Section>
       )}
 
+      <Side>
       {done.length > 0 && (
         <Section title="Feito">
           {done.slice(0, 3).map((d) => <DoneRow key={d.key} title={d.title} sub={d.sub} to={d.to} />)}
         </Section>
       )}
+      </Side>
 
+      <div className="m-only">
       <Section title="Seus números">
         <Row Icon={BarChart3} tone="mint" when="Último relatório" title={last ? fmtBRL(last.revenue) : 'Nenhum ainda'} sub={last ? `Quinzena ${fmtPeriod(last.period_start, last.period_end)}` : 'Envie seu primeiro relatório'} to="/relatorios" />
         <Row Icon={TrendingUp} when="Faturamento registrado" title={fmtBRL(total)} sub={reps.length ? `Soma de ${reps.length} relatório${reps.length > 1 ? 's' : ''}` : 'Nenhum relatório ainda'} to="/relatorios" />
       </Section>
+      </div>
+      </Workspace>
     </Screen>
   );
 }

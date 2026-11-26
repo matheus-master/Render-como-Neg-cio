@@ -5,11 +5,34 @@
  * dúvida?" e tela de confirmação com Desfazer.
  */
 import { Check, ChevronLeft, ChevronRight, CircleHelp, Info, Square, Volume2, type LucideIcon } from 'lucide-react';
-import { useEffect, useState, type ReactNode } from 'react';
+import { Children, isValidElement, useEffect, useState, type ReactNode } from 'react';
+import { useIsMobile } from '../lib/useIsMobile';
 import { Link, useNavigate } from 'react-router-dom';
 
 type Tone = 'blue' | 'mint' | 'amber' | 'red' | 'gray' | 'navy';
 type Act = { label: string; to?: string; onClick?: () => void; Icon?: LucideIcon; disabled?: boolean };
+
+/** Marca o que vai para a coluna lateral da área de trabalho (no computador). */
+export function Side({ children }: { children: ReactNode }) {
+  return <>{children}</>;
+}
+
+/**
+ * Área de trabalho: no computador, duas colunas (o que fazer à esquerda; atalhos, feitos e detalhes à direita,
+ * dentro de <Side>). No celular, tudo na ordem em que foi escrito.
+ */
+export function Workspace({ children }: { children: ReactNode }) {
+  const mobile = useIsMobile();
+  const items = Children.toArray(children);
+  if (mobile) return <div className="ws">{items}</div>;
+  const side = (c: unknown) => isValidElement(c) && c.type === Side;
+  return (
+    <div className="ws">
+      <div className="ws-main">{items.filter((c) => !side(c))}</div>
+      <div className="ws-side">{items.filter(side)}</div>
+    </div>
+  );
+}
 
 /** Coluna central da tela (estilo app): largura confortável de leitura. */
 export function Screen({ children, wide }: { children: ReactNode; wide?: boolean }) {

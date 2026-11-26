@@ -8,7 +8,7 @@ import { safeName } from '../lib/upload';
 import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
 import { ArrowRight, CalendarDays, Check, Circle, FileUp, House, LifeBuoy, Lock, Pencil, RotateCcw, Star, Timer, Trophy } from 'lucide-react';
-import { Actions, BigButton, Confirm, DetailCard, DoneRow, HelpCard, NextUp, Note, Pill, Row, Screen, ScreenHead, Section, Tile } from '../components/kit';
+import { Actions, BigButton, Confirm, DetailCard, DoneRow, HelpCard, NextUp, Note, Pill, Row, Screen, ScreenHead, Section, Side, Tile, Workspace } from '../components/kit';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ErrorState, PageHead, PageSkeleton, Mark, Num } from '../components/ui';
 import { useAuth, useProfile } from '../lib/auth';
@@ -112,6 +112,7 @@ export function Gamificacao() {
       </Screen>
     );
 
+  const showCur = !isPast && !isFuture;
   const nextCard = !isPast && !isFuture && all.length > 0 && (nextTask ? (
     <NextUp
       label={kindOf(nextTask) === 'andamento' ? 'Você está fazendo' : 'Próxima tarefa'}
@@ -132,16 +133,14 @@ export function Gamificacao() {
   return (
     <Screen>
       {head}
+      <Workspace>
       {nextCard}
       {levels}
-      {isFuture && lvl ? (
-        <LevelFuture lvl={lvl} unlockAfter={g.levels.find((l) => l.n === shown - 1)?.name ?? cur!.name} tasks={all} />
-      ) : isPast && lvl ? (
-        <LevelPast lvl={lvl} tasks={all} g={g} fixing={fixing} onSet={(id, k) => { const t = all.find((x) => x.id === id); if (t) set(t, k); }} />
-      ) : all.length === 0 ? (
-        <Note>As tarefas deste nível ainda não foram cadastradas pela equipe.</Note>
-      ) : (
-        <>
+      {isFuture && lvl && <LevelFuture lvl={lvl} unlockAfter={g.levels.find((l) => l.n === shown - 1)?.name ?? cur!.name} tasks={all} />}
+      {isPast && lvl && <LevelPast lvl={lvl} tasks={all} g={g} fixing={fixing} onSet={(id, k) => { const t = all.find((x) => x.id === id); if (t) set(t, k); }} />}
+      {showCur && all.length === 0 && <Note>As tarefas deste nível ainda não foram cadastradas pela equipe.</Note>}
+      {showCur && all.length > 0 && (
+        <Side>
           <section className="g-progress">
             <div className="between" style={{ alignItems: 'baseline' }}>
               <span className="k-eyebrow">Nível {lvl?.n} · {lvl?.name}</span>
@@ -151,35 +150,37 @@ export function Gamificacao() {
             <div className="track" style={{ height: 10, borderRadius: 5 }}><i style={{ width: pct + '%' }} /></div>
             {lvl?.goal && <div className="k-row-sub">Meta de faturamento do nível: <b style={{ color: 'var(--t)' }}>{lvl.goal}</b></div>}
           </section>
-
-          {going.length > 0 && (
-            <Section title="Fazendo">
-              {going.map((t) => <Row key={t.id} Icon={Timer} title={t.title} sub={taskSub(t)} onClick={() => setOpen(t)} right={<Pill tone="blue">Fazendo</Pill>} />)}
-            </Section>
-          )}
-          {todo.length > 0 && (
-            <Section title="Para fazer" right={<span className="k-count">{todo.length}</span>}>
-              {todo.map((t) => <Row key={t.id} Icon={t.auto_slot ? FileUp : Circle} tone="gray" title={t.title} sub={taskSub(t)} onClick={() => setOpen(t)} />)}
-            </Section>
-          )}
-          {bonusOpen.length > 0 && (
-            <Section title="Missões bônus" right={<span className="k-count">somam XP, não seguram o nível</span>}>
-              {bonusOpen.map((t) => <Row key={t.id} Icon={Star} tone="amber" title={t.title} sub={taskSub(t)} onClick={() => setOpen(t)} />)}
-            </Section>
-          )}
-          {finished.length > 0 && (
-            <Section title="Feitas" right={<span className="k-count">{finished.length}</span>}>
-              {finished.map((t) => (
-                <button key={t.id} className="k-row done" onClick={() => setOpen(t)}>
-                  <span className="k-done-check"><Check size={20} strokeWidth={2.6} aria-hidden /></span>
-                  <span className="k-row-main"><b>{t.title}</b><span className="k-row-sub">{taskSub(t)}{g.doneAt(t) ? ' · ' + fmtDay(g.doneAt(t)!, false) : ''}</span></span>
-                </button>
-              ))}
-            </Section>
-          )}
-          <Achievements g={g} />
-        </>
+        </Side>
       )}
+      {showCur && going.length > 0 && (
+        <Section title="Fazendo">
+          {going.map((t) => <Row key={t.id} Icon={Timer} title={t.title} sub={taskSub(t)} onClick={() => setOpen(t)} right={<Pill tone="blue">Fazendo</Pill>} />)}
+        </Section>
+      )}
+      {showCur && todo.length > 0 && (
+        <Section title="Para fazer" right={<span className="k-count">{todo.length}</span>}>
+          {todo.map((t) => <Row key={t.id} Icon={t.auto_slot ? FileUp : Circle} tone="gray" title={t.title} sub={taskSub(t)} onClick={() => setOpen(t)} />)}
+        </Section>
+      )}
+      {showCur && bonusOpen.length > 0 && (
+        <Section title="Missões bônus" right={<span className="k-count">somam XP, não seguram o nível</span>}>
+          {bonusOpen.map((t) => <Row key={t.id} Icon={Star} tone="amber" title={t.title} sub={taskSub(t)} onClick={() => setOpen(t)} />)}
+        </Section>
+      )}
+      {showCur && finished.length > 0 && (
+        <Side>
+          <Section title="Feitas" right={<span className="k-count">{finished.length}</span>}>
+            {finished.map((t) => (
+              <button key={t.id} className="k-row done" onClick={() => setOpen(t)}>
+                <span className="k-done-check"><Check size={20} strokeWidth={2.6} aria-hidden /></span>
+                <span className="k-row-main"><b>{t.title}</b><span className="k-row-sub">{taskSub(t)}{g.doneAt(t) ? ' · ' + fmtDay(g.doneAt(t)!, false) : ''}</span></span>
+              </button>
+            ))}
+          </Section>
+        </Side>
+      )}
+      {showCur && all.length > 0 && <Side><Achievements g={g} /></Side>}
+      </Workspace>
 
       {open && (
         <div className="sheet-backdrop k-sheet-wrap" onClick={() => setOpen(null)}>
@@ -439,7 +440,8 @@ export function Sessoes() {
       {red.isError ? (
         <ErrorState onRetry={red.refetch} />
       ) : (
-        <>
+        <Workspace>
+          <Side>
           <DetailCard
             Icon={LifeBuoy}
             tone="red"
@@ -460,6 +462,7 @@ export function Sessoes() {
               </>
             )}
           </DetailCard>
+          </Side>
 
           <Section title="Direcionamento inicial">
             {dirDone && !dirNext ? (
@@ -472,8 +475,8 @@ export function Sessoes() {
           <Section title="Plano de ação">
             <StudentPlans />
           </Section>
-          <HelpCard title="Dúvida numa venda?" sub="O Harvey responde na hora: mande o print da conversa com o cliente." to="/harvey" />
-        </>
+          <Side><HelpCard title="Dúvida numa venda?" sub="O Harvey responde na hora: mande o print da conversa com o cliente." to="/harvey" /></Side>
+        </Workspace>
       )}
       {confirm && (
         <div className="modal-backdrop" onClick={() => setConfirm(false)}>
