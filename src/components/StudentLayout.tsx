@@ -57,18 +57,18 @@ function LevelWidget({ g }: { g: ReturnType<typeof useGami> }) {
     <Link to="/gamificacao" className="level-widget" aria-label={`Nível ${cur.n}, ${cur.name}. ${g.xpLevel} de ${g.xpMax} XP.`}>
       <div className="between" style={{ alignItems: 'baseline' }}>
         <span className="label" style={{ color: 'var(--gold)' }}>Nível {cur.n} de {g.levels.length}</span>
-        <span className="mono" style={{ fontSize: 11, color: '#A9AFB9' }}>{Math.round(pct)}%</span>
+        <span className="mono" style={{ fontSize: 11, color: 'var(--steel-t)' }}>{Math.round(pct)}%</span>
       </div>
       <div style={{ fontWeight: 600, fontSize: 18, letterSpacing: '-.02em', marginTop: 4 }}>{cur.name}</div>
       <div className="track" style={{ marginTop: 10 }}>
         <i style={{ width: pct + '%' }} />
         <i className="ghost" style={{ width: ghost + '%' }} />
       </div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, marginTop: 8, fontSize: 12, color: '#A9AFB9' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, marginTop: 8, fontSize: 12, color: 'var(--steel-t)' }}>
         <span className="mono">{g.xpLevel}/{g.xpMax} XP</span>
         <span>{next ? <>Próximo: <b style={{ color: '#fff', fontWeight: 600 }}>{next.name}</b></> : 'Último nível'}</span>
       </div>
-      {left > 0 && <div style={{ fontSize: 12, color: '#A9AFB9', marginTop: 4 }}>{left === 1 ? 'Falta 1 tarefa' : `Faltam ${left} tarefas`}</div>}
+      {left > 0 && <div style={{ fontSize: 12, color: 'var(--steel-t)', marginTop: 4 }}>{left === 1 ? 'Falta 1 tarefa' : `Faltam ${left} tarefas`}</div>}
     </Link>
   );
 }

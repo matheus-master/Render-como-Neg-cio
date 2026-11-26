@@ -39,25 +39,25 @@ function AuthSplit({ team, children }: { team?: boolean; children: React.ReactNo
   return (
     <div className={'auth' + (team ? ' auth-team' : ' auth-student')}>
       <aside className="auth-side" aria-hidden>
-        <img src={team ? '/logo-rcn-branco.png' : '/logo-rcn.png'} alt="" className="auth-side-logo" />
+        <img src="/logo-rcn-branco.png" alt="" className="auth-side-logo" />
         {team ? (
           <div className="auth-side-body">
             <div className="auth-kicker">Área da equipe</div>
-            <div className="auth-title">Acompanhe cada aluno de perto.</div>
-            <ul className="auth-list">
-              <li><b>Fila</b> de documentos esperando devolutiva</li>
-              <li><b>Relatórios</b> quinzenais e quem está atrasado</li>
-              <li><b>Botão Vermelho</b>, tarefas e progresso por nível</li>
-            </ul>
+            <div className="auth-title">Acompanhe cada aluno <span className="hl">de perto.</span></div>
+            <div className="auth-rows">
+              <div><b>Fila de devolutivas</b><span>Documentos esperando revisão, com o prazo de cada um.</span></div>
+              <div><b>Relatórios quinzenais</b><span>Quem enviou, quem está atrasado e como estão os números.</span></div>
+              <div><b>Botão Vermelho e níveis</b><span>Pedidos de ajuda, tarefas e o progresso de cada aluno.</span></div>
+            </div>
           </div>
         ) : (
           <>
-            <StudentShowcase />
             <div className="auth-side-body">
-              <div className="auth-kicker">Portal do aluno · Render como Negócio</div>
-              <div className="auth-title">Seu studio,<br />tratado como negócio.</div>
-              <div className="auth-foot">Envie seus materiais, receba a devolutiva da equipe, suba de nível e acompanhe seu faturamento crescer.</div>
+              <div className="auth-kicker">Portal do aluno</div>
+              <div className="auth-title">Seu studio, tratado como <span className="hl">negócio.</span></div>
             </div>
+            <StudentShowcase />
+            <div className="auth-foot">Envie seus materiais, receba a devolutiva da equipe, suba de nível e acompanhe seu faturamento crescer.</div>
           </>
         )}
       </aside>

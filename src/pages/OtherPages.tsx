@@ -89,7 +89,7 @@ export function Gamificacao() {
               <div style={{ flex: '1 1 260px', minWidth: 0 }}>
                 <div className="label" style={{ color: 'var(--gold)' }}>Seu próximo passo</div>
                 <div style={{ fontWeight: 600, fontSize: 20, marginTop: 6 }}>{nextTask.title}</div>
-                <div style={{ fontSize: 14, color: '#A9AFB9', marginTop: 4 }}>
+                <div style={{ fontSize: 14, color: 'var(--steel-t)', marginTop: 4 }}>
                   {left === 1 ? 'Última tarefa' : `Faltam ${left} tarefas`}
                   {next ? ` para chegar a ${next.name}` : ' para fechar este nível'}
                   {started > 0 ? ` · ${started} em andamento` : ''}

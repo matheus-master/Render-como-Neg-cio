@@ -86,7 +86,7 @@ export function LevelUp({ uid, g }: { uid: string; g: ReturnType<typeof useGami>
           {now.tagline && !/[.!?]$/.test(now.tagline) ? '.' : ''}
         </div>
         {(nextMain > 0 || now.goal) && (
-          <div className="mono" style={{ fontSize: 12, color: '#A9AFB9', marginTop: 10 }}>
+          <div className="mono" style={{ fontSize: 12, color: 'var(--steel-t)', marginTop: 10 }}>
             {[nextMain ? `${nextMain} tarefas principais` : null, now.goal ? `meta ${now.goal}` : null].filter(Boolean).join(' · ')}
           </div>
         )}
