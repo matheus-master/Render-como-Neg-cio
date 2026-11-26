@@ -29,8 +29,7 @@ export default function Documentos() {
     );
   return (
     <Screen>
-      <ScreenHead title="Documentos" sub="Envie seus materiais. A equipe lê e devolve uma devolutiva aqui mesmo, em até 48h." />
-      {q.isLoading ? <PageSkeleton hero={false} /> : q.isError ? <ErrorState onRetry={q.refetch} /> : <ListTab docs={q.docs} />}
+      {q.isLoading ? <><ScreenHead title="Documentos." /><PageSkeleton hero={false} /></> : q.isError ? <><ScreenHead title="Documentos." /><ErrorState onRetry={q.refetch} /></> : <ListTab docs={q.docs} />}
     </Screen>
   );
 }
@@ -51,6 +50,17 @@ function ListTab({ docs }: { docs: ReturnType<typeof useDocs>['docs'] }) {
 
   return (
     <>
+      <ScreenHead
+        title="Documentos."
+        accent="A equipe devolve em até 48h."
+        sub="Envie seus materiais. A equipe lê e devolve uma devolutiva aqui mesmo."
+        meta={[
+          { k: 'Com a equipe', v: withTeam.length ? `${withTeam.length} em análise` : 'Nada agora' },
+          { k: 'Devolutiva pronta', v: ready.length ? `${ready.length} para ajustar` : 'Nenhuma pendente' },
+          { k: 'Aprovados', v: `${approved.length} de ${all.length}` },
+          { k: 'Para enviar', v: toSend.length ? `${toSend.length} materiais` : 'Tudo enviado' },
+        ]}
+      />
       {unseen ? (
         <NextUp label="Devolutiva nova" when="Chegou" Icon={Mail} title={SLOTS[unseen.slot].title} kind={`Versão ${unseen.latest!.version}${unseen.latest?.verdict ? ' · ' + VERDICTS[unseen.latest.verdict].label : ''}`} primary={{ label: 'Abrir devolutiva', to: `/documentos/${unseen.slot}/devolutiva` }} />
       ) : fix ? (

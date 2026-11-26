@@ -115,7 +115,7 @@ export function Status() {
 
   return (
     <Screen>
-      <ScreenHead back="/documentos" title="Acompanhar envio" date={`Enviado ${fmtDay(lv.created_at)}`} status={pill} />
+      <ScreenHead back="/documentos" title={SLOTS[slot].title} accent={stage === 3 ? 'Devolutiva pronta.' : late ? 'Devolutiva em breve.' : `Devolutiva até ${fmtDueShort(lv.due_at)}.`} date={`Enviado ${fmtDay(lv.created_at)}`} status={pill} />
       <DetailCard
         Icon={FileText}
         eyebrow={`${SLOTS[slot].tipo} · versão ${lv.version}`}
@@ -249,34 +249,36 @@ export function Devolutiva() {
   ].filter(Boolean).join(' ');
 
   return (
-    <div className="page dev-page">
-      <div className="dev-split">
-        <div className="screen dev-main">
-          <ScreenHead
-            back="/documentos"
-            title={SLOTS[slot].title}
-            right={<ReadAloud text={speech} />}
-            date={`Versão ${lv.version} · revisado por ${firstName(reviewer)}`}
-            status={<Pill tone={vt}>{v.label}</Pill>}
-          />
-
-          <DetailCard Icon={VIcon} tone={vt} eyebrow="Devolutiva" title={`${v.label}: ${v.meaning}`}>
-            <blockquote className="quote" style={{ margin: 0 }}>{fb.sum}</blockquote>
-            <button onClick={() => setLegend(!legend)} className="link" style={{ alignSelf: 'flex-start', fontSize: 15 }}>
-              {legend ? 'Esconder o significado dos vereditos' : 'O que significa cada veredito?'}
-            </button>
-            {legend && (
-              <div className="stack" style={{ gap: 8 }}>
-                {(['ok', 'aj', 're'] as const).map((k) => (
-                  <div key={k} className="row" style={{ gap: 10, fontSize: 15 }}>
-                    <Pill tone={k === 'ok' ? 'mint' : k === 'aj' ? 'amber' : 'red'}>{VERDICTS[k].label}</Pill>
-                    <span style={{ color: 'var(--t2)' }}>{VERDICTS[k].meaning}</span>
-                  </div>
-                ))}
+    <Screen>
+      <ScreenHead
+        back="/documentos"
+        title={SLOTS[slot].title}
+        accent={`${v.label}.`}
+        right={<ReadAloud text={speech} />}
+        date={`Versão ${lv.version} · revisado por ${firstName(reviewer)}`}
+        status={<Pill tone={vt}>{v.label}</Pill>}
+        lede={fb.sum}
+      />
+      <DetailCard Icon={VIcon} tone={vt} eyebrow={`Devolutiva · versão ${lv.version}`} title={`${v.label}: ${v.meaning}`}>
+        <blockquote className="quote" style={{ margin: 0 }}>{fb.sum}</blockquote>
+        <div className="k-row-sub dev-counts">{fb.pts.length ? `${fb.pts.length} ponto${fb.pts.length > 1 ? 's' : ''} a ajustar` : 'Nenhum ponto a ajustar'} · {doneN} de {checks.length} passos feitos</div>
+        <BigButton a={{ label: fb.verdict === 'ok' ? 'Enviar outra versão' : 'Enviar nova versão', to: `/documentos/nova?slot=${slot}`, Icon: FileUp }} />
+        <button onClick={() => setLegend(!legend)} className="link" style={{ alignSelf: 'flex-start', fontSize: 15 }}>
+          {legend ? 'Esconder o significado dos vereditos' : 'O que significa cada veredito?'}
+        </button>
+        {legend && (
+          <div className="stack" style={{ gap: 8 }}>
+            {(['ok', 'aj', 're'] as const).map((k) => (
+              <div key={k} className="row" style={{ gap: 10, fontSize: 15 }}>
+                <Pill tone={k === 'ok' ? 'mint' : k === 'aj' ? 'amber' : 'red'}>{VERDICTS[k].label}</Pill>
+                <span style={{ color: 'var(--t2)' }}>{VERDICTS[k].meaning}</span>
               </div>
-            )}
-          </DetailCard>
-
+            ))}
+          </div>
+        )}
+      </DetailCard>
+      <div className="dev-split">
+        <div className="dev-main">
           {fb.verdict === 'ok' && SLOTS[slot].task && (
             <DoneRow title={`+${task?.xp ?? 100} XP na Gamificação`} sub={`Tarefa concluída: ${task?.title ?? SLOTS[slot].task}`} to="/gamificacao" />
           )}
@@ -331,7 +333,7 @@ export function Devolutiva() {
           <MaterialPreview v={lv} title={SLOTS[slot].title} defaultOpen />
         </aside>
       </div>
-    </div>
+    </Screen>
   );
 }
 

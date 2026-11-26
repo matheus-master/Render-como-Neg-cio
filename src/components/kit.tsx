@@ -16,18 +16,33 @@ export function Screen({ children, wide }: { children: ReactNode; wide?: boolean
   return <div className={'screen' + (wide ? ' wide' : '')}>{children}</div>;
 }
 
-/** Cabeçalho: voltar (quadrado branco) + título grande; abaixo, data à esquerda e situação à direita. */
-export function ScreenHead({ back, title, sub, right, date, status }: { back?: string; title: ReactNode; sub?: ReactNode; right?: ReactNode; date?: ReactNode; status?: ReactNode }) {
+/** Ruído de fundo da capa: o que a interface costuma pedir para o aluno lembrar (bem apagado). */
+const NOISE = ['Qual era o prazo?', 'Passo 3 de 7', 'Onde mandei o PDF?', 'Esqueci o relatório', 'Atualize agora', 'Qual é o próximo passo?', 'Versão final_v4', 'Confirme sua senha', 'Leia antes de enviar', 'Você tem 12 avisos'];
+
+/**
+ * Cabeçalho da tela. No celular: voltar + título + data/situação.
+ * No computador vira a capa marinha de ponta a ponta: rótulo espaçado, título enorme em duas cores
+ * (o segundo verso em azul-aço), texto em serifa e colunas de dados embaixo.
+ */
+export function ScreenHead({ back, title, accent, label = 'R . C . N .', lede, sub, right, date, status, meta, decor }: {
+  back?: string; title: ReactNode; accent?: ReactNode; label?: string; lede?: ReactNode; sub?: ReactNode; right?: ReactNode;
+  date?: ReactNode; status?: ReactNode; meta?: { k: ReactNode; v: ReactNode }[]; decor?: boolean;
+}) {
   const nav = useNavigate();
   return (
-    <header className="sh">
+    <header className={'sh' + (accent ? ' has-accent' : '')}>
+      {decor && <div className="sh-noise" aria-hidden>{NOISE.map((n, i) => <span key={i}>{n}</span>)}</div>}
+      <div className="sh-label" aria-hidden>{label}</div>
       <div className="sh-top">
         {back && (
           <button className="sh-back" aria-label="Voltar" onClick={() => (window.history.length > 1 ? nav(-1) : nav(back))}>
             <ChevronLeft size={22} strokeWidth={2.2} aria-hidden />
           </button>
         )}
-        <h1 className="sh-title">{title}</h1>
+        <h1 className="sh-title">
+          {title}
+          {accent && <span className="sh-accent"> {accent}</span>}
+        </h1>
         {right && <div className="sh-right">{right}</div>}
       </div>
       {(date || status) && (
@@ -37,6 +52,14 @@ export function ScreenHead({ back, title, sub, right, date, status }: { back?: s
         </div>
       )}
       {sub && <p className="sh-sub">{sub}</p>}
+      {lede && <p className="sh-sub sh-lede">{lede}</p>}
+      {meta && meta.length > 0 && (
+        <dl className="sh-cols">
+          {meta.map((m, i) => (
+            <div key={i}><dt>{m.k}</dt><dd>{m.v}</dd></div>
+          ))}
+        </dl>
+      )}
     </header>
   );
 }

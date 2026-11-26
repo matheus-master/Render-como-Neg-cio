@@ -9,21 +9,15 @@ import { Tile } from './kit';
 import { useMyEvents, useRespond } from '../lib/agenda';
 import { useIsMobile } from '../lib/useIsMobile';
 
-/** Menu lateral (computador): o dia a dia em cima, a mentoria embaixo. Sempre palavra + ícone. */
-const NAV: [string, string, LucideIcon][][] = [
-  [
-    ['/', 'Início', House],
-    ['/documentos', 'Documentos', FileText],
-    ['/relatorios', 'Relatórios', BarChart3],
-    ['/gamificacao', 'Gamificação', Trophy],
-    ['/calendario', 'Agenda', CalendarDays],
-  ],
-  [
-    ['/harvey', 'Harvey', Briefcase],
-    ['/sessoes', 'Sessões e ajuda', LifeBuoy],
-    ['/feedback', 'Feedback', MessageSquareText],
-    ['/perfil', 'Perfil', UserRound],
-  ],
+/** Menu do topo (computador): só palavras, como nas pranchas. Perfil, Feedback e Sair ficam no avatar. */
+const TOP: [string, string][] = [
+  ['/', 'Início'],
+  ['/documentos', 'Documentos'],
+  ['/relatorios', 'Relatórios'],
+  ['/gamificacao', 'Gamificação'],
+  ['/calendario', 'Agenda'],
+  ['/harvey', 'Harvey'],
+  ['/sessoes', 'Ajuda'],
 ];
 /** Barra do celular: destinos com palavra + o "Enviar" no meio. */
 const TABS_L: [string, string, LucideIcon][] = [
@@ -76,32 +70,6 @@ function SendSheet({ onClose, desktop }: { onClose: () => void; desktop?: boolea
         </div>
       </div>
     </div>
-  );
-}
-
-/** Bloco de nível no menu lateral: nível atual, barra até o próximo e qual é o próximo. */
-function LevelWidget({ g }: { g: ReturnType<typeof useGami> }) {
-  const cur = g.current!;
-  const next = g.levels.find((l) => l.n === cur.n + 1);
-  const pct = g.xpMax ? (g.xpLevel / g.xpMax) * 100 : 0;
-  const ghost = g.xpMax ? (g.xpStarted / g.xpMax) * 100 : 0;
-  const left = g.tasksTotal - g.tasksDone;
-  return (
-    <Link to="/gamificacao" className="level-widget" aria-label={`Nível ${cur.n}, ${cur.name}. ${g.xpLevel} de ${g.xpMax} XP.`}>
-      <div className="between" style={{ alignItems: 'baseline' }}>
-        <span className="lw-k">Nível {cur.n} de {g.levels.length}</span>
-        <span className="lw-k" style={{ letterSpacing: 0 }}>{Math.round(pct)}%</span>
-      </div>
-      <div className="lw-name">{cur.name}</div>
-      <div className="track" style={{ marginTop: 10, height: 6, borderRadius: 3 }}>
-        <i style={{ width: pct + '%' }} />
-        <i className="ghost" style={{ width: ghost + '%' }} />
-      </div>
-      <div className="lw-foot">
-        <span>{left > 0 ? (left === 1 ? 'Falta 1 tarefa' : `Faltam ${left} tarefas`) : 'Nível completo'}</span>
-        <span>{next ? <>Próximo: <b>{next.name}</b></> : 'Último nível'}</span>
-      </div>
-    </Link>
   );
 }
 
@@ -170,6 +138,7 @@ export default function StudentLayout() {
   const { pathname } = useLocation();
   const [more, setMore] = useState(false);
   const [send, setSend] = useState(false);
+  const [me, setMe] = useState(false);
   const badge = unseen.length;
   const inNova = pathname.startsWith('/documentos/nova');
   const isOn = (p: string) => (p === '/' ? pathname === '/' : pathname.startsWith(p));
@@ -192,7 +161,7 @@ export default function StudentLayout() {
   );
 
   return (
-    <div className={'app' + (mobile && !inNova ? ' has-tabbar' : '') + (mobile ? '' : ' with-sidebar')}>
+    <div className={'app' + (mobile && !inNova ? ' has-tabbar' : '') + (mobile ? '' : ' with-topnav')}>
       {mobile ? (
         <header className="mheader">
           <Logo />
@@ -201,41 +170,42 @@ export default function StudentLayout() {
           </Link>
         </header>
       ) : (
-        <aside className="sidebar navy">
-          <div style={{ padding: '4px 10px 0' }}>
-            <Logo white />
-          </div>
-          <button className="side-send" onClick={() => setSend(true)}>
-            <Plus size={20} strokeWidth={2.4} aria-hidden /> Enviar
-          </button>
-          <nav className="sidenav" aria-label="Menu principal">
-            {NAV.map((group, gi) => (
-              <div key={gi} className="sidenav-group">
-                {gi > 0 && <div className="sidenav-sep" />}
-                {group.map(([to, label, Icon]) => (
-                  <NavLink key={to} to={to} end={to === '/'} className={({ isActive }) => (isActive ? 'active' : '')}>
-                    <Icon size={20} strokeWidth={1.9} aria-hidden />
-                    <span style={{ flex: 1 }}>{label}</span>
-                    {to === '/documentos' && badge > 0 && <span className="badge">{badge}</span>}
-                  </NavLink>
-                ))}
-              </div>
+        <header className="topnav-bar">
+          <Logo white />
+          <nav className="tn-links" aria-label="Menu principal">
+            {TOP.map(([to, label]) => (
+              <NavLink key={to} to={to} end={to === '/'} className={({ isActive }) => (isActive ? 'on' : '')}>
+                {label}
+                {to === '/documentos' && badge > 0 && <span className="badge">{badge}</span>}
+              </NavLink>
             ))}
           </nav>
-          {gami.current && <LevelWidget g={gami} />}
-          <div className="sidebar-user">
-            <Link to="/perfil" aria-label="Meu perfil">
-              <Avatar path={profile.avatar_path} name={profile.full_name} className="avatar-btn" size={36} />
+          {gami.current && (
+            <Link to="/gamificacao" className="tn-level" title={`${gami.xpLevel} de ${gami.xpMax} XP`}>
+              <span className="tn-ring" style={{ ['--p' as string]: (gami.xpMax ? Math.round((gami.xpLevel / gami.xpMax) * 100) : 0) + '%' }} />
+              {gami.current.name}
             </Link>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div className="su-name">{profile.full_name}</div>
-              <div className="su-sub">{profile.group_name}</div>
-            </div>
-            <button className="su-out" onClick={logout} aria-label="Sair" title="Sair">
-              <LogOut size={18} aria-hidden />
+          )}
+          <button className="tn-send" onClick={() => setSend(true)}>
+            <Plus size={19} strokeWidth={2.6} aria-hidden /> Enviar
+          </button>
+          <div className="tn-me">
+            <button className="tn-avatar" aria-label="Minha conta" aria-expanded={me} onClick={() => setMe(!me)}>
+              <Avatar path={profile.avatar_path} name={profile.full_name} className="avatar-btn" size={40} />
             </button>
+            {me && (
+              <>
+                <div className="tn-scrim" onClick={() => setMe(false)} />
+                <div className="tn-menu" role="menu">
+                  <div className="tn-menu-head"><b>{profile.full_name}</b><span>{profile.group_name}</span></div>
+                  <Link to="/perfil" role="menuitem" onClick={() => setMe(false)}><UserRound size={18} aria-hidden /> Meu perfil</Link>
+                  <Link to="/feedback" role="menuitem" onClick={() => setMe(false)}><MessageSquareText size={18} aria-hidden /> Feedback da mentoria</Link>
+                  <button role="menuitem" onClick={() => { setMe(false); logout(); }}><LogOut size={18} aria-hidden /> Sair</button>
+                </div>
+              </>
+            )}
           </div>
-        </aside>
+        </header>
       )}
 
       <main style={{ flex: 1, minWidth: 0 }}>

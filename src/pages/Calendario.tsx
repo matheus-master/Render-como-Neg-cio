@@ -97,8 +97,14 @@ export default function Calendario() {
   return (
     <Screen>
       <ScreenHead
-        title="Agenda"
-        sub="Aulas ao vivo, Laboratórios RCN, Mão na Massa e as suas sessões."
+        title="Agenda."
+        accent="Aulas e sessões da mentoria."
+        sub="Aulas ao vivo, Laboratórios RCN, Mão na Massa e as suas sessões, num lugar só."
+        meta={upcoming.length ? [
+          { k: 'Nos próximos 7 dias', v: ((n) => (n === 1 ? '1 evento' : `${n} eventos`))(upcoming.filter((e) => new Date(e.start).getTime() - now < 7 * 86_400_000).length) },
+          { k: 'Esperando sua resposta', v: ((n) => (n === 1 ? '1 convite' : `${n} convites`))(upcoming.filter((e) => e.portal?.me.response === 'pendente').length) },
+          { k: 'Depois disso', v: `${Math.max(0, upcoming.length - 1)} marcados` },
+        ] : undefined}
         right={calUrl && !mobile ? (
           <a href={calUrl} target="_blank" rel="noreferrer" className="k-read"><ExternalLink size={17} aria-hidden /> Google Agenda</a>
         ) : undefined}

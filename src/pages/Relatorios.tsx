@@ -25,7 +25,17 @@ export function Relatorios() {
   const [ps, pe] = currentFortnight();
   return (
     <Screen>
-      <ScreenHead title="Relatórios" sub="A cada quinzena, seus números e o que aconteceu. Sua evolução aparece aqui." />
+      <ScreenHead
+        title="Relatórios."
+        accent="Sua evolução, quinzena a quinzena."
+        sub="A cada quinzena, seus números e o que aconteceu. A equipe lê e comenta."
+        meta={reps.length ? [
+          { k: 'Última quinzena', v: fmtBRL(last!.revenue) },
+          { k: 'Total registrado', v: fmtBRL(total) },
+          { k: 'Projetos fechados', v: String(reps.reduce((a, r) => a + r.closed, 0)) },
+          { k: 'Relatórios enviados', v: String(reps.length) },
+        ] : undefined}
+      />
       {q.isLoading ? (
         <>
           <div className="skel-card" style={{ height: 220 }} />

@@ -71,9 +71,17 @@ export function Gamificacao() {
 
   const head = (
     <ScreenHead
-      title="Gamificação"
+      title="Gamificação."
+      accent={cur ? `Nível ${cur.n}: ${cur.name}.` : undefined}
       date={cur ? `Você está no nível ${cur.n} de ${g.levels.length} · ${g.xpTotal} XP no total` : undefined}
       status={cur ? <Pill tone="blue">{cur.name}</Pill> : undefined}
+      sub="Faça uma tarefa de cada vez. Ao concluir as principais do nível, você sobe sozinho para o próximo."
+      meta={cur && !isPast && !isFuture ? [
+        { k: 'XP neste nível', v: `${xpDone} de ${xpMax}` },
+        { k: 'Tarefas principais', v: `${done} de ${main.length} feitas` },
+        { k: 'Próximo nível', v: next ? next.name : 'Último nível' },
+        { k: 'Meta de faturamento', v: lvl?.goal || '—' },
+      ] : undefined}
     />
   );
   const levels = (
@@ -104,9 +112,27 @@ export function Gamificacao() {
       </Screen>
     );
 
+  const nextCard = !isPast && !isFuture && all.length > 0 && (nextTask ? (
+    <NextUp
+      label={kindOf(nextTask) === 'andamento' ? 'Você está fazendo' : 'Próxima tarefa'}
+      when={`+${nextTask.xp} XP`}
+      Icon={Trophy}
+      title={nextTask.title}
+      kind={nextTask.description || nextTask.category}
+      meta={left === 1 ? 'Última tarefa deste nível' : `Faltam ${left} tarefas${next ? ` para chegar a ${next.name}` : ' para fechar o nível'}`}
+      primary={nextTask.auto_slot
+        ? { label: kindOf(nextTask) === 'pendente' ? 'Enviar o documento' : 'Ver o documento', to: g.stateOf(nextTask).href }
+        : { label: 'Já fiz', Icon: Check, onClick: () => set(nextTask, 'feita', { confirm: true }) }}
+      later={nextTask.auto_slot ? undefined : kindOf(nextTask) === 'pendente' ? { label: 'Estou fazendo', onClick: () => set(nextTask, 'andamento') } : { label: 'Ainda não comecei', onClick: () => set(nextTask, 'pendente') }}
+    />
+  ) : (
+    <DoneRow title={`Nível ${lvl?.name} completo`} sub={next ? `Próximo: ${next.name}` : 'Você chegou ao último nível'} />
+  ));
+
   return (
     <Screen>
       {head}
+      {nextCard}
       {levels}
       {isFuture && lvl ? (
         <LevelFuture lvl={lvl} unlockAfter={g.levels.find((l) => l.n === shown - 1)?.name ?? cur!.name} tasks={all} />
@@ -116,23 +142,6 @@ export function Gamificacao() {
         <Note>As tarefas deste nível ainda não foram cadastradas pela equipe.</Note>
       ) : (
         <>
-          {nextTask ? (
-            <NextUp
-              label={kindOf(nextTask) === 'andamento' ? 'Você está fazendo' : 'Próxima tarefa'}
-              when={`+${nextTask.xp} XP`}
-              Icon={Trophy}
-              title={nextTask.title}
-              kind={nextTask.description || nextTask.category}
-              meta={left === 1 ? 'Última tarefa deste nível' : `Faltam ${left} tarefas${next ? ` para chegar a ${next.name}` : ' para fechar o nível'}`}
-              primary={nextTask.auto_slot
-                ? { label: kindOf(nextTask) === 'pendente' ? 'Enviar o documento' : 'Ver o documento', to: g.stateOf(nextTask).href }
-                : { label: 'Já fiz', Icon: Check, onClick: () => set(nextTask, 'feita', { confirm: true }) }}
-              later={nextTask.auto_slot ? undefined : kindOf(nextTask) === 'pendente' ? { label: 'Estou fazendo', onClick: () => set(nextTask, 'andamento') } : { label: 'Ainda não comecei', onClick: () => set(nextTask, 'pendente') }}
-            />
-          ) : (
-            <DoneRow title={`Nível ${lvl?.name} completo`} sub={next ? `Próximo: ${next.name}` : 'Você chegou ao último nível'} />
-          )}
-
           <section className="g-progress">
             <div className="between" style={{ alignItems: 'baseline' }}>
               <span className="k-eyebrow">Nível {lvl?.n} · {lvl?.name}</span>
@@ -426,7 +435,7 @@ export function Sessoes() {
 
   return (
     <Screen>
-      <ScreenHead title="Sessões e ajuda" sub="Suas duas sessões individuais com a Taty e o seu plano de ação." />
+      <ScreenHead title="Sessões e ajuda." accent="Ninguém trava sozinho." sub="Suas duas sessões individuais com a Taty, o Botão Vermelho e o seu plano de ação." />
       {red.isError ? (
         <ErrorState onRetry={red.refetch} />
       ) : (

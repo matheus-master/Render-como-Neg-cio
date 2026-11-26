@@ -123,9 +123,18 @@ export default function Inicio() {
   return (
     <Screen>
       <ScreenHead
-        title={`${greeting()}, ${firstName(profile.full_name)}`}
+        title={`${greeting()}, ${firstName(profile.full_name)}.`}
+        accent="Uma coisa de cada vez."
+        decor
         date={todayLabel()}
         status={lvl ? <Pill tone="blue">Nível {lvl.n} · {lvl.name}</Pill> : undefined}
+        lede="O que importa agora vem primeiro. O resto espera a vez: a gente organiza o que vem depois para você não precisar lembrar."
+        meta={[
+          { k: 'Seu nível', v: lvl ? `${lvl.name} · ${left > 0 ? `faltam ${left} tarefas` : 'completo'}` : '—' },
+          { k: 'Último relatório', v: last ? `${fmtBRL(last.revenue)} na quinzena` : 'Nenhum ainda' },
+          { k: 'Faturamento registrado', v: fmtBRL(total) },
+          { k: 'Próxima aula', v: upcoming[0] ? whenLabel(upcoming[0].starts_at) : 'Nada marcado' },
+        ]}
       />
 
       {next ? (
