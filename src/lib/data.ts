@@ -379,3 +379,18 @@ export function useFeatures() {
     },
   });
 }
+
+/** Ranking da gamificação (geral e do mês). Só nome curto, foto, turma, nível e XP. */
+export interface RankRow {
+  pos_total: number; pos_mes: number; student_id: string; nome: string; avatar_path: string | null; grupo: string | null;
+  nivel: number; nivel_nome: string; xp_total: number; xp_mes: number; tarefas: number; eu: boolean;
+}
+export function useRanking() {
+  const uid = useUid();
+  return useQuery({
+    queryKey: ['ranking', uid],
+    enabled: !!uid,
+    staleTime: 60_000,
+    queryFn: async () => unwrap(await supabase.rpc('ranking_alunos')) as RankRow[],
+  });
+}

@@ -15,6 +15,7 @@ import Lote from './pages/Lote';
 import Calendario from './pages/Calendario';
 import Harvey from './pages/Harvey';
 import Suits from './pages/Suits';
+import { Ranking } from './pages/Ranking';
 import { FeedbackMentoria, Gamificacao, Perfil, Sessoes } from './pages/OtherPages';
 import { NovoRelatorio, RelatorioDetalhe, Relatorios } from './pages/Relatorios';
 import { AlunoFicha, Configuracoes, Painel } from './pages/staff/Painel';
@@ -77,6 +78,7 @@ function App() {
         <Route path="documentos/:slot/devolutiva" element={<Devolutiva />} />
         <Route path="documentos/:slot/historico" element={<Historico />} />
         <Route path="gamificacao" element={<Gamificacao />} />
+        <Route path="gamificacao/ranking" element={<Ranking />} />
         <Route path="relatorios" element={<Relatorios />} />
         <Route path="relatorios/novo" element={<NovoRelatorio />} />
         <Route path="relatorios/:id" element={<RelatorioDetalhe />} />

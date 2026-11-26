@@ -18,6 +18,7 @@ export interface Profile {
   avatar_path: string | null;
   /** Escolhas do avatar em personagem (para editar depois). */
   avatar_config?: Record<string, string> | null;
+  ranking_visivel?: boolean;
   access_until: string | null;
   plan: string;
   status: 'ativo' | 'onboarding' | 'pausado' | 'encerrado';

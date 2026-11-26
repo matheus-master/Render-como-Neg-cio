@@ -10,7 +10,8 @@ import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 const AvatarBuilder = lazy(() => import('../components/AvatarBuilder'));
 import { ArrowRight, CalendarDays, Check, Circle, FileUp, House, LifeBuoy, Lock, Pencil, RotateCcw, Sparkles, Star, Timer, Trophy } from 'lucide-react';
 import { Actions, BigButton, Confirm, DetailCard, DoneRow, HelpCard, NextUp, Note, Pill, Row, Screen, ScreenHead, Section, Side, Tile, Workspace } from '../components/kit';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { RankingCard } from './Ranking';
 import { ErrorState, PageHead, PageSkeleton, Mark, Num } from '../components/ui';
 import { useAuth, useProfile } from '../lib/auth';
 import { useGami, useRedButton, type Level, type Task, useSurvey, useSetTaskStatus } from '../lib/data';
@@ -77,6 +78,7 @@ export function Gamificacao() {
       date={cur ? `Você está no nível ${cur.n} de ${g.levels.length} · ${g.xpTotal} XP no total` : undefined}
       status={cur ? <Pill tone="blue">{cur.name}</Pill> : undefined}
       sub="Faça uma tarefa de cada vez. Ao concluir as principais do nível, você sobe sozinho para o próximo."
+      right={<Link to="/gamificacao/ranking" className="btn btn-gold"><Trophy size={18} aria-hidden /> Ver ranking</Link>}
       meta={cur && !isPast && !isFuture ? [
         { k: 'XP neste nível', v: `${xpDone} de ${xpMax}` },
         { k: 'Tarefas principais', v: `${done} de ${main.length} feitas` },
@@ -153,6 +155,7 @@ export function Gamificacao() {
           </section>
         </Side>
       )}
+      {showCur && all.length > 0 && <Side><RankingCard /></Side>}
       {showCur && going.length > 0 && (
         <Section title="Fazendo">
           {going.map((t) => <Row key={t.id} Icon={Timer} title={t.title} sub={taskSub(t)} onClick={() => setOpen(t)} right={<Pill tone="blue">Fazendo</Pill>} />)}
