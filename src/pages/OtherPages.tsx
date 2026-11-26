@@ -6,10 +6,11 @@ import { StudentPlans } from '../components/Planos';
 import { useMyEvents, useMyPlans } from '../lib/agenda';
 import { safeName } from '../lib/upload';
 import { useQueryClient } from '@tanstack/react-query';
-import { Fragment, useEffect, useRef, useState } from 'react';
-import { Pencil } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { ArrowRight, CalendarDays, Check, Circle, FileUp, House, LifeBuoy, Lock, Pencil, RotateCcw, Star, Timer, Trophy } from 'lucide-react';
+import { Actions, BigButton, Confirm, DetailCard, DoneRow, HelpCard, NextUp, Note, Pill, Row, Screen, ScreenHead, Section, Tile } from '../components/kit';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Chip, ErrorState, PageHead, PageSkeleton, Mark, Num } from '../components/ui';
+import { ErrorState, PageHead, PageSkeleton, Mark, Num } from '../components/ui';
 import { useAuth, useProfile } from '../lib/auth';
 import { useGami, useRedButton, type Level, type Task, useSurvey, useSetTaskStatus } from '../lib/data';
 import { fmtDate, fmtDay } from '../lib/format';
@@ -23,171 +24,183 @@ export function Gamificacao() {
   const g = useGami();
   const setStatus = useSetTaskStatus();
   const toast = useToast();
-  const nav = useNavigate();
   const [params, setParams] = useSearchParams();
   const [sel, setSelRaw] = useState<number | null>(() => Number(params.get('nivel')) || null);
+  const [open, setOpen] = useState<Task | null>(null);
+  const [confirm, setConfirm] = useState<{ t: Task; prev: Kind } | null>(null);
   const fixing = params.get('corrigir') === '1';
   const setSel = (n: number) => {
     setSelRaw(n);
+    setConfirm(null);
     if (params.toString()) setParams({}, { replace: true });
   };
 
-  if (g.isLoading) return <div className="page"><PageSkeleton /></div>;
-  if (g.isError) return <div className="page"><ErrorState onRetry={g.refetch} /></div>;
+  if (g.isLoading) return <Screen><PageSkeleton /></Screen>;
+  if (g.isError) return <Screen><ErrorState onRetry={g.refetch} /></Screen>;
   const cur = g.current;
   const shown = sel ?? cur?.n ?? 1;
   const lvl = g.levels.find((l) => l.n === shown);
   const next = g.levels.find((l) => l.n === shown + 1);
-  // Principais primeiro, missões bônus no fim.
-  const tasks = [...g.byLevel(shown).filter((t) => !t.bonus), ...g.byLevel(shown).filter((t) => t.bonus)];
-  const states = tasks.map((t) => g.stateOf(t));
-  const isMain = (i: number) => !tasks[i]!.bonus;
-  const xpMax = tasks.reduce((a, t) => a + t.xp, 0);
-  const xpDone = tasks.filter((_, i) => states[i]!.kind === 'feita').reduce((a, t) => a + t.xp, 0);
-  const xpStarted = tasks.filter((_, i) => states[i]!.kind === 'andamento').reduce((a, t) => a + t.xp, 0);
-  const done = states.filter((s, i) => isMain(i) && s.kind === 'feita').length;
-  const started = states.filter((s, i) => isMain(i) && s.kind === 'andamento').length;
-  const mainCount = tasks.filter((t) => !t.bonus).length;
-  const left = mainCount - done;
+  const all = g.byLevel(shown);
+  const main = all.filter((t) => !t.bonus);
+  const bonus = all.filter((t) => t.bonus);
+  const kindOf = (t: Task) => g.stateOf(t).kind;
+  const xpMax = all.reduce((a, t) => a + t.xp, 0);
+  const xpDone = all.filter((t) => kindOf(t) === 'feita').reduce((a, t) => a + t.xp, 0);
+  const done = main.filter((t) => kindOf(t) === 'feita').length;
+  const left = main.length - done;
   const isPast = cur && shown < cur.n;
   const isFuture = cur && shown > cur.n;
-  // Próximo passo: a primeira em andamento; se não houver, a primeira pendente.
-  const firstMain = (k: string) => states.findIndex((s, i) => isMain(i) && s.kind === k);
-  const nextIdx = firstMain('andamento') >= 0 ? firstMain('andamento') : firstMain('pendente');
-  const nextTask = nextIdx >= 0 ? tasks[nextIdx] : null;
+  // Próxima tarefa: a primeira em andamento; se não houver, a primeira pendente.
+  const nextTask = main.find((t) => kindOf(t) === 'andamento') ?? main.find((t) => kindOf(t) === 'pendente') ?? null;
+  const going = all.filter((t) => kindOf(t) === 'andamento' && t !== nextTask);
+  const todo = main.filter((t) => kindOf(t) === 'pendente' && t !== nextTask);
+  const finished = all.filter((t) => kindOf(t) === 'feita');
+  const bonusOpen = bonus.filter((t) => kindOf(t) !== 'feita' && !going.includes(t));
 
-  const set = (taskId: number, status: 'pendente' | 'andamento' | 'feita') =>
-    setStatus.mutate({ taskId, status }, { onError: (e) => toast((e as Error).message) });
-  const pct = (n: number) => (xpMax ? (n / xpMax) * 100 : 0);
+  const set = (t: Task, status: Kind, opts?: { confirm?: boolean }) => {
+    const prev = kindOf(t);
+    setOpen(null);
+    setStatus.mutate({ taskId: t.id, status }, {
+      onError: (e) => toast((e as Error).message),
+      onSuccess: () => { if (opts?.confirm) { setConfirm({ t, prev }); window.scrollTo({ top: 0, behavior: 'smooth' }); } },
+    });
+  };
+  const pct = xpMax ? (xpDone / xpMax) * 100 : 0;
+  const taskSub = (t: Task) => [t.category, `+${t.xp} XP`].filter(Boolean).join(' · ');
+
+  const head = (
+    <ScreenHead
+      title="Gamificação"
+      date={cur ? `Você está no nível ${cur.n} de ${g.levels.length} · ${g.xpTotal} XP no total` : undefined}
+      status={cur ? <Pill tone="blue">{cur.name}</Pill> : undefined}
+    />
+  );
+  const levels = (
+    <div className="g-levels" role="tablist" aria-label="Níveis">
+      {g.levels.map((l) => {
+        const on = l.n === shown, past = cur && l.n < cur.n, now = l.n === cur?.n;
+        return (
+          <button key={l.n} role="tab" aria-selected={on} className={'g-level' + (on ? ' on' : '') + (past ? ' past' : '') + (now ? ' now' : '')} onClick={() => setSel(l.n)}>
+            <span className="g-level-ico">{past ? <Check size={16} strokeWidth={2.6} aria-hidden /> : now ? <Star size={15} aria-hidden /> : l.n > (cur?.n ?? 0) ? <Lock size={14} aria-hidden /> : l.n}</span>
+            {l.name}
+          </button>
+        );
+      })}
+    </div>
+  );
+
+  if (confirm && !isPast && !isFuture)
+    return (
+      <Screen>
+        <Confirm
+          title="Tarefa registrada"
+          sub="Você marcou esta tarefa como feita."
+          card={{ Icon: Trophy, title: confirm.t.title, sub: `Nível ${lvl?.name ?? ''}${confirm.t.category ? ' · ' + confirm.t.category : ''}`, note: `+${confirm.t.xp} XP somados` }}
+          undo={{ label: 'Marcou por engano?', sub: 'Desfaça esta marcação.', onClick: () => { setStatus.mutate({ taskId: confirm.t.id, status: confirm.prev }); setConfirm(null); toast('Marcação desfeita.'); } }}
+          primary={nextTask ? { label: 'Próxima tarefa', onClick: () => setConfirm(null), Icon: ArrowRight } : { label: 'Ver minhas tarefas', onClick: () => setConfirm(null), Icon: Trophy }}
+          secondary={{ label: 'Voltar ao início', to: '/', Icon: House }}
+        />
+      </Screen>
+    );
 
   return (
-    <div className="page">
-      <PageHead title="Gamificação" sub="Marque suas tarefas e acompanhe seu XP. Ao concluir todas as tarefas principais do seu nível, você sobe automaticamente para o próximo." />
-      <div style={{ display: 'flex', gap: 4, overflowX: 'auto', scrollbarWidth: 'none', borderBottom: '1px solid var(--b-card)' }} role="tablist">
-        {g.levels.map((l) => {
-          const on = l.n === shown;
-          return (
-            <button key={l.n} role="tab" aria-selected={on} onClick={() => setSel(l.n)} style={{ padding: '12px 14px', fontSize: 15, fontWeight: on ? 700 : 500, whiteSpace: 'nowrap', color: on ? 'var(--ac)' : 'var(--t3)', borderBottom: on ? '3px solid var(--ac)' : '3px solid transparent', marginBottom: -1 }}>
-              {l.n}. {l.name}
-              {l.n === cur?.n ? <span style={{ marginLeft: 6, display: 'inline-flex', color: 'var(--gold)' }}><Mark m="★" size={12} /></span> : null}
-            </button>
-          );
-        })}
-      </div>
+    <Screen>
+      {head}
+      {levels}
       {isFuture && lvl ? (
-        <LevelFuture lvl={lvl} unlockAfter={g.levels.find((l) => l.n === shown - 1)?.name ?? cur!.name} tasks={tasks} />
+        <LevelFuture lvl={lvl} unlockAfter={g.levels.find((l) => l.n === shown - 1)?.name ?? cur!.name} tasks={all} />
       ) : isPast && lvl ? (
-        <LevelPast lvl={lvl} tasks={tasks} g={g} fixing={fixing} onSet={set} />
-      ) : tasks.length === 0 ? (
-        <div className="card" style={{ padding: 28, textAlign: 'center', fontSize: 15, lineHeight: 1.5, color: 'var(--t2)' }}>
-          As tarefas deste nível ainda não foram cadastradas pela equipe.
-        </div>
+        <LevelPast lvl={lvl} tasks={all} g={g} fixing={fixing} onSet={(id, k) => { const t = all.find((x) => x.id === id); if (t) set(t, k); }} />
+      ) : all.length === 0 ? (
+        <Note>As tarefas deste nível ainda não foram cadastradas pela equipe.</Note>
       ) : (
         <>
-          {nextTask && !isPast && (
-            <div className="hero" style={{ padding: '20px 22px', display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>
-              <div style={{ flex: '1 1 260px', minWidth: 0 }}>
-                <div className="label" style={{ color: 'var(--gold)' }}>Seu próximo passo</div>
-                <div style={{ fontWeight: 600, fontSize: 20, marginTop: 6 }}>{nextTask.title}</div>
-                <div style={{ fontSize: 14, color: 'var(--steel-t)', marginTop: 4 }}>
-                  {left === 1 ? 'Última tarefa' : `Faltam ${left} tarefas`}
-                  {next ? ` para chegar a ${next.name}` : ' para fechar este nível'}
-                  {started > 0 ? ` · ${started} em andamento` : ''}
-                </div>
-              </div>
-              {nextTask.auto_slot ? (
-                <button className="btn btn-gold" onClick={() => nav(states[nextIdx]!.href!)}>
-                  {states[nextIdx]!.kind === 'pendente' ? 'Enviar documento' : 'Ver documento'}
-                </button>
-              ) : states[nextIdx]!.kind === 'pendente' ? (
-                <button className="btn btn-gold" onClick={() => set(nextTask.id, 'andamento')}><Mark m="▶" size={12} /> Começar agora</button>
-              ) : (
-                <button className="btn btn-gold" onClick={() => set(nextTask.id, 'feita')}><Mark m="✓" size={13} /> Marcar como feita</button>
-              )}
-            </div>
+          {nextTask ? (
+            <NextUp
+              label={kindOf(nextTask) === 'andamento' ? 'Você está fazendo' : 'Próxima tarefa'}
+              when={`+${nextTask.xp} XP`}
+              Icon={Trophy}
+              title={nextTask.title}
+              kind={nextTask.description || nextTask.category}
+              meta={left === 1 ? 'Última tarefa deste nível' : `Faltam ${left} tarefas${next ? ` para chegar a ${next.name}` : ' para fechar o nível'}`}
+              primary={nextTask.auto_slot
+                ? { label: kindOf(nextTask) === 'pendente' ? 'Enviar o documento' : 'Ver o documento', to: g.stateOf(nextTask).href }
+                : { label: 'Já fiz', Icon: Check, onClick: () => set(nextTask, 'feita', { confirm: true }) }}
+              later={nextTask.auto_slot ? undefined : kindOf(nextTask) === 'pendente' ? { label: 'Estou fazendo', onClick: () => set(nextTask, 'andamento') } : { label: 'Ainda não comecei', onClick: () => set(nextTask, 'pendente') }}
+            />
+          ) : (
+            <DoneRow title={`Nível ${lvl?.name} completo`} sub={next ? `Próximo: ${next.name}` : 'Você chegou ao último nível'} />
           )}
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(200px,1fr))', gap: 14 }}>
-            <div className="card">
-              <div className="label">XP neste nível</div>
-              <div style={{ fontWeight: 600, fontSize: 28, marginTop: 8 }}>
-                <Num>{xpDone}</Num> <span style={{ fontSize: 15, color: 'var(--t3)', fontWeight: 600 }}>/ {xpMax}</span>
-              </div>
-              <div style={{ height: 8, borderRadius: 4, background: 'var(--alt3)', overflow: 'hidden', marginTop: 10, display: 'flex' }}>
-                <div style={{ width: pct(xpDone) + '%', height: '100%', background: 'var(--ac)', transition: 'width .4s' }} />
-                <div style={{ width: pct(xpStarted) + '%', height: '100%', background: 'repeating-linear-gradient(45deg, color-mix(in oklab, var(--ac) 45%, #fff) 0 6px, color-mix(in oklab, var(--ac) 30%, #fff) 6px 12px)', transition: 'width .4s' }} />
-              </div>
-              {xpStarted > 0 && <div style={{ fontSize: 13, color: 'var(--t3)', marginTop: 6 }}>+{xpStarted} XP em andamento</div>}
+          <section className="g-progress">
+            <div className="between" style={{ alignItems: 'baseline' }}>
+              <span className="k-eyebrow">Nível {lvl?.n} · {lvl?.name}</span>
+              <span className="k-count">{done} de {main.length} tarefas</span>
             </div>
-            <div className="card">
-              <div className="label">Tarefas principais</div>
-              <div style={{ fontWeight: 600, fontSize: 28, marginTop: 8 }}>
-                <Num>{done}</Num> <span style={{ fontSize: 15, color: 'var(--t3)', fontWeight: 600 }}>/ {mainCount}</span>
-              </div>
-              <div style={{ fontSize: 14, color: 'var(--t3)', marginTop: 4 }}>
-                {started > 0 ? `${started} em andamento` : lvl?.goal ? `Meta de faturamento: ${lvl.goal}` : 'Comece por uma tarefa'}
-              </div>
-            </div>
-            <div className="card">
-              <div className="label">XP total conquistado</div>
-              <div style={{ fontWeight: 600, fontSize: 28, marginTop: 8 }}><Num>{g.xpTotal}</Num></div>
-              <div style={{ fontSize: 14, color: 'var(--t3)', marginTop: 4 }}>Somando todos os níveis</div>
-            </div>
-          </div>
+            <div className="g-progress-xp"><Num>{xpDone}</Num><span> / {xpMax} XP</span></div>
+            <div className="track" style={{ height: 10, borderRadius: 5 }}><i style={{ width: pct + '%' }} /></div>
+            {lvl?.goal && <div className="k-row-sub">Meta de faturamento do nível: <b style={{ color: 'var(--t)' }}>{lvl.goal}</b></div>}
+          </section>
 
-          <div className="card" style={{ padding: '20px 20px 6px' }}>
-            <div className="h-card">
-              Nível {lvl?.n} · {lvl?.name}
-            </div>
-            {lvl?.tagline && <div style={{ fontSize: 15, color: 'var(--t3)', marginTop: 2 }}>{lvl.tagline}</div>}
-            <div className="task-hint">
-              Em cada tarefa, toque na situação: <b>A fazer</b>, <b>Fazendo</b> ou <b>Feita</b>. Só <b>Feita</b> soma XP.
-            </div>
-            {tasks.map((t, i) => {
-              const st = states[i]!;
-              const on = st.kind === 'feita';
-              const bonusHeader = t.bonus && (i === 0 || !tasks[i - 1]!.bonus);
-              const going = st.kind === 'andamento';
-              return (
-                <Fragment key={t.id}>
-                {bonusHeader && (
-                  <div style={{ padding: '18px 0 8px', borderTop: '1px solid var(--b-div)' }}>
-                    <div className="row" style={{ gap: 8 }}>
-                      <span style={{ color: 'var(--gold)', display: 'flex' }}><Mark m="★" size={15} /></span>
-                      <span className="h-card" style={{ fontSize: 15 }}>Missões bônus</span>
-                    </div>
-                    <div style={{ fontSize: 13, color: 'var(--t3)', marginTop: 2 }}>Somam XP, mas não contam para subir de nível.</div>
-                  </div>
-                )}
-                <div className={'task-row' + (going ? ' going' : '') + (on ? ' done' : '')}>
-                  <div className="task-num">{t.position}</div>
-                  <div className="task-main">
-                    <div className="task-title">{t.title}</div>
-                    <div style={{ fontSize: 13, lineHeight: 1.4, color: 'var(--t3)' }}>
-                      {t.description}
-                      {t.category ? ' · ' + t.category : ''}
-                      <span className="mono" style={{ marginLeft: 6, color: going ? 'var(--ac)' : on ? 'var(--ok-t)' : 'var(--t2)', fontWeight: 600 }}>+{t.xp} XP</span>
-                    </div>
-                    {t.auto_slot && (
-                      <button onClick={() => nav(st.href!)} style={{ fontSize: 12, fontWeight: 600, color: 'var(--ac)', marginTop: 4 }}>
-                        {st.note} →
-                      </button>
-                    )}
-                  </div>
-                  {t.auto_slot ? (
-                    <Chip tone={on ? 'ok' : going ? 'soft' : 'none'}>{on ? 'Feita' : going ? 'Fazendo' : 'A fazer'}</Chip>
-                  ) : (
-                    <TaskPicker t={t} kind={st.kind} onSet={(k) => set(t.id, k)} />
-                  )}
-                </div>
-                </Fragment>
-              );
-            })}
-          </div>
+          {going.length > 0 && (
+            <Section title="Fazendo">
+              {going.map((t) => <Row key={t.id} Icon={Timer} title={t.title} sub={taskSub(t)} onClick={() => setOpen(t)} right={<Pill tone="blue">Fazendo</Pill>} />)}
+            </Section>
+          )}
+          {todo.length > 0 && (
+            <Section title="Para fazer" right={<span className="k-count">{todo.length}</span>}>
+              {todo.map((t) => <Row key={t.id} Icon={t.auto_slot ? FileUp : Circle} tone="gray" title={t.title} sub={taskSub(t)} onClick={() => setOpen(t)} />)}
+            </Section>
+          )}
+          {bonusOpen.length > 0 && (
+            <Section title="Missões bônus" right={<span className="k-count">somam XP, não seguram o nível</span>}>
+              {bonusOpen.map((t) => <Row key={t.id} Icon={Star} tone="amber" title={t.title} sub={taskSub(t)} onClick={() => setOpen(t)} />)}
+            </Section>
+          )}
+          {finished.length > 0 && (
+            <Section title="Feitas" right={<span className="k-count">{finished.length}</span>}>
+              {finished.map((t) => (
+                <button key={t.id} className="k-row done" onClick={() => setOpen(t)}>
+                  <span className="k-done-check"><Check size={20} strokeWidth={2.6} aria-hidden /></span>
+                  <span className="k-row-main"><b>{t.title}</b><span className="k-row-sub">{taskSub(t)}{g.doneAt(t) ? ' · ' + fmtDay(g.doneAt(t)!, false) : ''}</span></span>
+                </button>
+              ))}
+            </Section>
+          )}
           <Achievements g={g} />
         </>
       )}
-    </div>
+
+      {open && (
+        <div className="sheet-backdrop k-sheet-wrap" onClick={() => setOpen(null)}>
+          <div className="sheet k-task" onClick={(e) => e.stopPropagation()} role="dialog" aria-label={open.title}>
+            <div className="grip" />
+            <div className="k-detail-head">
+              <Tile Icon={open.bonus ? Star : Trophy} tone={kindOf(open) === 'feita' ? 'mint' : open.bonus ? 'amber' : 'blue'} size="lg" />
+              <div style={{ minWidth: 0 }}>
+                <div className="k-eyebrow">{open.bonus ? 'Missão bônus' : `Tarefa ${open.position}`} · +{open.xp} XP</div>
+                <div className="k-detail-title">{open.title}</div>
+              </div>
+            </div>
+            {(open.description || open.category) && <div className="k-row-sub" style={{ fontSize: 16 }}>{[open.description, open.category].filter(Boolean).join(' · ')}</div>}
+            {open.auto_slot ? (
+              <>
+                <Note>Esta tarefa conclui sozinha quando a devolutiva do documento vier <b>Aprovado</b>.</Note>
+                <BigButton a={{ label: g.stateOf(open).note?.includes('Enviar') ? 'Enviar o documento' : 'Ver o documento', to: g.stateOf(open).href, Icon: FileUp }} />
+              </>
+            ) : (
+              <Actions>
+                {kindOf(open) !== 'feita' && <BigButton a={{ label: 'Já fiz', Icon: Check, onClick: () => set(open, 'feita', { confirm: true }) }} />}
+                {kindOf(open) !== 'andamento' && <BigButton a={{ label: 'Estou fazendo', Icon: Timer, onClick: () => set(open, 'andamento') }} variant="secondary" />}
+                {kindOf(open) !== 'pendente' && <BigButton a={{ label: 'Ainda não comecei', Icon: RotateCcw, onClick: () => set(open, 'pendente') }} variant="soft" />}
+              </Actions>
+            )}
+            <HelpCard title="Travou nesta tarefa?" sub="Peça ajuda à equipe em Sessões e ajuda." to="/sessoes" />
+          </div>
+        </div>
+      )}
+    </Screen>
   );
 }
 
@@ -335,11 +348,13 @@ function LevelFuture({ lvl, unlockAfter, tasks: raw }: { lvl: Level; unlockAfter
 
 /** Linha do tempo do que o aluno já concluiu, em todos os níveis. */
 function Achievements({ g }: { g: Gami }) {
+  const [open, setOpen] = useState(false);
   const items = g.tasks
     .filter(g.isDone)
     .map((t) => ({ t, at: g.doneAt(t), lvl: g.levels.find((l) => l.n === t.level) }))
     .sort((a, b) => (b.at || '').localeCompare(a.at || ''));
   if (!items.length) return null;
+  if (!open) return <Row Icon={Star} tone="amber" title="Todas as suas conquistas" sub={`${items.length} tarefas feitas · ${g.xpTotal} XP somando todos os níveis`} onClick={() => setOpen(true)} />;
   return (
     <div className="card" style={{ padding: '20px 20px 6px' }}>
       <div className="between" style={{ alignItems: 'baseline' }}>
@@ -382,6 +397,7 @@ export function Sessoes() {
   const [confirm, setConfirm] = useState(false);
   const [reason, setReason] = useState('');
   const used = !!red.data;
+  const [justUsed, setJustUsed] = useState(false);
 
   const go = async () => {
     if (reason.trim().length < 10) return;
@@ -389,74 +405,84 @@ export function Sessoes() {
     const { error } = await supabase.from('red_button').insert({ reason: reason.trim() });
     if (error) return toast('Não deu para acionar. Tente de novo.');
     qc.invalidateQueries({ queryKey: ['red_button'] });
+    setJustUsed(true);
   };
 
+  const st = red.data?.staff_status;
+  const when = dirNext ? new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo', weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }).format(new Date(dirNext.starts_at)) : '';
+
+  if (justUsed)
+    return (
+      <Screen>
+        <Confirm
+          title="Pedido enviado"
+          sub="A Taty recebeu o seu Botão Vermelho."
+          card={{ Icon: LifeBuoy, title: 'Sessão de emergência', sub: 'Ela entra em contato pelo WhatsApp em até 1 dia útil.', note: 'Solicitado agora' }}
+          primary={{ label: 'Voltar ao início', to: '/', Icon: House }}
+          secondary={{ label: 'Ver minhas sessões', onClick: () => setJustUsed(false), Icon: LifeBuoy }}
+        />
+      </Screen>
+    );
+
   return (
-    <div className="page">
-      <PageHead title="Sessões individuais" sub="Suas duas sessões individuais com a Taty." />
+    <Screen>
+      <ScreenHead title="Sessões e ajuda" sub="Suas duas sessões individuais com a Taty e o seu plano de ação." />
       {red.isError ? (
         <ErrorState onRetry={red.refetch} />
       ) : (
-        <div className="grid-300">
-          <div className="card stack" style={{ gap: 8 }}>
-            <div className="between" style={{ alignItems: 'center' }}>
-              <div className="h-card">Direcionamento inicial</div>
-              {dirNext ? <Chip tone="soft">Agendado</Chip> : dirDone ? <Chip tone="ok">Realizado</Chip> : <span className="chip chip-none">Disponível</span>}
-            </div>
-            <div style={{ fontSize: 15, lineHeight: 1.5, color: 'var(--t2)' }}>
-              {dirNext
-                ? `Marcado para ${new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo', weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }).format(new Date(dirNext.starts_at))}. Os detalhes e o link estão no Calendário.`
-                : dirDone
-                  ? 'Sessão feita. Seu plano de ação está logo abaixo: marque cada passo quando fizer.'
-                  : 'Sessão individual com a Taty para montar seu plano de ação personalizado. A equipe marca a data com você.'}
-            </div>
-          </div>
-          <div className="card stack" style={{ gap: 12 }}>
-            <div className="between" style={{ alignItems: 'center' }}>
-              <div className="h-card">Botão Vermelho</div>
-              {red.isLoading ? null : used ? <Chip tone={red.data!.staff_status === 'realizado' ? 'ok' : red.data!.staff_status === 'agendado' ? 'soft' : 'err'}>{red.data!.staff_status === 'realizado' ? 'Realizado' : red.data!.staff_status === 'agendado' ? 'Agendado' : 'Solicitado'}</Chip> : <span className="chip chip-none">Disponível</span>}
-            </div>
-            <div style={{ fontSize: 15, lineHeight: 1.5, color: 'var(--t2)' }}>Sessão de emergência, para usar em último caso quando você travar nas tarefas. Só pode ser usada uma vez.</div>
-            {!red.isLoading && !used && (
-              <button className="btn btn-danger btn-md" style={{ alignSelf: 'flex-start', gap: 10, padding: '0 22px' }} onClick={() => setConfirm(true)}>
-                <span style={{ width: 12, height: 12, borderRadius: '50%', background: '#fff' }} />
-                Acionar Botão Vermelho
-              </button>
+        <>
+          <DetailCard
+            Icon={LifeBuoy}
+            tone="red"
+            eyebrow="Sessão de emergência"
+            title="Botão Vermelho"
+            question={used ? (st === 'realizado' ? 'Sessão realizada' : st === 'agendado' ? 'Sessão agendada' : 'Pedido enviado') : 'Travou nas tarefas?'}
+            sub={used ? `Acionado ${fmtDay(red.data!.used_at)}. ${st === 'solicitado' ? 'A Taty entra em contato pelo WhatsApp em até 1 dia útil.' : st === 'agendado' ? 'Os detalhes estão na sua agenda.' : 'Bom trabalho!'}` : 'Use em último caso, quando nada mais destravar. Só pode ser usado uma vez.'}
+          >
+            {used ? (
+              <>
+                {red.data!.reason && <Note tone="blue"><span style={{ fontWeight: 400 }}><b>Seu motivo:</b> {red.data!.reason}</span></Note>}
+                {red.data!.staff_notes && <Note><span style={{ fontWeight: 400 }}><b>Equipe:</b> {red.data!.staff_notes}</span></Note>}
+              </>
+            ) : !red.isLoading && (
+              <>
+                <Note tone="amber">Antes de acionar, vale tentar o Harvey ou rever a devolutiva: às vezes a resposta já está lá.</Note>
+                <BigButton a={{ label: 'Acionar Botão Vermelho', Icon: LifeBuoy, onClick: () => setConfirm(true) }} variant="danger" />
+              </>
             )}
-            {used && (
-              <div style={{ background: 'var(--err-bg)', borderRadius: 8, padding: '12px 14px', fontSize: 15, lineHeight: 1.45, color: '#7A1A14' }}>
-                Acionado {fmtDay(red.data!.used_at)}.{' '}
-                {red.data!.staff_status === 'solicitado' ? 'A Taty entra em contato pelo WhatsApp em até 1 dia útil.' : red.data!.staff_status === 'agendado' ? 'Sessão agendada.' : 'Sessão realizada.'}
-                {red.data!.reason && <div style={{ marginTop: 8, fontSize: 14, color: 'var(--t2)' }}><b>Seu motivo:</b> {red.data!.reason}</div>}
-                {red.data!.staff_notes && <div style={{ marginTop: 6, fontSize: 14, color: 'var(--t2)' }}><b>Equipe:</b> {red.data!.staff_notes}</div>}
-              </div>
+          </DetailCard>
+
+          <Section title="Direcionamento inicial">
+            {dirDone && !dirNext ? (
+              <DoneRow title="Sessão feita" sub="Seu plano de ação está logo abaixo: marque cada passo quando fizer." />
+            ) : (
+              <Row Icon={CalendarDays} title={dirNext ? 'Marcado' : 'Ainda não marcado'} sub={dirNext ? when : 'Sessão individual com a Taty para montar seu plano de ação. A equipe marca a data com você.'} to={dirNext ? '/calendario' : undefined} right={<Pill tone={dirNext ? 'blue' : 'gray'}>{dirNext ? 'Agendado' : 'Disponível'}</Pill>} />
             )}
-          </div>
-        </div>
+          </Section>
+
+          <Section title="Plano de ação">
+            <StudentPlans />
+          </Section>
+          <HelpCard title="Dúvida numa venda?" sub="O Harvey responde na hora: mande o print da conversa com o cliente." to="/harvey" />
+        </>
       )}
-      <div style={{ fontWeight: 600, fontSize: 20, marginTop: 6 }}>Plano de ação</div>
-      <StudentPlans />
       {confirm && (
         <div className="modal-backdrop" onClick={() => setConfirm(false)}>
           <div className="modal" role="alertdialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
-            <div style={{ fontWeight: 600, fontSize: 20, lineHeight: 1.25 }}>Acionar o Botão Vermelho?</div>
-            <div style={{ fontSize: 15, lineHeight: 1.5, color: 'var(--t2)' }}>Ele só pode ser usado uma vez. A Taty recebe o aviso e marca uma sessão de emergência com você.</div>
+            <div style={{ fontWeight: 900, fontSize: 24, lineHeight: 1.2 }}>Acionar o Botão Vermelho?</div>
+            <div style={{ fontSize: 16, lineHeight: 1.5, color: 'var(--t2)' }}>Ele só pode ser usado uma vez. A Taty recebe o aviso e marca uma sessão de emergência com você.</div>
             <label className="field">
               <span>Onde você travou?</span>
               <textarea className="textarea" autoFocus placeholder="Conte em poucas linhas o que está te travando, para a Taty já chegar preparada." value={reason} onChange={(e) => setReason(e.target.value)} />
             </label>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginTop: 6 }}>
-              <button className="btn btn-secondary" style={{ height: 50 }} onClick={() => setConfirm(false)}>
-                Agora não
-              </button>
-              <button className="btn btn-danger" style={{ height: 50 }} onClick={go} disabled={reason.trim().length < 10}>
-                Acionar
-              </button>
-            </div>
+            <Actions>
+              <BigButton a={{ label: 'Acionar agora', Icon: LifeBuoy, onClick: go, disabled: reason.trim().length < 10 }} variant="danger" />
+              <BigButton a={{ label: 'Agora não', onClick: () => setConfirm(false) }} variant="soft" />
+            </Actions>
           </div>
         </div>
       )}
-    </div>
+    </Screen>
   );
 }
 

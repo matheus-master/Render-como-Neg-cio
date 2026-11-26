@@ -1,8 +1,10 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
-import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom';
+import { Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { isSlot, MAX_UPLOAD_BYTES, MIN_TEXT_CHARS, SLOT_ORDER, SLOTS } from '../../shared/domain';
 import { BackLink, ErrorState, extOf, FileIcon, PageSkeleton, Mark } from '../components/ui';
+import { FileStack, FileText, FileUp, Link2, Send, Type } from 'lucide-react';
+import { BigButton, DetailCard, Pill, Row, Screen, ScreenHead } from '../components/kit';
 import { accessOf, useAuth, useProfile } from '../lib/auth';
 import { useDocs } from '../lib/data';
 import { fmtMB } from '../lib/format';
@@ -131,48 +133,31 @@ export default function NovaAnalise() {
   const sendLabel = uploading ? `Enviando arquivo… ${file.pct}%` : sending ? 'Enviando…' : sendErr ? 'Tentar enviar de novo' : 'Enviar para análise';
 
   return (
-    <div className="page" style={{ paddingBottom: 0 }}>
-      <div className="flow" style={{ gap: 24 }}>
-        <BackLink to="/documentos">Meus documentos</BackLink>
-        <h1 style={{ fontWeight: 600, fontSize: 28, marginTop: -12 }}>Nova análise</h1>
+    <Screen>
+        <ScreenHead back="/documentos" title={slot ? 'Enviar material' : 'O que você quer enviar?'} sub={slot ? undefined : 'Escolha o material. A equipe lê e devolve a devolutiva em até 48h.'} />
 
         {!slot ? (
-          <div className="stack" style={{ gap: 10 }}>
-            <div className="between" style={{ alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
-              <div className="h-card">O que você quer analisar?</div>
-              <Link to="/documentos/lote" className="link" style={{ fontSize: 14 }}>Enviar vários de uma vez →</Link>
-            </div>
+          <div className="k-sec-list">
             {SLOT_ORDER.map((s) => (
-              <button key={s} onClick={() => setParams({ slot: s }, { replace: true })} className="row card tight" style={{ gap: 14, padding: 14, minHeight: 72 }}>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 600, fontSize: 16 }}>{SLOTS[s].title}</div>
-                  <div style={{ fontSize: 14, lineHeight: 1.4, color: 'var(--t3)' }}>{SLOTS[s].desc}</div>
-                </div>
-                <div style={{ fontSize: 20, color: 'var(--t4)' }}><Mark m="›" size={18} /></div>
-              </button>
+              <Row key={s} Icon={FileText} tone={docsQ.docs[s].versions.length ? 'blue' : 'gray'} title={SLOTS[s].title} sub={SLOTS[s].desc} onClick={() => setParams({ slot: s }, { replace: true })} right={docsQ.docs[s].versions.length ? <Pill tone="gray">Versão {docsQ.docs[s].versions.length + 1}</Pill> : undefined} />
             ))}
+            <Row Icon={FileStack} title="Vários de uma vez" sub="Escolha todos os arquivos juntos e diga o que é cada um" to="/documentos/lote" />
           </div>
         ) : (
           <>
-            <div className="stack" style={{ gap: 6 }}>
-              <div className="row card tight" style={{ gap: 14, padding: '12px 14px' }}>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 13, color: 'var(--t3)' }}>Tipo de análise</div>
-                  <div style={{ fontWeight: 600, fontSize: 16 }}>{SLOTS[slot].title}</div>
-                  <div style={{ fontSize: 14, color: 'var(--t3)', marginTop: 2 }}>{SLOTS[slot].desc}</div>
-                </div>
-                <button onClick={() => { clearFile(); setParams({}, { replace: true }); }} style={{ fontWeight: 600, fontSize: 15, color: 'var(--ac)', padding: '12px 4px' }}>
-                  Trocar
-                </button>
+            <DetailCard Icon={FileText} eyebrow={nextVersion ? `${SLOTS[slot].tipo} · versão ${nextVersion}` : SLOTS[slot].tipo} title={SLOTS[slot].title} sub={undefined}>
+              <div className="between" style={{ alignItems: 'center', gap: 12 }}>
+                <span className="k-row-sub" style={{ marginTop: 0 }}>{nextVersion ? 'A versão anterior continua no histórico.' : SLOTS[slot].desc}</span>
+                <button className="btn btn-soft btn-sm" onClick={() => { clearFile(); setParams({}, { replace: true }); }}>Trocar</button>
               </div>
-              {nextVersion && <div style={{ fontSize: 14, color: 'var(--t3)' }}>Esta será a versão {nextVersion}. A anterior continua no histórico.</div>}
-            </div>
+            </DetailCard>
 
-            <div className="stack" style={{ gap: 12 }}>
-              <div style={{ fontWeight: 600, fontSize: 16 }}>Seu material</div>
-              <div className="seg" style={{ gridTemplateColumns: '1fr 1fr 1fr' }} role="tablist">
-                {([['file', 'Arquivo'], ['link', 'Link'], ['text', 'Colar texto']] as const).map(([k, label]) => (
+            <div className="k-sec">
+              <div className="k-sec-head"><h2>Como você quer mandar?</h2></div>
+              <div className="k-choose" role="tablist">
+                {([['file', 'Arquivo', FileUp], ['link', 'Link', Link2], ['text', 'Colar texto', Type]] as const).map(([k, label, Icon]) => (
                   <button key={k} role="tab" aria-selected={mode === k} className={mode === k ? 'on' : ''} onClick={() => setMode(k)}>
+                    <Icon size={24} aria-hidden />
                     {label}
                   </button>
                 ))}
@@ -257,14 +242,12 @@ export default function NovaAnalise() {
               )}
             </div>
 
-            <div className="stack" style={{ gap: 8 }}>
-              <div style={{ fontWeight: 600, fontSize: 16 }}>
-                Observação <span style={{ fontWeight: 400, color: 'var(--t3)' }}>(opcional)</span>
-              </div>
+            <div className="k-sec">
+              <div className="k-sec-head"><h2>Observação <span style={{ fontWeight: 400, fontSize: 17, color: 'var(--t3)' }}>(opcional)</span></h2></div>
               <textarea className="textarea" placeholder="Ex.: é para uma construtora nova, primeiro contato." value={note} onChange={(e) => setNote(e.target.value)} />
             </div>
 
-            <div style={{ position: 'sticky', bottom: 0, background: 'var(--bg)', padding: '12px 0 calc(16px + env(safe-area-inset-bottom))', display: 'flex', flexDirection: 'column', gap: 8, borderTop: '1px solid var(--b-card)' }}>
+            <div className="k-sticky">
               {sendErr && (
                 <div className="alert-err">
                   <div className="ico-circle ico-err"><Mark m="!" size={12} /></div>
@@ -273,14 +256,11 @@ export default function NovaAnalise() {
                   </div>
                 </div>
               )}
-              <button className="btn btn-primary btn-lg" disabled={!canSend || sending} onClick={send}>
-                {sendLabel}
-              </button>
+              <BigButton a={{ label: sendLabel, Icon: Send, onClick: send, disabled: !canSend || sending }} />
               <div style={{ fontSize: 13, color: 'var(--t3)', textAlign: 'center' }}>{canSend ? 'Devolutiva em até 48h.' : 'Adicione o material para enviar. Devolutiva em até 48h.'}</div>
             </div>
           </>
         )}
-      </div>
-    </div>
+    </Screen>
   );
 }

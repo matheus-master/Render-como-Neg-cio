@@ -1,7 +1,9 @@
 import { useQuery } from '@tanstack/react-query';
-import { CalendarPlus, ChevronLeft, ChevronRight, Clock, ExternalLink, MapPin, Video, X } from 'lucide-react';
+import { CalendarDays, CalendarPlus, Check, ChevronLeft, ChevronRight, Clock, ExternalLink, MapPin, Video, X } from 'lucide-react';
+import { BigButton, NextUp, Note, Row, Screen, ScreenHead, Section } from '../components/kit';
+import { whenLabel } from './Inicio';
 import { useMemo, useState } from 'react';
-import { ErrorState, PageHead } from '../components/ui';
+import { ErrorState } from '../components/ui';
 import { useAuth } from '../lib/auth';
 import { apiGet } from '../lib/supabase';
 import { EVENT_KINDS, kindInfo, openSigned, useMyEvents, useRespond, type MyEvent } from '../lib/agenda';
@@ -51,6 +53,7 @@ export default function Calendario() {
   const [cursor, setCursor] = useState({ y: today.y, m: today.m });
   const [open, setOpen] = useState<CalEvent | null>(null);
   const [selDay, setSelDay] = useState<string | null>(null);
+  const [showMonth, setShowMonth] = useState(false);
   const now = Date.now();
 
   const mine = useMyEvents();
@@ -85,19 +88,20 @@ export default function Calendario() {
   const calUrl = q.data?.calendarUrl;
   const selEvents = selDay ? byDay.get(selDay) || [] : null;
 
+  const nextEv = upcoming[0];
+  const rest = upcoming.slice(1, 6);
+  const nextPending = nextEv?.portal && nextEv.portal.me.response === 'pendente';
+  const nextLive = nextEv && isLiveSoon(nextEv, now) && nextEv.url;
+  const resp = (e: CalEvent) => (e.portal?.me.response === 'vou' ? ' · você vai' : e.portal?.me.response === 'pendente' ? ' · confirme presença' : '');
+
   return (
-    <div className="page">
-      <PageHead
-        title="Calendário"
-        sub="Aulas ao vivo, Laboratórios RCN, Mão na Massa e datas importantes da mentoria."
-        right={
-          calUrl && (
-            <a href={calUrl} target="_blank" rel="noreferrer" className="btn btn-secondary">
-              <ExternalLink size={16} aria-hidden />
-              Abrir no Google Agenda
-            </a>
-          )
-        }
+    <Screen>
+      <ScreenHead
+        title="Agenda"
+        sub="Aulas ao vivo, Laboratórios RCN, Mão na Massa e as suas sessões."
+        right={calUrl && !mobile ? (
+          <a href={calUrl} target="_blank" rel="noreferrer" className="k-read"><ExternalLink size={17} aria-hidden /> Google Agenda</a>
+        ) : undefined}
       />
 
       {q.isLoading || mine.isLoading ? (
@@ -118,6 +122,34 @@ export default function Calendario() {
           )}
         </div>
       ) : (
+        <>
+          {nextEv ? (
+            <NextUp
+              label={nextLive ? 'Acontecendo agora' : 'Próximo'}
+              when={whenLabel(nextEv.start)}
+              Icon={nextEv.url ? Video : CalendarDays}
+              title={nextEv.title}
+              kind={kindOf(nextEv).label + resp(nextEv)}
+              meta={[timeRange(nextEv), nextEv.location && !/^https?:/.test(nextEv.location) ? nextEv.location : nextEv.url ? 'Online' : null].filter(Boolean).join(' · ')}
+              primary={nextLive
+                ? { label: 'Entrar na aula', Icon: Video, onClick: () => window.open(nextEv.url!, '_blank', 'noopener') }
+                : nextPending
+                  ? { label: 'Vou', Icon: Check, onClick: () => respond.mutate({ eventId: nextEv.portal!.id, response: 'vou' }) }
+                  : { label: 'Ver detalhes', onClick: () => setOpen(nextEv) }}
+              later={nextPending ? { label: 'Não vou', onClick: () => respond.mutate({ eventId: nextEv.portal!.id, response: 'nao_vou' }) } : { label: 'Salvar na minha agenda', onClick: () => window.open(gcalAdd(nextEv), '_blank', 'noopener') }}
+            />
+          ) : (
+            <Note>Nada marcado por enquanto. Quando a equipe marcar uma aula ou sessão, ela aparece aqui.</Note>
+          )}
+          {rest.length > 0 && (
+            <Section title="Mais adiante">
+              {rest.map((e) => (
+                <Row key={e.id} Icon={e.url ? Video : CalendarDays} tone={kindOf(e).key === 'massa' ? 'mint' : kindOf(e).key === 'emergencia' ? 'red' : kindOf(e).key === 'lab' ? 'amber' : 'blue'} when={whenLabel(e.start)} title={e.title} sub={kindOf(e).label + resp(e)} onClick={() => setOpen(e)} />
+              ))}
+            </Section>
+          )}
+          <BigButton a={{ label: showMonth ? 'Esconder o calendário do mês' : 'Ver o calendário do mês', Icon: CalendarDays, onClick: () => setShowMonth(!showMonth) }} variant="soft" />
+          {showMonth && (
         <div className="cal-layout">
           <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
             <div className="between" style={{ alignItems: 'center', padding: '14px 16px', borderBottom: '1px solid var(--line)', flexWrap: 'wrap', gap: 8 }}>
@@ -209,6 +241,8 @@ export default function Calendario() {
             })}
           </div>
         </div>
+          )}
+        </>
       )}
 
       {open && (
@@ -269,6 +303,6 @@ export default function Calendario() {
           </div>
         </div>
       )}
-    </div>
+    </Screen>
   );
 }

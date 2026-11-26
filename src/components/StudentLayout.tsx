@@ -1,48 +1,81 @@
-import { BarChart3, Briefcase, CalendarDays, ChevronRight, FileText, House, LogOut, MessageSquareText, MoreHorizontal, Siren, Trophy, UserRound, type LucideIcon } from 'lucide-react';
+import { BarChart3, Briefcase, CalendarDays, ChevronRight, FileStack, FileText, FileUp, House, LifeBuoy, LogOut, MessageSquareText, MoreHorizontal, Plus, Trophy, UserRound, X, type LucideIcon } from 'lucide-react';
 import { useState } from 'react';
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { accessOf, useAuth, useProfile } from '../lib/auth';
 import { useDocs, useGami } from '../lib/data';
 import { LevelUp } from './LevelUp';
 import { Avatar } from './Avatar';
+import { Tile } from './kit';
 import { useMyEvents, useRespond } from '../lib/agenda';
 import { useIsMobile } from '../lib/useIsMobile';
 
-/** Menu lateral (computador), em dois grupos: o dia a dia e a mentoria. */
+/** Menu lateral (computador): o dia a dia em cima, a mentoria embaixo. Sempre palavra + ícone. */
 const NAV: [string, string, LucideIcon][][] = [
   [
     ['/', 'Início', House],
     ['/documentos', 'Documentos', FileText],
     ['/relatorios', 'Relatórios', BarChart3],
     ['/gamificacao', 'Gamificação', Trophy],
+    ['/calendario', 'Agenda', CalendarDays],
   ],
   [
-    ['/harvey', 'Harvey · Vendas', Briefcase],
-    ['/sessoes', 'Sessões', Siren],
-    ['/calendario', 'Calendário', CalendarDays],
+    ['/harvey', 'Harvey', Briefcase],
+    ['/sessoes', 'Sessões e ajuda', LifeBuoy],
     ['/feedback', 'Feedback', MessageSquareText],
     ['/perfil', 'Perfil', UserRound],
   ],
 ];
-const TABS: [string, string, LucideIcon][] = [
+/** Barra do celular: destinos com palavra + o "Enviar" no meio. */
+const TABS_L: [string, string, LucideIcon][] = [
   ['/', 'Início', House],
   ['/documentos', 'Documentos', FileText],
-  ['/gamificacao', 'Gamificação', Trophy],
-  ['/relatorios', 'Relatórios', BarChart3],
 ];
-const MORE: [string, string][] = [
-  ['/harvey', 'Harvey · Vendas'],
-  ['/sessoes', 'Sessões'],
-  ['/calendario', 'Calendário'],
-  ['/feedback', 'Feedback da mentoria'],
-  ['/perfil', 'Meu perfil'],
+const TABS_R: [string, string, LucideIcon][] = [['/gamificacao', 'Gamificação', Trophy]];
+const MORE: [string, string, LucideIcon, string][] = [
+  ['/relatorios', 'Relatórios', BarChart3, 'Números da quinzena'],
+  ['/calendario', 'Agenda', CalendarDays, 'Aulas e sessões'],
+  ['/harvey', 'Harvey', Briefcase, 'Ajuda numa venda'],
+  ['/sessoes', 'Sessões e ajuda', LifeBuoy, 'Botão Vermelho'],
+  ['/feedback', 'Feedback', MessageSquareText, 'Avalie a mentoria'],
+  ['/perfil', 'Perfil', UserRound, 'Seus dados'],
+];
+/** O que dá para enviar: a mesma lista no "+" do celular e no "Enviar" do computador. */
+const SEND: [string, string, LucideIcon, string][] = [
+  ['/documentos/nova', 'Material para análise', FileUp, 'Proposta, contrato, portfólio ou apresentação'],
+  ['/documentos/lote', 'Vários de uma vez', FileStack, 'Todos os arquivos juntos'],
+  ['/relatorios/novo', 'Relatório da quinzena', BarChart3, 'Faturamento, prospecção e conquistas'],
+  ['/harvey', 'Conversa para o Harvey', Briefcase, 'Print do WhatsApp com o cliente'],
+  ['/sessoes', 'Pedido de ajuda', LifeBuoy, 'Botão Vermelho: sessão de emergência'],
 ];
 
-export function Logo({ to = '/' }: { to?: string }) {
+export function Logo({ to = '/', white }: { to?: string; white?: boolean }) {
   return (
     <Link to={to} className="logo" aria-label="Render como Negócio · Início">
-      <img src="/logo-rcn.png" alt="Render como Negócio" />
+      <img src={white ? '/logo-rcn-branco.png' : '/logo-rcn.png'} alt="Render como Negócio" />
     </Link>
+  );
+}
+
+function SendSheet({ onClose, desktop }: { onClose: () => void; desktop?: boolean }) {
+  return (
+    <div className={desktop ? 'modal-backdrop' : 'sheet-backdrop'} onClick={onClose}>
+      <div className={desktop ? 'modal send-modal' : 'sheet send-sheet'} onClick={(e) => e.stopPropagation()} role="dialog" aria-label="O que você quer enviar?">
+        {!desktop && <div className="grip" />}
+        <div className="send-head">
+          <h2>O que você quer enviar?</h2>
+          <button className="send-x" aria-label="Fechar" onClick={onClose}><X size={20} aria-hidden /></button>
+        </div>
+        <div className="send-list">
+          {SEND.map(([to, label, Icon, sub]) => (
+            <Link key={to + label} to={to} onClick={onClose} className="send-row">
+              <Tile Icon={Icon} tone={to === '/sessoes' ? 'red' : to.startsWith('/relatorios') ? 'mint' : 'blue'} />
+              <span className="k-row-main"><b>{label}</b><span className="k-row-sub">{sub}</span></span>
+              <ChevronRight size={20} aria-hidden style={{ color: 'var(--t3)', flex: 'none' }} />
+            </Link>
+          ))}
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -56,19 +89,18 @@ function LevelWidget({ g }: { g: ReturnType<typeof useGami> }) {
   return (
     <Link to="/gamificacao" className="level-widget" aria-label={`Nível ${cur.n}, ${cur.name}. ${g.xpLevel} de ${g.xpMax} XP.`}>
       <div className="between" style={{ alignItems: 'baseline' }}>
-        <span className="label" style={{ color: 'var(--gold)' }}>Nível {cur.n} de {g.levels.length}</span>
-        <span className="mono" style={{ fontSize: 11, color: 'var(--steel-t)' }}>{Math.round(pct)}%</span>
+        <span className="lw-k">Nível {cur.n} de {g.levels.length}</span>
+        <span className="lw-k" style={{ letterSpacing: 0 }}>{Math.round(pct)}%</span>
       </div>
-      <div style={{ fontWeight: 600, fontSize: 18, letterSpacing: '-.02em', marginTop: 4 }}>{cur.name}</div>
-      <div className="track" style={{ marginTop: 10 }}>
+      <div className="lw-name">{cur.name}</div>
+      <div className="track" style={{ marginTop: 10, height: 6, borderRadius: 3 }}>
         <i style={{ width: pct + '%' }} />
         <i className="ghost" style={{ width: ghost + '%' }} />
       </div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, marginTop: 8, fontSize: 12, color: 'var(--steel-t)' }}>
-        <span className="mono">{g.xpLevel}/{g.xpMax} XP</span>
-        <span>{next ? <>Próximo: <b style={{ color: '#fff', fontWeight: 600 }}>{next.name}</b></> : 'Último nível'}</span>
+      <div className="lw-foot">
+        <span>{left > 0 ? (left === 1 ? 'Falta 1 tarefa' : `Faltam ${left} tarefas`) : 'Nível completo'}</span>
+        <span>{next ? <>Próximo: <b>{next.name}</b></> : 'Último nível'}</span>
       </div>
-      {left > 0 && <div style={{ fontSize: 12, color: 'var(--steel-t)', marginTop: 4 }}>{left === 1 ? 'Falta 1 tarefa' : `Faltam ${left} tarefas`}</div>}
     </Link>
   );
 }
@@ -106,12 +138,13 @@ function AgendaNotices() {
     <div className="agenda-notices">
       {list.map((e) => (
         <div key={e.id} className={'agenda-notice ' + e.me.notice}>
+          <Tile Icon={CalendarDays} tone={e.me.notice === 'cancelado' ? 'red' : e.me.notice === 'alterado' ? 'amber' : 'blue'} size="sm" />
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div className="label" style={{ color: 'inherit' }}>
+            <div className="an-k">
               {e.me.notice === 'novo' ? 'Novo na sua agenda' : e.me.notice === 'alterado' ? 'Mudança na agenda' : 'Evento cancelado'}
             </div>
-            <div style={{ fontWeight: 600, fontSize: 15, marginTop: 2 }}>{e.title} · {when(e.starts_at)}</div>
-            {e.me.notice !== 'novo' && e.me.notice_text && <div style={{ fontSize: 13, marginTop: 2, opacity: 0.85 }}>{e.me.notice_text}</div>}
+            <div className="an-t">{e.title} · {when(e.starts_at)}</div>
+            {e.me.notice !== 'novo' && e.me.notice_text && <div style={{ fontSize: 14, marginTop: 2, color: 'var(--t3)' }}>{e.me.notice_text}</div>}
           </div>
           {e.me.notice === 'cancelado' ? (
             <button className="btn btn-secondary btn-sm" onClick={() => respond.mutate({ eventId: e.id })}>Ok, entendi</button>
@@ -136,15 +169,27 @@ export default function StudentLayout() {
   const nav = useNavigate();
   const { pathname } = useLocation();
   const [more, setMore] = useState(false);
+  const [send, setSend] = useState(false);
   const badge = unseen.length;
   const inNova = pathname.startsWith('/documentos/nova');
   const isOn = (p: string) => (p === '/' ? pathname === '/' : pathname.startsWith(p));
+  const onTab = (p: string) => isOn(p) && !more && !send;
   const inMore = MORE.some(([p]) => isOn(p));
   const logout = async () => {
     setMore(false);
     await signOut();
     nav('/login');
   };
+
+  const tab = ([to, label, Icon]: [string, string, LucideIcon]) => (
+    <Link key={to} to={to} className={onTab(to) ? 'on' : ''}>
+      <span className="ico">
+        <Icon size={22} strokeWidth={onTab(to) ? 2.2 : 1.8} aria-hidden />
+        {to === '/documentos' && badge > 0 && <span className="dot">{badge}</span>}
+      </span>
+      {label}
+    </Link>
+  );
 
   return (
     <div className={'app' + (mobile && !inNova ? ' has-tabbar' : '') + (mobile ? '' : ' with-sidebar')}>
@@ -156,17 +201,20 @@ export default function StudentLayout() {
           </Link>
         </header>
       ) : (
-        <aside className="sidebar">
+        <aside className="sidebar navy">
           <div style={{ padding: '4px 10px 0' }}>
-            <Logo />
+            <Logo white />
           </div>
+          <button className="side-send" onClick={() => setSend(true)}>
+            <Plus size={20} strokeWidth={2.4} aria-hidden /> Enviar
+          </button>
           <nav className="sidenav" aria-label="Menu principal">
             {NAV.map((group, gi) => (
               <div key={gi} className="sidenav-group">
-                <div className="label sidenav-title">{gi === 0 ? 'Painel' : 'Mentoria'}</div>
+                {gi > 0 && <div className="sidenav-sep" />}
                 {group.map(([to, label, Icon]) => (
                   <NavLink key={to} to={to} end={to === '/'} className={({ isActive }) => (isActive ? 'active' : '')}>
-                    <Icon size={17} strokeWidth={1.8} aria-hidden />
+                    <Icon size={20} strokeWidth={1.9} aria-hidden />
                     <span style={{ flex: 1 }}>{label}</span>
                     {to === '/documentos' && badge > 0 && <span className="badge">{badge}</span>}
                   </NavLink>
@@ -177,14 +225,14 @@ export default function StudentLayout() {
           {gami.current && <LevelWidget g={gami} />}
           <div className="sidebar-user">
             <Link to="/perfil" aria-label="Meu perfil">
-              <Avatar path={profile.avatar_path} name={profile.full_name} className="avatar-btn" size={34} />
+              <Avatar path={profile.avatar_path} name={profile.full_name} className="avatar-btn" size={36} />
             </Link>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 14, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{profile.full_name}</div>
-              <div className="mono" style={{ fontSize: 11, color: 'var(--t3)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{profile.group_name}</div>
+              <div className="su-name">{profile.full_name}</div>
+              <div className="su-sub">{profile.group_name}</div>
             </div>
-            <button className="rv-x" onClick={logout} aria-label="Sair" title="Sair">
-              <LogOut size={17} aria-hidden />
+            <button className="su-out" onClick={logout} aria-label="Sair" title="Sair">
+              <LogOut size={18} aria-hidden />
             </button>
           </div>
         </aside>
@@ -199,19 +247,14 @@ export default function StudentLayout() {
 
       {mobile && !inNova && (
         <nav className="tabbar">
-          {TABS.map(([to, label, Icon]) => (
-            <Link key={to} to={to} className={isOn(to) && !more ? 'on' : ''}>
-              <span className="ico">
-                <Icon size={20} strokeWidth={isOn(to) && !more ? 2.2 : 1.7} aria-hidden />
-                {to === '/documentos' && badge > 0 && <span className="dot">{badge}</span>}
-              </span>
-              {label}
-            </Link>
-          ))}
+          {TABS_L.map(tab)}
+          <button className={'tab-plus' + (send ? ' on' : '')} onClick={() => setSend(true)}>
+            <span className="plus-btn"><Plus size={26} strokeWidth={2.4} aria-hidden /></span>
+            Enviar
+          </button>
+          {TABS_R.map(tab)}
           <button className={inMore || more ? 'on' : ''} onClick={() => setMore(true)}>
-            <span className="ico">
-              <MoreHorizontal size={20} strokeWidth={1.7} aria-hidden />
-            </span>
+            <span className="ico"><MoreHorizontal size={22} strokeWidth={1.8} aria-hidden /></span>
             Mais
           </button>
         </nav>
@@ -219,25 +262,22 @@ export default function StudentLayout() {
 
       {mobile && more && (
         <div className="sheet-backdrop" onClick={() => setMore(false)}>
-          <div className="sheet" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Mais">
+          <div className="sheet more-sheet" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Mais">
             <div className="grip" />
-            {MORE.map(([to, label]) => (
-              <Link key={to} to={to} onClick={() => setMore(false)}>
-                {label}
-                <span className="chev">
-                  <ChevronRight size={18} aria-hidden />
-                </span>
-              </Link>
-            ))}
-            <button onClick={logout}>
-              Sair
-              <span className="chev">
-                  <ChevronRight size={18} aria-hidden />
-                </span>
-            </button>
+            <div className="more-grid">
+              {MORE.map(([to, label, Icon, sub]) => (
+                <Link key={to} to={to} onClick={() => setMore(false)} className={'more-tile' + (isOn(to) ? ' on' : '')}>
+                  <Tile Icon={Icon} tone={to === '/sessoes' ? 'red' : 'blue'} />
+                  <b>{label}</b>
+                  <span>{sub}</span>
+                </Link>
+              ))}
+            </div>
+            <button className="k-big secondary" onClick={logout}><LogOut size={20} aria-hidden /><span>Sair</span><span /></button>
           </div>
         </div>
       )}
+      {send && <SendSheet onClose={() => setSend(false)} desktop={!mobile} />}
     </div>
   );
 }

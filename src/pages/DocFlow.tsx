@@ -1,11 +1,13 @@
 import { Fragment, useEffect, useState } from 'react';
 import { Link, Navigate, useLocation, useParams } from 'react-router-dom';
 import { isSlot, POINT_SECS, SLOT_ORDER, SLOTS, VERDICTS, type Feedback, type Slot } from '../../shared/domain';
-import { BackLink, CheckIcon, ErrorState, PageSkeleton, VerdictChip, VersionChip, Mark } from '../components/ui';
+import { CheckIcon, ErrorState, PageSkeleton, VerdictChip, VersionChip } from '../components/ui';
+import { Check, Clock, FileStack, FileText, FileUp, History, House, Mail, RotateCcw, TriangleAlert } from 'lucide-react';
+import { Actions, BigButton, Confirm, DetailCard, DoneRow, HelpCard, Note, Pill, ReadAloud, Row, Screen, ScreenHead, Section } from '../components/kit';
 import { MaterialPreview } from '../components/MaterialPreview';
 import { useProfile } from '../lib/auth';
 import { useDocs, useFeatures, useGami, useMarkSeen, useSetChecks } from '../lib/data';
-import { firstName, fmtDay, fmtDue, fmtDueShort, initials, isPast } from '../lib/format';
+import { firstName, fmtDay, fmtDue, fmtDueShort, isPast } from '../lib/format';
 
 /** Tempo típico da análise (para a barra de progresso) e a partir de quando avisamos que está demorando. */
 const TYPICAL_MS = 3 * 60_000;
@@ -17,12 +19,8 @@ function useSlotDocs() {
   return { slot: isSlot(slot) ? slot : null, q };
 }
 
-function Shell({ wide, children }: { wide?: boolean; children: React.ReactNode }) {
-  return (
-    <div className="page">
-      <div className={'flow' + (wide ? ' wide' : '')}>{children}</div>
-    </div>
-  );
+function Shell({ children }: { wide?: boolean; children: React.ReactNode }) {
+  return <Screen>{children}</Screen>;
 }
 
 function useNow(active: boolean) {
@@ -92,80 +90,76 @@ export function Status() {
   // Sem robô, "Recebido" já está concluído e a etapa atual é "Com a equipe".
   const shown = ai ? stage : stage === 3 ? 3 : 2;
 
-  return (
-    <Shell>
-      <BackLink to="/documentos">Meus documentos</BackLink>
-      <div className="stack" style={{ gap: 8 }}>
-        {stage === 1 && (
-          <div style={{ display: 'inline-flex', alignSelf: 'flex-start', gap: 6, alignItems: 'center', background: 'var(--ok-bg)', color: 'var(--ok-t)', fontWeight: 600, fontSize: 14, padding: '6px 10px', borderRadius: 8 }}><Mark m="✓" size={13} /> Recebemos seu material</div>
-        )}
-        <div className="h-flow">{title}</div>
-        <div style={{ fontSize: 16, lineHeight: 1.5, color: 'var(--t2)' }}>{sub}</div>
-      </div>
+  const pill = stage === 3 ? <Pill tone="mint">Devolutiva pronta</Pill> : stage === 2 ? <Pill tone="blue">Em revisão</Pill> : <Pill tone="blue">Com a equipe</Pill>;
+  const others = notSent.length > 0 && stage !== 3 && (
+    <Section title={justSent ? 'Quer aproveitar e mandar os outros?' : 'Ainda falta enviar'}>
+      {notSent.map((x) => <Row key={x} Icon={FileUp} tone="gray" title={SLOTS[x].title} sub={SLOTS[x].desc} to={`/documentos/nova?slot=${x}`} />)}
+      {notSent.length > 1 && <BigButton a={{ label: 'Enviar todos de uma vez', to: '/documentos/lote', Icon: FileStack }} variant="secondary" />}
+    </Section>
+  );
 
-      <div className="card stack">
-        {steps.map(([label, s], i) => {
+  if (justSent && stage !== 3)
+    return (
+      <Screen>
+        <Confirm
+          title="Material enviado"
+          sub="A equipe já recebeu. Não precisa ficar nesta tela."
+          card={{ Icon: FileText, title: SLOTS[slot].title, sub: `Versão ${lv.version} · ${SLOTS[slot].tipo}`, note: late ? 'Devolutiva em breve' : `Devolutiva até ${fmtDue(lv.due_at)}` }}
+          primary={{ label: 'Voltar ao início', to: '/', Icon: House }}
+          secondary={{ label: 'Ver meus documentos', to: '/documentos', Icon: FileText }}
+        />
+        <Note>{where}</Note>
+        {others}
+      </Screen>
+    );
+
+  return (
+    <Screen>
+      <ScreenHead back="/documentos" title="Acompanhar envio" date={`Enviado ${fmtDay(lv.created_at)}`} status={pill} />
+      <DetailCard
+        Icon={FileText}
+        eyebrow={`${SLOTS[slot].tipo} · versão ${lv.version}`}
+        title={SLOTS[slot].title}
+        time={stage !== 3 ? <><Clock size={22} aria-hidden />{late ? 'Em breve' : fmtDue(lv.due_at)}</> : undefined}
+        when={stage !== 3 ? 'previsão da devolutiva' : undefined}
+        question={title}
+        sub={sub}
+      >
+        {stage !== 3 && <Note>Você não precisa ficar nesta tela. {where}</Note>}
+      </DetailCard>
+
+      <section className="k-steps">
+        {steps.map(([label, st], i) => {
           const n = i + 1, done = n < shown || shown === 3, cur = n === shown && !done;
           return (
-            <div key={label} style={{ display: 'flex', gap: 14 }}>
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                <div style={{ width: 28, height: 28, borderRadius: '50%', flex: 'none', display: 'grid', placeItems: 'center', color: '#fff', fontSize: 14, fontWeight: 600, background: done ? 'var(--ok)' : cur ? 'var(--ac)' : '#fff', border: done || cur ? 'none' : '2px solid var(--b-btn)' }}>
-                  {done ? <Mark m="✓" /> : cur ? <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#fff' }} /> : ''}
-                </div>
-                <div style={{ width: 2, flex: 1, margin: '4px 0', background: i === 2 ? 'transparent' : done ? 'var(--ok)' : '#DCDFE3' }} />
-              </div>
-              <div style={{ paddingBottom: 20, flex: 1 }}>
-                <div style={{ fontWeight: 600, fontSize: 16, color: done || cur ? 'var(--t)' : 'var(--t3)' }}>{label}</div>
-                <div style={{ fontSize: 14, lineHeight: 1.45, color: 'var(--t3)', marginTop: 2 }}>{s}</div>
+            <div key={label} className={'k-step' + (done ? ' done' : cur ? ' cur' : '')}>
+              <span className="k-step-dot">{done ? <Check size={18} strokeWidth={2.6} aria-hidden /> : cur ? <i /> : n}</span>
+              <div style={{ minWidth: 0, flex: 1 }}>
+                <b>{label}</b>
+                <span>{st}</span>
                 {cur && n === 1 && ai && (
-                  <div style={{ height: 6, borderRadius: 3, background: 'var(--alt3)', overflow: 'hidden', marginTop: 10 }}>
-                    <div style={{ width: anaPct + '%', height: '100%', borderRadius: 3, background: 'var(--ac)', transition: 'width .9s linear' }} />
-                  </div>
+                  <div className="track" style={{ height: 6, borderRadius: 3, marginTop: 10 }}><i style={{ width: anaPct + '%', transition: 'width .9s linear' }} /></div>
                 )}
               </div>
             </div>
           );
         })}
-      </div>
+      </section>
+
+      {slow && <Note tone="amber">Está levando mais tempo que o normal. Isso não muda seu prazo: se a análise travar, a equipe assume e a devolutiva chega até {fmtDue(lv.due_at)}.</Note>}
 
       <MaterialPreview v={lv} title={SLOTS[slot].title} />
 
-      {slow && (
-        <div className="card tight" style={{ borderColor: '#D3D6DB', display: 'flex', gap: 14 }}>
-          <div className="spinner" />
-          <div>
-            <div style={{ fontWeight: 600, fontSize: 16 }}>Está levando mais tempo que o normal</div>
-            <div style={{ fontSize: 15, lineHeight: 1.45, color: 'var(--t2)', marginTop: 2 }}>
-              Isso não muda seu prazo. Se a análise travar, a equipe assume e a devolutiva chega até {fmtDue(lv.due_at)}.
-            </div>
-          </div>
-        </div>
-      )}
-
-      {stage === 3 && (
-        <Link to={`/documentos/${slot}/devolutiva`} className="btn btn-primary btn-lg">
-          Ver devolutiva
-        </Link>
-      )}
-      {stage !== 3 && notSent.length > 0 && (
-        <div className="card stack" style={{ gap: 10 }}>
-          <div style={{ fontWeight: 600, fontSize: 16 }}>{justSent ? 'Quer aproveitar e mandar os outros?' : 'Ainda falta enviar'}</div>
-          <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
-            {notSent.map((x) => (
-              <Link key={x} to={`/documentos/nova?slot=${x}`} className="btn btn-secondary btn-sm">
-                <Mark m="+" size={13} /> {SLOTS[x].title}
-              </Link>
-            ))}
-            {notSent.length > 1 && (
-              <Link to="/documentos/lote" className="btn btn-primary btn-sm">Enviar todos de uma vez</Link>
-            )}
-          </div>
-        </div>
-      )}
-      <Link to="/documentos" className="btn btn-secondary btn-md btn-block" style={{ borderRadius: 10 }}>
-        Voltar para Documentos
-      </Link>
-    </Shell>
+      <Actions>
+        {stage === 3 ? (
+          <BigButton a={{ label: 'Ver devolutiva', to: `/documentos/${slot}/devolutiva`, Icon: Mail }} />
+        ) : (
+          <BigButton a={{ label: 'Voltar ao início', to: '/', Icon: House }} />
+        )}
+        <BigButton a={{ label: 'Ver meus documentos', to: '/documentos', Icon: FileText }} variant="soft" />
+      </Actions>
+      {others}
+    </Screen>
   );
 }
 
@@ -178,8 +172,8 @@ function PointsBySection({ pts }: { pts: Feedback['pts'] }) {
   return (
     <>
       {groups.map((g) => (
-        <div key={g.k} className="stack" style={{ gap: 10 }}>
-          <div className="h-sec">{g.label}</div>
+        <div key={g.k} className="k-sec">
+          <div className="k-sec-head"><h2>{g.label}</h2></div>
           {g.k === 'portugues' ? (
             <div className="card tight stack" style={{ gap: 0, padding: '4px 16px' }}>
               {g.items.map((p, i) => (
@@ -203,9 +197,9 @@ function PointsBySection({ pts }: { pts: Feedback['pts'] }) {
               <div key={i} className="pt-card">
                 <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
                   {p.pg && <span className="pt-pg">{p.pg}</span>}
-                  <span style={{ fontWeight: 600, fontSize: 16 }}>{p.t}</span>
+                  <b className="pt-t">{p.t}</b>
                 </div>
-                {p.d && <div style={{ fontSize: 15, lineHeight: 1.5, color: 'var(--t2)' }}>{p.d}</div>}
+                {p.d && <div className="pt-d">{p.d}</div>}
                 {p.s && <div className="pt-do">→ {p.s}</div>}
               </div>
             ))
@@ -244,134 +238,94 @@ export function Devolutiva() {
   const checks = fb.steps.map((_, i) => !!fbRow.checks[i]);
   const toggle = (i: number) => setChecks.mutate({ submissionId: fbRow.submission_id, checks: checks.map((c, j) => (j === i ? !c : c)) });
 
+  const vt = (fb.verdict === 'ok' ? 'mint' : fb.verdict === 'aj' ? 'amber' : 'red') as 'mint' | 'amber' | 'red';
+  const VIcon = fb.verdict === 'ok' ? Check : fb.verdict === 're' ? RotateCcw : TriangleAlert;
+  const doneN = checks.filter(Boolean).length;
+  const speech = [
+    `${SLOTS[slot].title}. Veredito: ${v.label}. ${fb.sum}`,
+    fb.strong.length ? `Pontos fortes: ${fb.strong.join('. ')}.` : '',
+    fb.pts.length ? `Pontos a ajustar: ${fb.pts.map((p) => `${p.t}. ${p.d || ''} ${p.s ? 'Sugestão: ' + p.s : ''}`).join(' ')}` : '',
+    fb.steps.length ? `Próximos passos: ${fb.steps.join('. ')}.` : '',
+  ].filter(Boolean).join(' ');
+
   return (
-    <div className="page">
+    <div className="page dev-page">
       <div className="dev-split">
-        <div className="flow wide dev-main">
-      <BackLink to="/documentos">Meus documentos</BackLink>
-      <div className="stack" style={{ gap: 4, marginTop: -10 }}>
-        <div className="h-flow">{SLOTS[slot].title}</div>
-        <div style={{ fontSize: 14, color: 'var(--t3)' }}>
-          Versão {lv.version} de {d.versions.length}
-        </div>
-        <div className="row" style={{ gap: 8, marginTop: 8, fontSize: 14, color: 'var(--t2)' }}>
-          <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--alt3)', display: 'grid', placeItems: 'center', fontWeight: 600, fontSize: 12 }}>{initials(reviewer)}</div>
-          Revisado por {firstName(reviewer)}
-        </div>
-      </div>
+        <div className="screen dev-main">
+          <ScreenHead
+            back="/documentos"
+            title={SLOTS[slot].title}
+            right={<ReadAloud text={speech} />}
+            date={`Versão ${lv.version} · revisado por ${firstName(reviewer)}`}
+            status={<Pill tone={vt}>{v.label}</Pill>}
+          />
 
-      <div className="card" style={{ padding: 0, display: 'flex', overflow: 'hidden' }}>
-        <div style={{ width: 4, background: v.strong, flex: 'none' }} />
-        <div style={{ padding: '20px 20px 22px', display: 'flex', gap: 16, alignItems: 'flex-start' }}>
-          <div style={{ width: 40, height: 40, borderRadius: 8, background: v.bg, color: v.strong, display: 'grid', placeItems: 'center', flex: 'none' }}>
-            <Mark m={v.mark} size={20} />
-          </div>
-          <div>
-            <div className="label">Veredito</div>
-            <div style={{ fontWeight: 600, fontSize: 28, letterSpacing: '-.03em', lineHeight: 1.1, marginTop: 4, color: v.strong }}>{v.label}</div>
-            <div style={{ fontSize: 15, lineHeight: 1.5, marginTop: 8, color: 'var(--t2)' }}>{fb.sum}</div>
-          </div>
-        </div>
-      </div>
+          <DetailCard Icon={VIcon} tone={vt} eyebrow="Devolutiva" title={`${v.label}: ${v.meaning}`}>
+            <blockquote className="quote" style={{ margin: 0 }}>{fb.sum}</blockquote>
+            <button onClick={() => setLegend(!legend)} className="link" style={{ alignSelf: 'flex-start', fontSize: 15 }}>
+              {legend ? 'Esconder o significado dos vereditos' : 'O que significa cada veredito?'}
+            </button>
+            {legend && (
+              <div className="stack" style={{ gap: 8 }}>
+                {(['ok', 'aj', 're'] as const).map((k) => (
+                  <div key={k} className="row" style={{ gap: 10, fontSize: 15 }}>
+                    <Pill tone={k === 'ok' ? 'mint' : k === 'aj' ? 'amber' : 'red'}>{VERDICTS[k].label}</Pill>
+                    <span style={{ color: 'var(--t2)' }}>{VERDICTS[k].meaning}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </DetailCard>
 
-      <div className="stack" style={{ marginTop: -14, gap: 8 }}>
-        <button onClick={() => setLegend(!legend)} style={{ fontSize: 14, fontWeight: 600, color: 'var(--ac)', padding: '4px 0', alignSelf: 'flex-start' }}>
-          {legend ? 'Esconder o significado dos vereditos' : 'O que significa cada veredito?'}
-        </button>
-        {legend && (
-          <div className="stack" style={{ gap: 6 }}>
-            {(['ok', 'aj', 're'] as const).map((k) => {
-              const x = VERDICTS[k];
-              return (
-                <div key={k} className="row" style={{ gap: 10, background: x.bg, borderRadius: 8, padding: '10px 12px' }}>
-                  <CheckIcon bg={x.strong} fg="#fff" mark={x.mark} size={26} />
-                  <div style={{ fontSize: 14, color: x.fg }}>
-                    <span style={{ fontWeight: 600 }}>{x.label}:</span> {x.meaning}
+          {fb.verdict === 'ok' && SLOTS[slot].task && (
+            <DoneRow title={`+${task?.xp ?? 100} XP na Gamificação`} sub={`Tarefa concluída: ${task?.title ?? SLOTS[slot].task}`} to="/gamificacao" />
+          )}
+
+          {fb.strong.length > 0 && (
+            <Section title="Pontos fortes">
+              {fb.strong.map((t, i) => <DoneRow key={i} title={t} />)}
+            </Section>
+          )}
+
+          {fb.pts.length > 0 && fb.pts.some((p) => p.sec) ? (
+            <PointsBySection pts={fb.pts} />
+          ) : fb.pts.length > 0 && (
+            <Section title="Pontos a ajustar">
+              {fb.pts.map((p, i) => (
+                <div key={i} className="pt-card">
+                  <div className="row" style={{ gap: 12, alignItems: 'flex-start' }}>
+                    <span className="pt-n">{i + 1}</span>
+                    <div className="stack" style={{ gap: 6, minWidth: 0 }}>
+                      <b className="pt-t">{p.t}</b>
+                      {p.d && <div className="pt-d">{p.d}</div>}
+                      {p.s && <div className="pt-do">→ {p.s}</div>}
+                    </div>
                   </div>
                 </div>
-              );
-            })}
+              ))}
+            </Section>
+          )}
+
+          {fb.steps.length > 0 && (
+            <Section title="Próximos passos" right={<span className="k-count">{doneN} de {checks.length} feitos</span>}>
+              {fb.steps.map((label, i) => (
+                <button key={i} role="checkbox" aria-checked={checks[i]} onClick={() => toggle(i)} className={'k-row k-check' + (checks[i] ? ' done' : '')}>
+                  <span className="k-check-box">{checks[i] ? <Check size={20} strokeWidth={2.6} aria-hidden /> : i + 1}</span>
+                  <span className="k-row-main"><b>{label}</b>{checks[i] && <span className="k-row-sub">Feito</span>}</span>
+                </button>
+              ))}
+            </Section>
+          )}
+
+          <div className="dev-inline-doc">
+            <MaterialPreview v={lv} title={SLOTS[slot].title} />
           </div>
-        )}
-      </div>
 
-      {fb.verdict === 'ok' && SLOTS[slot].task && (
-        <Link to="/gamificacao" className="hero" style={{ padding: '14px 16px', display: 'flex', gap: 12, alignItems: 'center', textDecoration: 'none' }}>
-          <div style={{ background: 'var(--gold)', color: 'var(--t)', fontWeight: 600, fontSize: 14, padding: '6px 10px', borderRadius: 8, flex: 'none' }}>+{task?.xp ?? 100} XP</div>
-          <div style={{ fontSize: 15, lineHeight: 1.4, flex: 1 }}>Tarefa concluída na Gamificação: {task?.title ?? SLOTS[slot].task}</div>
-          <div style={{ fontSize: 18 }}><Mark m="›" size={18} /></div>
-        </Link>
-      )}
-
-      {fb.strong.length > 0 && (
-        <div className="stack" style={{ gap: 12 }}>
-          <div className="h-sec">Pontos fortes</div>
-          <div className="card list" style={{ padding: '4px 16px' }}>
-            {fb.strong.map((t, i) => (
-              <div key={i} className="divrow" style={{ display: 'flex', gap: 12, padding: '14px 0' }}>
-                <CheckIcon />
-                <div style={{ fontSize: 15, lineHeight: 1.45 }}>{t}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {fb.pts.length > 0 && fb.pts.some((p) => p.sec) ? (
-        <PointsBySection pts={fb.pts} />
-      ) : fb.pts.length > 0 && (
-        <div className="stack" style={{ gap: 12 }}>
-          <div className="h-sec">Pontos a ajustar</div>
-          {fb.pts.map((p, i) => (
-            <div key={i} className="card tight" style={{ display: 'flex', gap: 12 }}>
-              <CheckIcon bg="var(--warn-bg)" fg="var(--warn-t)" mark={String(i + 1)} size={26} />
-              <div className="stack" style={{ gap: 8, minWidth: 0 }}>
-                <div>
-                  <div style={{ fontWeight: 600, fontSize: 16 }}>{p.t}</div>
-                  {p.d && <div style={{ fontSize: 15, lineHeight: 1.45, color: 'var(--t2)', marginTop: 2 }}>{p.d}</div>}
-                </div>
-                {p.s && (
-                  <div style={{ borderLeft: '2px solid var(--ac)', background: 'var(--alt)', borderRadius: '0 6px 6px 0', padding: '10px 14px', fontSize: 15, lineHeight: 1.5 }}>
-                    <span style={{ fontWeight: 600, color: 'var(--ac)' }}>Sugestão:</span> {p.s}
-                  </div>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {fb.steps.length > 0 && (
-        <div className="stack" style={{ gap: 12 }}>
-          <div className="between" style={{ alignItems: 'baseline' }}>
-            <div className="h-sec">Próximos passos</div>
-            <div style={{ fontSize: 14, color: 'var(--t3)' }}>
-              {checks.filter(Boolean).length} de {checks.length} feitos
-            </div>
-          </div>
-          <div className="card list">
-            {fb.steps.map((label, i) => (
-              <button key={i} role="checkbox" aria-checked={checks[i]} onClick={() => toggle(i)} className="row divrow" style={{ minHeight: 56, width: '100%' }}>
-                <div className={'check-box' + (checks[i] ? ' on' : '')}>{checks[i] ? <Mark m="✓" /> : ''}</div>
-                <div style={{ fontSize: 15, lineHeight: 1.4, color: checks[i] ? 'var(--t3)' : 'var(--t)', textDecoration: checks[i] ? 'line-through' : 'none' }}>{label}</div>
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      <div className="dev-inline-doc">
-        <MaterialPreview v={lv} title={SLOTS[slot].title} />
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(200px,1fr))', gap: 10 }}>
-        <Link to={`/documentos/nova?slot=${slot}`} className="btn btn-primary" style={{ height: 54, borderRadius: 10, fontSize: 16 }}>
-          Enviar nova versão
-        </Link>
-        <Link to={`/documentos/${slot}/historico`} className="btn btn-secondary" style={{ height: 54, borderRadius: 10, fontSize: 16 }}>
-          Histórico e comparação
-        </Link>
-      </div>
+          <Actions>
+            <BigButton a={{ label: fb.verdict === 'ok' ? 'Enviar outra versão' : 'Enviar nova versão', to: `/documentos/nova?slot=${slot}`, Icon: FileUp }} />
+            <BigButton a={{ label: 'Histórico e comparação', to: `/documentos/${slot}/historico`, Icon: History }} variant="soft" />
+          </Actions>
+          <HelpCard sub="O Harvey te ajuda a aplicar os ajustes e a apresentar a proposta ao cliente." to="/harvey" />
         </div>
         <aside className="dev-doc">
           <MaterialPreview v={lv} title={SLOTS[slot].title} defaultOpen />
@@ -415,12 +369,8 @@ export function Historico() {
     : [];
 
   return (
-    <Shell wide>
-      <BackLink to="/documentos">Meus documentos</BackLink>
-      <div style={{ marginTop: -10 }}>
-        <div style={{ fontSize: 14, color: 'var(--t3)' }}>Histórico</div>
-        <div className="h-flow">{SLOTS[slot].title}</div>
-      </div>
+    <Screen>
+      <ScreenHead back="/documentos" title={SLOTS[slot].title} date="Histórico e comparação" />
       {d.versions.length === 0 ? (
         <div className="dashed">
           <div style={{ fontWeight: 600, fontSize: 17 }}>Nenhum envio ainda</div>
@@ -483,6 +433,6 @@ export function Historico() {
           </div>
         )
       )}
-    </Shell>
+    </Screen>
   );
 }

@@ -1,7 +1,7 @@
-import { BarChart3, Briefcase, CalendarDays, Check, ChevronRight, FilePen, FileText, FileUp, Mail, TrendingUp, Trophy, type LucideIcon } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { BarChart3, Briefcase, CalendarDays, Check, FilePen, FileUp, Mail, TrendingUp, Trophy, type LucideIcon } from 'lucide-react';
 import { SLOT_ORDER, SLOTS, VERDICTS } from '../../shared/domain';
-import { DocChip, ErrorState, PageSkeleton, Num } from '../components/ui';
+import { ActionGrid, DoneRow, NextUp, Pill, Row, Screen, ScreenHead, Section } from '../components/kit';
+import { ErrorState, PageSkeleton } from '../components/ui';
 import { useProfile } from '../lib/auth';
 import { kindInfo, useMyEvents } from '../lib/agenda';
 import { useDocs, useGami, useReports, type DocState } from '../lib/data';
@@ -13,11 +13,11 @@ const greeting = () => {
   const h = Number(new Intl.DateTimeFormat('en-GB', { timeZone: TZ, hour: '2-digit', hourCycle: 'h23' }).format(new Date()));
   return h < 12 ? 'Bom dia' : h < 18 ? 'Boa tarde' : 'Boa noite';
 };
-const todayLabel = () => {
+export const todayLabel = () => {
   const s = new Intl.DateTimeFormat('pt-BR', { timeZone: TZ, weekday: 'long', day: 'numeric', month: 'long' }).format(new Date());
   return s.charAt(0).toUpperCase() + s.slice(1);
 };
-const whenLabel = (iso: string) => {
+export const whenLabel = (iso: string) => {
   const d = new Date(iso);
   const day = (x: Date) => new Intl.DateTimeFormat('en-CA', { timeZone: TZ }).format(x);
   const hour = new Intl.DateTimeFormat('pt-BR', { timeZone: TZ, hour: '2-digit', minute: '2-digit' }).format(d);
@@ -55,12 +55,12 @@ export default function Inicio() {
   const loading = docsQ.isLoading || gami.isLoading || reports.isLoading;
   const error = docsQ.isError || gami.isError || reports.isError;
 
-  if (loading) return <div className="page"><PageSkeleton /></div>;
+  if (loading) return <Screen><PageSkeleton /></Screen>;
   if (error)
     return (
-      <div className="page">
+      <Screen>
         <ErrorState onRetry={() => { docsQ.refetch(); gami.refetch(); reports.refetch(); }} />
-      </div>
+      </Screen>
     );
 
   const { docs, unseen } = docsQ;
@@ -69,7 +69,6 @@ export default function Inicio() {
   const last = reps[0];
   const total = reps.reduce((a, r) => a + r.revenue, 0);
   const lvl = gami.current;
-  const pct = gami.xpMax ? (gami.xpLevel / gami.xpMax) * 100 : 0;
   const left = gami.tasksTotal - gami.tasksDone;
 
   // ----- Próximo passo: a coisa mais importante agora, e o que vem depois -----
@@ -87,180 +86,92 @@ export default function Inicio() {
   const steps: Step[] = [];
   for (const s of unseen) {
     const d = docs[s];
-    steps.push({ key: 'dev' + s, Icon: Mail, kind: 'Devolutiva', title: `Sua devolutiva chegou: ${SLOTS[s].title}`, meta: `Versão ${d.latest!.version}${d.latest?.verdict ? ' · ' + VERDICTS[d.latest.verdict].label : ''}`, when: 'Nova', cta: 'Abrir devolutiva', to: `/documentos/${s}/devolutiva` });
+    steps.push({ key: 'dev' + s, Icon: Mail, kind: 'Devolutiva nova', title: SLOTS[s].title, meta: `Versão ${d.latest!.version}${d.latest?.verdict ? ' · ' + VERDICTS[d.latest.verdict].label : ''}`, when: 'Chegou', cta: 'Abrir devolutiva', to: `/documentos/${s}/devolutiva` });
   }
-  if (fresh) steps.push({ key: 'first', Icon: FileUp, kind: 'Comece por aqui', title: 'Envie seu primeiro material', meta: 'Proposta, contrato, portfólio ou apresentação · devolutiva em até 48h', cta: 'Enviar material', to: '/documentos/nova' });
+  if (fresh) steps.push({ key: 'first', Icon: FileUp, kind: 'Comece por aqui', title: 'Envie seu primeiro material', meta: 'Devolutiva da equipe em até 48h', cta: 'Enviar material', to: '/documentos/nova' });
   soon.forEach((e) => steps.push(evStep(e)));
   for (const s of SLOT_ORDER) {
     const d = docs[s];
     if (d.status === 'pronta' && !d.unseen && d.latest?.verdict && d.latest.verdict !== 'ok')
-      steps.push({ key: 'fix' + s, Icon: FilePen, kind: `Devolutiva: ${VERDICTS[d.latest.verdict].label}`, title: `Envie a nova versão: ${SLOTS[s].title}`, meta: 'Os pontos a mudar estão na devolutiva', cta: 'Enviar nova versão', to: `/documentos/nova?slot=${s}` });
+      steps.push({ key: 'fix' + s, Icon: FilePen, kind: `Nova versão · a devolutiva pediu ${VERDICTS[d.latest.verdict].label.toLowerCase()}`, title: SLOTS[s].title, meta: 'Os pontos a mudar estão na devolutiva', cta: 'Enviar nova versão', to: `/documentos/nova?slot=${s}` });
   }
   if (daysSinceReport === null || daysSinceReport >= 14)
-    steps.push({ key: 'rep', Icon: BarChart3, kind: 'Relatório quinzenal', title: last ? 'Hora do relatório da quinzena' : 'Envie seu primeiro relatório', meta: last ? `O último foi há ${daysSinceReport} dias` : 'Faturamento, propostas e prospecção da quinzena', cta: 'Enviar relatório', to: '/relatorios/novo' });
+    steps.push({ key: 'rep', Icon: BarChart3, kind: 'Relatório quinzenal', title: last ? 'Hora do relatório da quinzena' : 'Envie seu primeiro relatório', meta: last ? `O último foi há ${daysSinceReport} dias` : 'Faturamento, propostas e prospecção', cta: 'Enviar relatório', to: '/relatorios/novo' });
   week.filter((e) => !soon.includes(e)).forEach((e) => steps.push(evStep(e)));
-  if (nextTask) steps.push({ key: 'task', Icon: Trophy, kind: `Tarefa do nível ${lvl!.name}`, title: nextTask.title, meta: `+${nextTask.xp} XP`, cta: 'Ver minhas tarefas', to: '/gamificacao' });
+  if (nextTask) steps.push({ key: 'task', Icon: Trophy, kind: `Tarefa do nível ${lvl!.name}`, title: nextTask.title, meta: `+${nextTask.xp} XP`, cta: 'Ver a tarefa', to: '/gamificacao' });
   if (!fresh)
     for (const s of SLOT_ORDER)
-      if (docs[s].status === 'none') steps.push({ key: 'send' + s, Icon: FileUp, kind: 'Material', title: `Envie seu ${SLOTS[s].title.toLowerCase()}`, meta: 'A equipe devolve revisado em até 48h', cta: 'Enviar material', to: `/documentos/nova?slot=${s}` });
+      if (docs[s].status === 'none') steps.push({ key: 'send' + s, Icon: FileUp, kind: 'Material para enviar', title: SLOTS[s].title, meta: 'A equipe devolve revisado em até 48h', cta: 'Enviar material', to: `/documentos/nova?slot=${s}` });
 
   const [next, ...later] = steps;
 
+  // ----- Feito: o que andou nos últimos dias (dá a sensação de progresso) -----
+  const weekAgo = now - 10 * 86_400_000;
+  const done: { key: string; title: string; sub: string; to: string; at: number }[] = [];
+  for (const s of SLOT_ORDER) {
+    const d = docs[s];
+    const at = d.latest?.feedback?.released_at;
+    if (d.status === 'pronta' && d.latest?.verdict === 'ok' && at) done.push({ key: 'ok' + s, title: `${SLOTS[s].title} aprovado`, sub: `Devolutiva de ${fmtDay(at, false)}`, to: `/documentos/${s}/devolutiva`, at: new Date(at).getTime() });
+  }
+  for (const t of gami.tasks) {
+    const at = gami.doneAt(t);
+    if (at && new Date(at).getTime() > weekAgo) done.push({ key: 't' + t.id, title: t.title, sub: `Tarefa feita · +${t.xp} XP`, to: '/gamificacao', at: new Date(at).getTime() });
+  }
+  if (last && daysSinceReport !== null && daysSinceReport < 14) done.push({ key: 'rep', title: 'Relatório da quinzena enviado', sub: `Quinzena ${fmtPeriod(last.period_start, last.period_end)}`, to: `/relatorios/${last.id}`, at: new Date(last.created_at).getTime() });
+  done.sort((a, b) => b.at - a.at);
+
   return (
-    <div className="page home">
-      <header className="home-head">
-        <div>
-          <h1 className="h-page">{greeting()}, {firstName(profile.full_name)}</h1>
-          <div className="home-date">{todayLabel()}{profile.studio ? ` · ${profile.studio}` : ''}</div>
-        </div>
-        {lvl && (
-          <Link to="/gamificacao" className="home-chip" aria-label={`Nível ${lvl.n}: ${lvl.name}`}>
-            <Trophy size={16} aria-hidden /> Nível {lvl.n} · <b>{lvl.name}</b>
-          </Link>
-        )}
-      </header>
+    <Screen>
+      <ScreenHead
+        title={`${greeting()}, ${firstName(profile.full_name)}`}
+        date={todayLabel()}
+        status={lvl ? <Pill tone="blue">Nível {lvl.n} · {lvl.name}</Pill> : undefined}
+      />
 
       {next ? (
-        <section className="hero nextup" aria-label="Próximo passo">
-          <div className="nextup-top">
-            <span>Próximo passo</span>
-            {next.when && <span>{next.when}</span>}
-          </div>
-          <div className="nextup-body">
-            <span className="tile navy"><next.Icon size={24} strokeWidth={1.9} aria-hidden /></span>
-            <div style={{ minWidth: 0 }}>
-              <div className="nextup-title">{next.title}</div>
-              <div className="nextup-kind">{next.kind}</div>
-              {next.meta && <div className="nextup-meta">{next.meta}</div>}
-            </div>
-          </div>
-          <Link to={next.to} className="btn btn-white btn-lg">{next.cta}</Link>
-          {later[0] && (
-            <Link to={later[0].to} className="nextup-later">
-              <span><b>Depois:</b> {later[0].title}</span>
-              {later[0].when ? <span className="nextup-when">{later[0].when}</span> : <ChevronRight size={18} aria-hidden />}
-            </Link>
-          )}
-        </section>
+        <NextUp
+          label="Próximo"
+          when={next.when}
+          Icon={next.Icon}
+          title={next.title}
+          kind={next.kind}
+          meta={next.meta}
+          primary={{ label: next.cta, to: next.to }}
+          later={later[0] ? { label: `Depois: ${later[0].title}`, to: later[0].to } : undefined}
+        />
       ) : (
-        <section className="hero nextup" aria-label="Próximo passo">
-          <div className="nextup-body">
-            <span className="tile navy"><Check size={24} aria-hidden /></span>
-            <div>
-              <div className="nextup-title">Tudo em dia por aqui</div>
-              <div className="nextup-kind">Nada pendente agora. Bom momento para revisar suas tarefas ou falar com o Harvey.</div>
-            </div>
-          </div>
-        </section>
+        <NextUp label="Hoje" Icon={Check} title="Tudo em dia por aqui" kind="Nada pendente agora." primary={{ label: 'Ver minhas tarefas', to: '/gamificacao' }} />
       )}
 
-      <section className="home-sec">
-        <h2 className="home-q">O que você quer fazer?</h2>
-        <div className="home-actions">
-          <Link to="/documentos/nova" className="action">
-            <span className="tile"><FileUp size={24} strokeWidth={1.8} aria-hidden /></span>
-            <b>Enviar material</b>
-            <span>Proposta, contrato ou portfólio</span>
-          </Link>
-          <Link to="/relatorios/novo" className="action">
-            <span className="tile mint"><BarChart3 size={24} strokeWidth={1.8} aria-hidden /></span>
-            <b>Relatório</b>
-            <span>Os números da quinzena</span>
-          </Link>
-          <Link to="/harvey" className="action">
-            <span className="tile"><Briefcase size={24} strokeWidth={1.8} aria-hidden /></span>
-            <b>Harvey</b>
-            <span>Ajuda numa venda</span>
-          </Link>
-          <Link to="/gamificacao" className="action">
-            <span className="tile mint"><Trophy size={24} strokeWidth={1.8} aria-hidden /></span>
-            <b>Minhas tarefas</b>
-            <span>{left > 0 ? `${left === 1 ? 'Falta 1' : `Faltam ${left}`} para subir` : 'Nível completo'}</span>
-          </Link>
-        </div>
-      </section>
+      <Section title="O que você quer fazer?">
+        <ActionGrid
+          items={[
+            { to: '/documentos/nova', Icon: FileUp, title: 'Enviar material', sub: 'Proposta, contrato ou portfólio' },
+            { to: '/relatorios/novo', Icon: BarChart3, tone: 'mint', title: 'Relatório', sub: 'Os números da quinzena' },
+            { to: '/harvey', Icon: Briefcase, title: 'Harvey', sub: 'Ajuda numa venda' },
+            { to: '/gamificacao', Icon: Trophy, tone: 'mint', title: 'Tarefas', sub: left > 0 ? `${left === 1 ? 'Falta 1' : `Faltam ${left}`} para subir` : 'Nível completo' },
+          ]}
+        />
+      </Section>
 
       {later.length > 1 && (
-        <section className="home-sec">
-          <h2 className="home-q">Mais para depois</h2>
-          <div className="later-list">
-            {later.slice(1, 4).map((s) => (
-              <Link key={s.key} to={s.to} className="later-row">
-                <span className="tile sm"><s.Icon size={19} strokeWidth={1.9} aria-hidden /></span>
-                <span style={{ flex: 1, minWidth: 0 }}>
-                  {s.when && <span className="later-when">{s.when}</span>}
-                  <b>{s.title}</b>
-                  <span className="later-kind">{s.kind}</span>
-                </span>
-                <ChevronRight size={18} aria-hidden style={{ color: 'var(--t4)' }} />
-              </Link>
-            ))}
-          </div>
-        </section>
+        <Section title="Mais tarde">
+          {later.slice(1, 4).map((s) => (
+            <Row key={s.key} Icon={s.Icon} when={s.when} title={s.title} sub={s.kind} to={s.to} />
+          ))}
+        </Section>
       )}
 
-      <div className="home-split">
-        <section className="card home-mats">
-          <div className="between" style={{ alignItems: 'baseline', marginBottom: 4 }}>
-            <h2 className="h-card">Seus materiais</h2>
-            <Link to="/documentos" className="link">Ver todos</Link>
-          </div>
-          {SLOT_ORDER.map((s) => {
-            const d = docs[s];
-            const ok = d.status === 'pronta' && d.latest?.verdict === 'ok';
-            return (
-              <Link key={s} to={slotHref(d)} className="mat-row">
-                <span className={'tile sm' + (ok ? ' mint' : '')}>{ok ? <Check size={19} aria-hidden /> : <FileText size={19} strokeWidth={1.9} aria-hidden />}</span>
-                <span style={{ flex: 1, minWidth: 0 }}>
-                  <b>{SLOTS[s].title} {d.unseen && <NewBadge />}</b>
-                  <span className="later-kind">{docLine(d)}</span>
-                </span>
-                <DocChip d={d} />
-              </Link>
-            );
-          })}
-        </section>
+      {done.length > 0 && (
+        <Section title="Feito">
+          {done.slice(0, 3).map((d) => <DoneRow key={d.key} title={d.title} sub={d.sub} to={d.to} />)}
+        </Section>
+      )}
 
-        <div className="home-stats">
-          {lvl && (
-            <Link to="/gamificacao" className="card home-level">
-              <div className="between" style={{ alignItems: 'baseline' }}>
-                <span className="label">Nível {lvl.n} de {gami.levels.length}</span>
-                <span className="label" style={{ letterSpacing: 0 }}>{Math.round(pct)}%</span>
-              </div>
-              <div className="home-level-name">{lvl.name}</div>
-              <div className="track" style={{ height: 8, borderRadius: 4, marginTop: 12 }}>
-                <i style={{ width: pct + '%' }} />
-                <i className="ghost" style={{ width: (gami.xpMax ? (gami.xpStarted / gami.xpMax) * 100 : 0) + '%' }} />
-              </div>
-              <div className="home-ladder">
-                {gami.levels.map((l) => (
-                  <i key={l.n} className={l.n < lvl.n ? 'done' : l.n === lvl.n ? 'now' : ''} title={l.name} />
-                ))}
-              </div>
-              <div style={{ fontSize: 14, color: 'var(--t3)', marginTop: 10 }}>
-                {gami.xpLevel} de {gami.xpMax} XP · {gami.tasksDone}/{gami.tasksTotal} tarefas{gami.tasksStarted ? ` · ${gami.tasksStarted} em andamento` : ''}
-              </div>
-            </Link>
-          )}
-          <Link to="/relatorios" className="card home-stat">
-            <span className="tile mint sm"><BarChart3 size={19} aria-hidden /></span>
-            <span style={{ minWidth: 0 }}>
-              <span className="label">Último relatório</span>
-              <span className="home-num num">{last ? <Num>{fmtBRL(last.revenue)}</Num> : '—'}</span>
-              <span className="later-kind">{last ? `Quinzena ${fmtPeriod(last.period_start, last.period_end)} · enviado ${fmtDay(last.created_at, false)}` : 'Envie seu primeiro relatório'}</span>
-            </span>
-          </Link>
-          <Link to="/relatorios" className="card home-stat">
-            <span className="tile sm"><TrendingUp size={19} aria-hidden /></span>
-            <span style={{ minWidth: 0 }}>
-              <span className="label">Faturamento registrado</span>
-              <span className="home-num num"><Num>{fmtBRL(total)}</Num></span>
-              <span className="later-kind">{reps.length ? `Soma de ${reps.length} relatório${reps.length > 1 ? 's' : ''}` : 'Nenhum relatório ainda'}</span>
-            </span>
-          </Link>
-        </div>
-      </div>
-    </div>
+      <Section title="Seus números">
+        <Row Icon={BarChart3} tone="mint" when="Último relatório" title={last ? fmtBRL(last.revenue) : 'Nenhum ainda'} sub={last ? `Quinzena ${fmtPeriod(last.period_start, last.period_end)}` : 'Envie seu primeiro relatório'} to="/relatorios" />
+        <Row Icon={TrendingUp} when="Faturamento registrado" title={fmtBRL(total)} sub={reps.length ? `Soma de ${reps.length} relatório${reps.length > 1 ? 's' : ''}` : 'Nenhum relatório ainda'} to="/relatorios" />
+      </Section>
+    </Screen>
   );
 }

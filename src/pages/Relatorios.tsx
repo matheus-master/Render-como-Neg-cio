@@ -1,8 +1,9 @@
 import { useQueryClient } from '@tanstack/react-query';
-import { Pencil } from 'lucide-react';
+import { BarChart3, FileText, MessageSquareText, Pencil, TrendingUp } from 'lucide-react';
+import { DoneRow, NextUp, Pill, Row, Screen, ScreenHead, Section } from '../components/kit';
 import { Fragment, useEffect, useRef, useState } from 'react';
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
-import { BackLink, ErrorState, PageHead, Mark, Num } from '../components/ui';
+import { BackLink, ErrorState, Mark, Num } from '../components/ui';
 import { useAuth } from '../lib/auth';
 import { useReports, type Report } from '../lib/data';
 import { fmtBRL, fmtDay, fmtPeriod } from '../lib/format';
@@ -17,17 +18,14 @@ import { FUNNEL, FunnelBars, sumFunnel, type FunnelKey } from '../components/Fun
 export function Relatorios() {
   const q = useReports();
   const reps = q.data || [];
+  const last = reps[0];
+  const total = reps.reduce((a, r) => a + r.revenue, 0);
+  const days = last ? Math.floor((Date.now() - new Date(last.created_at).getTime()) / 86_400_000) : null;
+  const due = days === null || days >= 14;
+  const [ps, pe] = currentFortnight();
   return (
-    <div className="page">
-      <PageHead
-        title="Relatórios quinzenais"
-        sub="Seu histórico de evolução, quinzena a quinzena."
-        right={
-          <Link to="/relatorios/novo" className="btn btn-primary">
-            <span className="plus"><Mark m="+" size={16} /></span>Novo relatório
-          </Link>
-        }
-      />
+    <Screen>
+      <ScreenHead title="Relatórios" sub="A cada quinzena, seus números e o que aconteceu. Sua evolução aparece aqui." />
       {q.isLoading ? (
         <>
           <div className="skel-card" style={{ height: 220 }} />
@@ -35,52 +33,50 @@ export function Relatorios() {
         </>
       ) : q.isError ? (
         <ErrorState onRetry={q.refetch} />
-      ) : reps.length === 0 ? (
-        <div className="dashed" style={{ gap: 6 }}>
-          <div style={{ fontWeight: 600, fontSize: 17 }}>Nenhum relatório ainda</div>
-          <div style={{ fontSize: 15, color: 'var(--t3)', lineHeight: 1.45, maxWidth: 420 }}>
-            A cada quinzena, registre faturamento, prospecção, conquistas e dificuldades. Sua evolução aparece aqui e no Início.
-          </div>
-          <Link to="/relatorios/novo" className="btn btn-primary" style={{ marginTop: 8 }}>
-            Enviar primeiro relatório
-          </Link>
-        </div>
       ) : (
         <>
-          <FunnelCard reps={reps} />
-          <Evolution reps={reps} />
-          <Journey reps={reps} />
-          <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-            <div className="rep-row rep-head">
-              <div>Quinzena</div>
-              <div>Faturamento</div>
-              <div>Prospecção</div>
-              <div>Destaque</div>
-              <div />
-            </div>
-            {reps.map((r) => (
-              <Link key={r.id} to={`/relatorios/${r.id}`} className="rep-row">
-                <div>
-                  <div style={{ fontWeight: 600, fontSize: 15 }}>{fmtPeriod(r.period_start, r.period_end)}</div>
-                  <div className="mono" style={{ fontSize: 11, color: 'var(--t3)' }}>enviado {fmtDay(r.created_at, false)}</div>
-                </div>
-                <div className="evo-num" style={{ fontSize: 18, marginTop: 0 }}>{fmtBRL(r.revenue)}</div>
-                <div className="mono" style={{ fontSize: 12, color: 'var(--t2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0 }} title={`${r.leads} leads · ${r.contacts} contatos · ${r.responses} respostas · ${r.meetings} reuniões · ${r.proposals} propostas · ${r.closed} fechados`}>
-                  {r.contacts} cont. · {r.proposals} prop. · {r.closed} fech.
-                </div>
-                <div style={{ fontSize: 14, color: 'var(--t2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>
-                  {r.staff_comment && <span className="chip chip-soft" style={{ marginRight: 8 }}>Comentado</span>}
-                  {r.executed ? r.wins || r.actions || '—' : 'Não conseguiu executar nesta quinzena'}
-                </div>
-                <div style={{ color: 'var(--t4)', display: 'flex', justifyContent: 'flex-end' }}>
-                  <Mark m="›" size={18} />
-                </div>
-              </Link>
-            ))}
-          </div>
+          {due ? (
+            <NextUp
+              label="Próximo relatório"
+              when={`Quinzena ${fmtPeriod(ps, pe)}`}
+              Icon={BarChart3}
+              title={last ? 'Conte como foi a quinzena' : 'Envie seu primeiro relatório'}
+              kind="Faturamento, prospecção, conquistas e dificuldades"
+              meta={last ? `O último foi há ${days} dias · leva uns 5 minutos` : 'Leva uns 5 minutos'}
+              primary={{ label: 'Enviar relatório', to: '/relatorios/novo' }}
+            />
+          ) : (
+            <DoneRow title="Relatório desta quinzena enviado" sub={`Quinzena ${fmtPeriod(last!.period_start, last!.period_end)} · o próximo abre em ${14 - days!} dia${14 - days! === 1 ? '' : 's'}`} to={`/relatorios/${last!.id}`} />
+          )}
+
+          {reps.length > 0 && (
+            <>
+              <Section title="Seus números">
+                <Row Icon={BarChart3} tone="mint" when="Última quinzena" title={fmtBRL(last!.revenue)} sub={`${last!.closed} projeto${last!.closed === 1 ? '' : 's'} fechado${last!.closed === 1 ? '' : 's'} · ${last!.proposals} propostas`} to={`/relatorios/${last!.id}`} />
+                <Row Icon={TrendingUp} when="Total registrado" title={fmtBRL(total)} sub={`Soma de ${reps.length} relatório${reps.length > 1 ? 's' : ''}`} />
+              </Section>
+              <FunnelCard reps={reps} />
+              <Evolution reps={reps} />
+              <Journey reps={reps} />
+              <Section title="Histórico" right={<span className="k-count">{reps.length}</span>}>
+                {reps.map((r) => (
+                  <Row
+                    key={r.id}
+                    Icon={r.staff_comment ? MessageSquareText : FileText}
+                    tone={r.staff_comment ? 'mint' : 'gray'}
+                    when={`Quinzena ${fmtPeriod(r.period_start, r.period_end)}`}
+                    title={fmtBRL(r.revenue)}
+                    sub={r.executed ? `${r.contacts} contatos · ${r.proposals} propostas · ${r.closed} fechados` : 'Não conseguiu executar nesta quinzena'}
+                    to={`/relatorios/${r.id}`}
+                    right={r.staff_comment ? <Pill tone="mint">Comentado</Pill> : undefined}
+                  />
+                ))}
+              </Section>
+            </>
+          )}
         </>
       )}
-    </div>
+    </Screen>
   );
 }
 

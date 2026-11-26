@@ -78,16 +78,17 @@ export function BackLink({ to, children }: { to: string; children: ReactNode }) 
   );
 }
 
+/** Cabeçalho de página (mesma linguagem do ScreenHead do kit: título grande, explicação curta). */
 export function PageHead({ title, sub, right, kicker }: { title: string; sub?: ReactNode; right?: ReactNode; kicker?: string }) {
   return (
-    <div className="between" style={{ alignItems: 'flex-end', flexWrap: 'wrap', gap: 16 }}>
-      <div>
-        {kicker && <div className="label" style={{ marginBottom: 10 }}>{kicker}</div>}
-        <h1 className="h-page">{title}</h1>
-        {sub && <div className="sub">{sub}</div>}
+    <header className="sh">
+      {kicker && <div className="k-eyebrow">{kicker}</div>}
+      <div className="sh-top">
+        <h1 className="sh-title">{title}</h1>
+        {right && <div className="sh-right">{right}</div>}
       </div>
-      {right}
-    </div>
+      {sub && <p className="sh-sub">{sub}</p>}
+    </header>
   );
 }
 
