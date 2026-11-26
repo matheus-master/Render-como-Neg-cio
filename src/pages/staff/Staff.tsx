@@ -99,8 +99,8 @@ export function StaffLayout() {
             </Link>
           ))}
         </nav>
-        <button className="tn-send" onClick={next} title={pending[0] ? `${pending[0].student.full_name} · ${SLOTS[pending[0].slot].title}` : undefined}>
-          <PenLine size={19} strokeWidth={2.4} aria-hidden /> {pend ? 'Próxima devolutiva' : 'Fila em dia'}
+        <button className="tn-send" onClick={next} aria-label={pend ? 'Próxima devolutiva' : 'Fila em dia'} title={pending[0] ? `${pending[0].student.full_name} · ${SLOTS[pending[0].slot].title}` : undefined}>
+          <PenLine size={19} strokeWidth={2.4} aria-hidden /> <span className="tn-send-txt">{pend ? 'Próxima devolutiva' : 'Fila em dia'}</span>
         </button>
         <div className="tn-me">
           <button className={'tn-me-btn' + (me ? ' open' : '')} aria-haspopup="menu" aria-expanded={me} onClick={() => setMe(!me)}>

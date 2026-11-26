@@ -5,7 +5,7 @@
  * dúvida?" e tela de confirmação com Desfazer.
  */
 import { Check, ChevronLeft, ChevronRight, CircleHelp, Info, Square, Volume2, type LucideIcon } from 'lucide-react';
-import { Children, isValidElement, useEffect, useState, type ReactNode } from 'react';
+import { Children, isValidElement, useEffect, useRef, useState, type ReactNode } from 'react';
 import { useIsMobile } from '../lib/useIsMobile';
 import { Link, useNavigate } from 'react-router-dom';
 
@@ -30,9 +30,29 @@ export function Workspace({ children }: { children: ReactNode }) {
   return (
     <div className="ws">
       <div className="ws-main">{items.filter((c) => !side(c))}</div>
-      <div className="ws-side">{items.filter(side)}</div>
+      <StickySide>{items.filter(side)}</StickySide>
     </div>
   );
+}
+
+/** Coluna lateral fixa ao rolar, a não ser que seja mais alta que a tela (aí rola junto, para nada ficar escondido). */
+function StickySide({ children }: { children: ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [tall, setTall] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const check = () => setTall(el.getBoundingClientRect().height > window.innerHeight - 124);
+    const ro = new ResizeObserver(check);
+    ro.observe(el);
+    window.addEventListener('resize', check);
+    check();
+    return () => {
+      ro.disconnect();
+      window.removeEventListener('resize', check);
+    };
+  }, []);
+  return <div ref={ref} className={'ws-side' + (tall ? ' tall' : '')}>{children}</div>;
 }
 
 /** Coluna central da tela (estilo app): largura confortável de leitura. */

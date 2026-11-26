@@ -86,7 +86,7 @@ export function MaterialPreview({ v, title, defaultOpen = false }: { v: Version;
       {err && <div style={{ padding: '0 16px 14px', fontSize: 13, color: 'var(--err-t)' }}>Não foi possível abrir o arquivo agora. Tente de novo em instantes.</div>}
       {open && isPdf && url && (
         <div style={{ borderTop: '1px solid var(--line)', background: 'var(--alt2)', padding: 12 }}>
-          <iframe title={`Material enviado: ${v.file_name || title}`} src={url} style={{ width: '100%', height: '72vh', border: '1px solid var(--line)', borderRadius: 8, background: '#fff' }} />
+          <iframe title={`Material enviado: ${v.file_name || title}`} src={url} style={{ width: '100%', height: 'calc(72vh / var(--z))', border: '1px solid var(--line)', borderRadius: 8, background: '#fff' }} />
         </div>
       )}
       {open && v.source_kind === 'text' && (
