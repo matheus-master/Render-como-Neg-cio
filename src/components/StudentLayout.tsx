@@ -1,4 +1,4 @@
-import { BarChart3, Briefcase, CalendarDays, ChevronDown, ChevronRight, FileStack, FileText, FileUp, House, LifeBuoy, LogOut, MessageSquareText, MoreHorizontal, Plus, Sparkles, Trophy, UserRound, X, type LucideIcon } from 'lucide-react';
+import { BarChart3, Briefcase, MonitorPlay, CalendarDays, ChevronDown, ChevronRight, FileStack, FileText, FileUp, House, LifeBuoy, LogOut, MessageSquareText, MoreHorizontal, Plus, Sparkles, Trophy, UserRound, X, type LucideIcon } from 'lucide-react';
 import { lazy, Suspense, useEffect, useState } from 'react';
 const AvatarBuilder = lazy(() => import('./AvatarBuilder'));
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
@@ -13,6 +13,7 @@ import { useIsMobile } from '../lib/useIsMobile';
 /** Menu do topo (computador): uma palavra embaixo de cada ícone. Perfil, Feedback e Sair ficam no menu da conta. */
 const TOP: [string, string, LucideIcon][] = [
   ['/', 'Início', House],
+  ['/aulas', 'Aulas', MonitorPlay],
   ['/documentos', 'Documentos', FileText],
   ['/relatorios', 'Relatórios', BarChart3],
   ['/gamificacao', 'Gamificação', Trophy],
@@ -25,8 +26,9 @@ const TABS_L: [string, string, LucideIcon][] = [
   ['/', 'Início', House],
   ['/documentos', 'Documentos', FileText],
 ];
-const TABS_R: [string, string, LucideIcon][] = [['/gamificacao', 'Gamificação', Trophy]];
+const TABS_R: [string, string, LucideIcon][] = [['/aulas', 'Aulas', MonitorPlay]];
 const MORE: [string, string, LucideIcon, string][] = [
+  ['/gamificacao', 'Gamificação', Trophy, 'Tarefas e níveis'],
   ['/relatorios', 'Relatórios', BarChart3, 'Números da quinzena'],
   ['/calendario', 'Agenda', CalendarDays, 'Aulas e sessões'],
   ['/suits', 'Suits', Briefcase, 'Seu time de IA'],
@@ -199,7 +201,7 @@ export default function StudentLayout() {
           <Logo white />
           <nav className="tn-links" aria-label="Menu principal">
             {TOP.map(([to, label, Icon]) => (
-              <NavLink key={to} to={to} end={to === '/'} className={({ isActive }) => 'tn-item' + (isActive || (to === '/suits' && pathname.startsWith('/harvey')) ? ' on' : '')} title={label}>
+              <NavLink key={to} to={to} end={to === '/'} className={({ isActive }) => 'tn-item' + (to === '/aulas' ? ' special' : '') + (isActive || (to === '/suits' && pathname.startsWith('/harvey')) ? ' on' : '')} title={label}>
                 {({ isActive }) => (
                   <>
                     <span className="tn-ico">

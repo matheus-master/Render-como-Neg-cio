@@ -1,7 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 const AvatarBuilder = lazy(() => import('../../components/AvatarBuilder'));
-import { CalendarDays, Check, ChevronDown, FileText, Inbox, LayoutDashboard, LogOut, PenLine, Settings, Sparkles, Upload, type LucideIcon } from 'lucide-react';
+import { CalendarDays, Check, ChevronDown, FileText, Inbox, LayoutDashboard, MonitorPlay, LogOut, PenLine, Settings, Sparkles, Upload, type LucideIcon } from 'lucide-react';
 import { Link, Outlet, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useIsMobile } from '../../lib/useIsMobile';
 import { FILE_SUMMARY, forbiddenHits, MAX_UPLOAD_BYTES, POINT_SECS, SLOTS, VERDICTS, type Feedback, type FeedbackFile, type PointSec, type Verdict } from '../../../shared/domain';
@@ -34,6 +34,7 @@ export function StaffLayout() {
     ['/equipe', 'Painel', LayoutDashboard],
     ['/equipe/fila', 'Fila', Inbox, pend],
     ['/equipe/agenda', 'Agenda', CalendarDays],
+    ['/equipe/aulas', 'Aulas', MonitorPlay],
     ['/equipe/config', 'Ajustes', Settings],
   ];
   const isOn = (to: string) => (to === '/equipe' ? pathname === '/equipe' || pathname.startsWith('/equipe/aluno') : pathname.startsWith(to) || (to === '/equipe/fila' && pathname.startsWith('/equipe/revisao')));
@@ -63,7 +64,7 @@ export function StaffLayout() {
           <button className="btn btn-gold btn-sm" onClick={next}>{pend ? `Próxima devolutiva · ${pend}` : 'Fila em dia'}</button>
         </header>
         <main style={{ flex: 1, display: 'flex', flexDirection: 'column' }}><Outlet /></main>
-        <nav className="tabbar" style={{ gridTemplateColumns: 'repeat(5, 1fr)' }}>
+        <nav className="tabbar" style={{ gridTemplateColumns: `repeat(${items.length + 1}, 1fr)` }}>
           {items.map(([to, label, Icon, badge]) => (
             <Link key={to} to={to} className={isOn(to) ? 'on' : ''}>
               <span className="ico">

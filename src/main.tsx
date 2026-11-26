@@ -20,6 +20,13 @@ import { NovoRelatorio, RelatorioDetalhe, Relatorios } from './pages/Relatorios'
 import { AlunoFicha, Configuracoes, Painel } from './pages/staff/Painel';
 import { Fila, Revisao, StaffLayout } from './pages/staff/Staff';
 import { Agenda } from './pages/staff/Agenda';
+import { lazy, Suspense } from 'react';
+const AulasHome = lazy(() => import('./pages/Aulas').then((m) => ({ default: m.AulasHome })));
+const Curso = lazy(() => import('./pages/Aulas').then((m) => ({ default: m.Curso })));
+const Aula = lazy(() => import('./pages/Aulas').then((m) => ({ default: m.Aula })));
+const AulasAdmin = lazy(() => import('./pages/staff/AulasAdmin').then((m) => ({ default: m.AulasAdmin })));
+const CursoAdmin = lazy(() => import('./pages/staff/AulasAdmin').then((m) => ({ default: m.CursoAdmin })));
+const lz = (el: ReactNode) => <Suspense fallback={<div className="page"><PageSkeleton /></div>}>{el}</Suspense>;
 import './styles.css';
 
 const qc = new QueryClient({ defaultOptions: { queries: { retry: 1, refetchOnWindowFocus: true, staleTime: 15_000 } } });
@@ -58,6 +65,8 @@ function App() {
         <Route path="aluno/:id" element={<AlunoFicha />} />
         <Route path="agenda" element={<Agenda />} />
         <Route path="config" element={<Configuracoes />} />
+        <Route path="aulas" element={lz(<AulasAdmin />)} />
+        <Route path="aulas/:id" element={lz(<CursoAdmin />)} />
       </Route>
       <Route element={<Guard><StudentLayout /></Guard>}>
         <Route index element={<Inicio />} />
@@ -78,6 +87,9 @@ function App() {
         <Route path="perfil" element={<Perfil />} />
         <Route path="harvey" element={<Harvey />} />
         <Route path="suits" element={<Suits />} />
+        <Route path="aulas" element={lz(<AulasHome />)} />
+        <Route path="aulas/:courseId" element={lz(<Curso />)} />
+        <Route path="aulas/:courseId/:lessonId" element={lz(<Aula />)} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>
