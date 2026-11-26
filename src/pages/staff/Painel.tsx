@@ -611,7 +611,6 @@ export function Configuracoes() {
   const [newGroup, setNewGroup] = useState('');
   const [renaming, setRenaming] = useState<{ from: string; to: string } | null>(null);
   const [ics, setIcs] = useState<string | null>(null);
-  const [calUrl, setCalUrl] = useState<string | null>(null);
   const icsVal = ics ?? settings.data?.calendar_ics_url ?? '';
   const feat = useFeatures();
   const [dgUrl, setDgUrl] = useState<string | null>(null);
@@ -645,7 +644,6 @@ export function Configuracoes() {
       setLoadingSvc(false);
     }
   };
-  const calVal = calUrl ?? settings.data?.calendar_url ?? '';
   const validCode = /^[A-Z0-9]{2,}-?[A-Z0-9]{2,}$/.test(code.trim().toUpperCase());
 
   const addCode = async () => {
@@ -684,7 +682,6 @@ export function Configuracoes() {
   const saveCal = async () => {
     const { error } = await supabase.from('settings').upsert([
       { key: 'calendar_ics_url', value: icsVal.trim() },
-      { key: 'calendar_url', value: calVal.trim() },
     ]);
     if (error) return toast('Não deu para salvar.');
     toast('Agenda atualizada. Pode levar até 10 minutos para aparecer.');
@@ -746,17 +743,19 @@ export function Configuracoes() {
         </div>
 
         <div className="card stack" style={{ gap: 12 }}>
-          <div className="h-card">Agenda da mentoria</div>
+          <div className="between" style={{ alignItems: 'center' }}>
+            <div className="h-card">Agenda da mentoria</div>
+            {icsVal && icsVal !== 'demo' ? <Pill tone="mint">Google Agenda ligado</Pill> : <Pill tone="amber">{icsVal === 'demo' ? 'Demonstração' : 'Não ligado'}</Pill>}
+          </div>
+          <div style={{ fontSize: 14, color: 'var(--t3)', marginTop: -6 }}>
+            Os eventos que vocês marcam em Agenda já vão para o calendário de cada aluno. Ligue aqui o Google Agenda da mentoria para os eventos de lá também aparecerem no portal e no calendário dos alunos.
+          </div>
           <label className="field">
-            <span>Endereço iCal do Google Agenda</span>
+            <span>Endereço secreto iCal do Google Agenda da mentoria</span>
             <input className="input md" placeholder="https://calendar.google.com/calendar/ical/…/basic.ics" value={icsVal} onChange={(e) => setIcs(e.target.value)} />
-            <span style={{ fontSize: 12, color: 'var(--t3)', fontWeight: 400 }}>
-              Google Agenda → Configurações da agenda → Integrar agenda → "Endereço secreto no formato iCal". Use <span className="mono">demo</span> para a agenda de demonstração.
+            <span style={{ fontSize: 12.5, color: 'var(--t3)', fontWeight: 400, lineHeight: 1.45 }}>
+              No Google Agenda (pelo computador): passe o mouse na agenda da mentoria › <b>⋮</b> › <b>Configurações e compartilhamento</b> › <b>Integrar agenda</b> › copie o <b>Endereço secreto no formato iCal</b>.
             </span>
-          </label>
-          <label className="field">
-            <span>Link para "Abrir no Google Agenda"</span>
-            <input className="input md" placeholder="https://calendar.google.com/…" value={calVal} onChange={(e) => setCalUrl(e.target.value)} />
           </label>
           <button className="btn btn-primary btn-sm" style={{ alignSelf: 'flex-start' }} onClick={saveCal}>Salvar agenda</button>
         </div>

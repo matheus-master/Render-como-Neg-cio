@@ -208,3 +208,27 @@ export async function openSigned(path: string) {
   if (w) w.location.href = u;
   else window.location.href = u;
 }
+
+// ---------------------------------------------------------------------
+// Agenda para assinar (Google Agenda / iPhone / Outlook)
+// ---------------------------------------------------------------------
+/** Endereços da agenda pessoal do aluno (o código é secreto: quem tem o link vê os eventos). */
+export function useAgendaFeed() {
+  const uid = useAuth().session?.user.id;
+  const qc = useQueryClient();
+  const q = useQuery({
+    queryKey: ['ical-token', uid],
+    enabled: !!uid,
+    staleTime: Infinity,
+    queryFn: async () => unwrap(await supabase.from('profiles').select('ical_token').eq('id', uid!).single()) as { ical_token: string },
+  });
+  const reset = useMutation({
+    mutationFn: async () => unwrap(await supabase.rpc('reset_ical_token')) as string,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['ical-token'] }),
+  });
+  const token = q.data?.ical_token;
+  const https = token ? `${window.location.origin}/api/agenda/${token}.ics` : null;
+  const webcal = https ? https.replace(/^https?:/, 'webcal:') : null;
+  const google = webcal ? `https://calendar.google.com/calendar/render?cid=${encodeURIComponent(webcal)}` : null;
+  return { https, webcal, google, loading: q.isLoading, reset };
+}

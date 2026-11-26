@@ -1,5 +1,6 @@
 import { FILE_SUMMARY, isPointSec, type Feedback } from '../shared/domain';
 import { digisacSend, digisacServices } from './digisac';
+import { icalFeed } from './ical';
 import { markFailed, processSubmission } from './analyze';
 import { notifyReleased } from './email';
 import { PermanentError, type AnalysisMessage, type Env } from './env';
@@ -91,6 +92,10 @@ async function api(req: Request, url: URL, env: Env, ctx: ExecutionContext): Pro
     if (!caller) return json({ error: 'Sessão expirada. Entre de novo.' }, 401);
     return instagramReview(req, env, caller, ctx);
   }
+
+  // GET /api/agenda/{código}.ics · agenda do aluno para assinar no Google Agenda/iPhone/Outlook (sem login)
+  const ag = url.pathname.match(/^\/api\/agenda\/([0-9a-f-]{36})(?:\.ics)?$/i);
+  if (ag && (req.method === 'GET' || req.method === 'HEAD')) return icalFeed(ag[1]!.toLowerCase(), env, ctx);
 
   // Digisac (só equipe): conexões e envio de mensagem pelo WhatsApp da RCN
   if (url.pathname === '/api/digisac/services' && req.method === 'GET') {

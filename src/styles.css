@@ -1787,3 +1787,9 @@ a.k-row:hover, button.k-row:hover { text-decoration: none; transform: translateY
 .nudge-modal { max-width: 560px; gap: 16px; }
 .nudge-title { font-weight: 900; font-size: 22px; color: var(--t); margin-top: 2px; }
 .nudge-modal .textarea { font-size: 15.5px; line-height: 1.5; min-height: 150px; }
+
+/* Agenda: assinar no calendário do aluno */
+.agenda-sync { gap: 12px; }
+.agenda-more { align-self: center; font-size: 14px; }
+.agenda-alt { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; justify-content: center; }
+.with-topnav .ws .agenda-sync .k-note { font-size: 14px; }

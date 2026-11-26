@@ -1,12 +1,13 @@
 import { useQuery } from '@tanstack/react-query';
-import { CalendarDays, CalendarPlus, Check, ChevronLeft, ChevronRight, Clock, ExternalLink, MapPin, Video, X } from 'lucide-react';
+import { CalendarDays, CalendarPlus, Check, ChevronLeft, ChevronRight, Clock, Copy, MapPin, Video, X } from 'lucide-react';
 import { BigButton, NextUp, Note, Row, Screen, ScreenHead, Section, Side, Workspace } from '../components/kit';
 import { whenLabel } from './Inicio';
 import { useMemo, useState } from 'react';
 import { ErrorState } from '../components/ui';
 import { useAuth } from '../lib/auth';
 import { apiGet } from '../lib/supabase';
-import { EVENT_KINDS, kindInfo, openSigned, useMyEvents, useRespond, type MyEvent } from '../lib/agenda';
+import { EVENT_KINDS, kindInfo, openSigned, useAgendaFeed, useMyEvents, useRespond, type MyEvent } from '../lib/agenda';
+import { useToast } from '../lib/toast';
 import { Paperclip } from 'lucide-react';
 import { useIsMobile } from '../lib/useIsMobile';
 
@@ -45,6 +46,52 @@ function gcalAdd(e: CalEvent) {
 /** Ao vivo agora ou começa em até 15 minutos. */
 const isLiveSoon = (e: CalEvent, now: number) => !e.allDay && now >= new Date(e.start).getTime() - 15 * 60000 && now <= new Date(e.end).getTime();
 
+/** "No seu calendário": assinar a agenda da mentoria no Google Agenda, iPhone ou Outlook. */
+function AgendaSync() {
+  const f = useAgendaFeed();
+  const toast = useToast();
+  const [more, setMore] = useState(false);
+  const ios = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+  const copy = async () => {
+    if (!f.https) return;
+    await navigator.clipboard?.writeText(f.https).catch(() => undefined);
+    toast('Link da agenda copiado.');
+  };
+  const reset = async () => {
+    if (!window.confirm('Gerar um link novo? O link antigo para de funcionar e você precisará adicionar a agenda de novo.')) return;
+    await f.reset.mutateAsync().catch(() => toast('Não deu para gerar agora. Tente de novo.'));
+    toast('Link novo gerado. Adicione a agenda de novo no seu calendário.');
+  };
+  return (
+    <section className="k-sec agenda-sync">
+      <div className="k-sec-head"><h2>No seu calendário</h2></div>
+      <p className="k-row-sub" style={{ margin: 0, fontSize: 15 }}>
+        Adicione a agenda da mentoria uma vez e todas as aulas, laboratórios e sessões aparecem no seu calendário, inclusive mudanças e cancelamentos.
+      </p>
+      <div className="k-actions">
+        {ios ? (
+          <BigButton a={{ label: 'Adicionar ao calendário do iPhone', Icon: CalendarPlus, onClick: () => f.webcal && (window.location.href = f.webcal), disabled: !f.webcal }} />
+        ) : (
+          <BigButton a={{ label: 'Adicionar ao Google Agenda', Icon: CalendarPlus, onClick: () => f.google && window.open(f.google, '_blank', 'noopener'), disabled: !f.google }} />
+        )}
+        <button className="link agenda-more" onClick={() => setMore(!more)}>{more ? 'Menos opções' : 'Usa outro calendário?'}</button>
+        {more && (
+          <div className="agenda-alt">
+            {ios ? (
+              <a className="btn btn-secondary btn-sm" href={f.google ?? '#'} target="_blank" rel="noreferrer">Google Agenda</a>
+            ) : (
+              <a className="btn btn-secondary btn-sm" href={f.webcal ?? '#'}>iPhone, Mac ou Outlook</a>
+            )}
+            <button className="btn btn-secondary btn-sm" onClick={copy} disabled={!f.https}><Copy size={14} aria-hidden /> Copiar link</button>
+            <button className="link" style={{ fontSize: 13 }} onClick={reset}>Gerar link novo</button>
+          </div>
+        )}
+      </div>
+      <Note tone="blue">O calendário atualiza sozinho algumas vezes por dia. Mudança de última hora aparece aqui no portal na hora.{!ios && ' No Android, se o botão não abrir, faça uma vez pelo computador: depois a agenda aparece no app do Google Agenda no celular.'}</Note>
+    </section>
+  );
+}
+
 export default function Calendario() {
   const { session } = useAuth();
   const mobile = useIsMobile();
@@ -53,6 +100,7 @@ export default function Calendario() {
   const [cursor, setCursor] = useState({ y: today.y, m: today.m });
   const [open, setOpen] = useState<CalEvent | null>(null);
   const [selDay, setSelDay] = useState<string | null>(null);
+  const feed = useAgendaFeed();
   const [showMonth, setShowMonth] = useState(() => !window.matchMedia('(max-width: 760px)').matches);
   const now = Date.now();
 
@@ -85,7 +133,6 @@ export default function Calendario() {
   const cells: (number | null)[] = [...Array(first).fill(null), ...Array.from({ length: days }, (_, i) => i + 1)];
   while (cells.length % 7) cells.push(null);
   const move = (dm: number) => setCursor(({ y, m }) => ({ y: m + dm < 0 ? y - 1 : m + dm > 11 ? y + 1 : y, m: (m + dm + 12) % 12 }));
-  const calUrl = q.data?.calendarUrl;
   const selEvents = selDay ? byDay.get(selDay) || [] : null;
 
   const nextEv = upcoming[0];
@@ -105,8 +152,8 @@ export default function Calendario() {
           { k: 'Esperando sua resposta', v: ((n) => (n === 1 ? '1 convite' : `${n} convites`))(upcoming.filter((e) => e.portal?.me.response === 'pendente').length) },
           { k: 'Depois disso', v: `${Math.max(0, upcoming.length - 1)} marcados` },
         ] : undefined}
-        right={calUrl && !mobile ? (
-          <a href={calUrl} target="_blank" rel="noreferrer" className="k-read"><ExternalLink size={17} aria-hidden /> Google Agenda</a>
+        right={!mobile && feed.google ? (
+          <a href={feed.google} target="_blank" rel="noreferrer" className="k-read"><CalendarPlus size={17} aria-hidden /> Adicionar ao Google Agenda</a>
         ) : undefined}
       />
 
@@ -118,15 +165,10 @@ export default function Calendario() {
       ) : q.isError && !portal.length ? (
         <ErrorState onRetry={q.refetch} />
       ) : !hasAny ? (
-        <div className="hero" style={{ padding: '40px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, textAlign: 'center' }}>
-          <div style={{ fontWeight: 600, fontSize: 26 }}>Calendário do mês</div>
-          <div className="hero-sub" style={{ fontSize: 15, lineHeight: 1.5, maxWidth: 460 }}>A agenda da mentoria ainda não foi conectada ao portal. Enquanto isso, abra o calendário pelo botão abaixo.</div>
-          {calUrl && (
-            <a href={calUrl} target="_blank" rel="noreferrer" className="btn btn-gold btn-md" style={{ marginTop: 10, padding: '0 24px' }}>
-              Abrir calendário <ExternalLink size={16} aria-hidden />
-            </a>
-          )}
-        </div>
+        <Workspace>
+          <Note>Nada marcado por enquanto. Quando a equipe marcar uma aula ou sessão, ela aparece aqui e no seu calendário.</Note>
+          <Side><AgendaSync /></Side>
+        </Workspace>
       ) : (
         <Workspace>
           {nextEv ? (
@@ -147,6 +189,7 @@ export default function Calendario() {
           ) : (
             <Note>Nada marcado por enquanto. Quando a equipe marcar uma aula ou sessão, ela aparece aqui.</Note>
           )}
+          <Side><AgendaSync /></Side>
           {rest.length > 0 && (
             <Side>
             <Section title="Mais adiante">
