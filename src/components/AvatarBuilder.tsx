@@ -12,14 +12,20 @@ import { useAuth, useProfile } from '../lib/auth';
 import { supabase } from '../lib/supabase';
 import { useToast } from '../lib/toast';
 
+export type AvatarSex = 'm' | 'f';
 export interface AvatarConfig {
-  skin: string; top: string; hair: string; facialHair: string; facialHairColor: string;
+  sex: AvatarSex; skin: string; top: string; hair: string; facialHair: string; facialHairColor: string;
   eyes: string; eyebrows: string; mouth: string; accessories: string; clothing: string; clothes: string; bg: string;
 }
 
 const SKIN = ['ffdbb4', 'edb98a', 'd08b5b', 'ae5d29', '614335', 'fd9841', 'f8d25c'];
 const HAIR = ['2c1b18', '4a312c', '724133', 'a55728', 'b58143', 'd6b370', 'ecdcbf', 'e8e1e1', 'c93305', 'f59797'];
-const TOPS = ['shortFlat', 'shortRound', 'shortWaved', 'shortCurly', 'theCaesar', 'theCaesarAndSidePart', 'sides', 'shavedSides', 'shaggy', 'shaggyMullet', 'frizzle', 'fro', 'froBand', 'dreads', 'dreads01', 'dreads02', 'bob', 'bun', 'curly', 'curvy', 'bigHair', 'longButNotTooLong', 'miaWallace', 'straight01', 'straight02', 'straightAndStrand', 'frida', 'hijab', 'turban', 'hat', 'winterHat1', 'winterHat02', 'winterHat03', 'winterHat04'];
+// Estilos separados por personagem (masculino/feminino); chapéus, turbante, black e dreads aparecem nos dois.
+const HATS = ['turban', 'hat', 'winterHat1', 'winterHat02', 'winterHat03', 'winterHat04'];
+const TOPS_M = ['shortFlat', 'shortRound', 'shortWaved', 'shortCurly', 'theCaesar', 'theCaesarAndSidePart', 'sides', 'shavedSides', 'shaggy', 'shaggyMullet', 'frizzle', 'fro', 'dreads01', 'dreads02', 'dreads', ...HATS];
+const TOPS_F = ['longButNotTooLong', 'straight01', 'straight02', 'straightAndStrand', 'bob', 'miaWallace', 'bigHair', 'curly', 'curvy', 'bun', 'frida', 'fro', 'froBand', 'dreads', 'shaggy', 'hijab', ...HATS];
+const TOPS: Record<AvatarSex, string[]> = { m: TOPS_M, f: TOPS_F };
+const ONLY_F = new Set(TOPS_F.filter((t) => !TOPS_M.includes(t)));
 const COVERS = new Set(['hijab', 'turban', 'hat', 'winterHat1', 'winterHat02', 'winterHat03', 'winterHat04']);
 const EYES = ['default', 'happy', 'wink', 'squint', 'side', 'surprised', 'closed', 'eyeRoll', 'hearts', 'winkWacky', 'cry', 'xDizzy'];
 const BROWS = ['defaultNatural', 'default', 'flatNatural', 'raisedExcitedNatural', 'raisedExcited', 'upDownNatural', 'upDown', 'frownNatural', 'sadConcernedNatural', 'sadConcerned', 'angryNatural', 'angry', 'unibrowNatural'];
@@ -32,14 +38,25 @@ const CLOTHES = ['1f3a5e', 'e3a440', '5e85aa', '2f5b56', '262e33', '3c4f5c', '92
 const BG = ['e6f0f6', 'cbeae0', 'fbf0dc', 'f4f2ee', '1f3a5e', '0c1b2f', 'e3a440', '5e85aa', 'ffafb9', 'b1e2ff'];
 
 export const DEFAULT_AVATAR: AvatarConfig = {
-  skin: 'edb98a', top: 'shortFlat', hair: '2c1b18', facialHair: '', facialHairColor: '2c1b18', eyes: 'default', eyebrows: 'defaultNatural',
+  sex: 'm', skin: 'edb98a', top: 'shortFlat', hair: '2c1b18', facialHair: '', facialHairColor: '2c1b18', eyes: 'default', eyebrows: 'defaultNatural',
   mouth: 'smile', accessories: '', clothing: 'blazerAndShirt', clothes: '1f3a5e', bg: 'e6f0f6',
 };
+const START: Record<AvatarSex, AvatarConfig> = {
+  m: DEFAULT_AVATAR,
+  f: { ...DEFAULT_AVATAR, sex: 'f', top: 'longButNotTooLong', hair: '4a312c', clothing: 'blazerAndSweater', clothes: '1f3a5e', bg: 'cbeae0' },
+};
+
+/** Avatar salvo antes da separação: deduz o personagem pelo cabelo. */
+function fromSaved(saved: Partial<AvatarConfig> | null | undefined): AvatarConfig {
+  const c = { ...DEFAULT_AVATAR, ...(saved ?? {}) };
+  if (!saved?.sex) c.sex = ONLY_F.has(c.top) ? 'f' : 'm';
+  return c;
+}
 
 const pick = <T,>(a: T[]) => a[Math.floor(Math.random() * a.length)]!;
-function randomAvatar(): AvatarConfig {
+function randomAvatar(sex: AvatarSex): AvatarConfig {
   return {
-    skin: pick(SKIN.slice(0, 5)), top: pick(TOPS), hair: pick(HAIR), facialHair: Math.random() < 0.3 ? pick(BEARDS.slice(1)) : '', facialHairColor: pick(HAIR.slice(0, 6)),
+    sex, skin: pick(SKIN.slice(0, 5)), top: pick(TOPS[sex]), hair: pick(HAIR), facialHair: sex === 'm' && Math.random() < 0.3 ? pick(BEARDS.slice(1)) : '', facialHairColor: pick(HAIR.slice(0, 6)),
     eyes: pick(EYES.slice(0, 6)), eyebrows: pick(BROWS.slice(0, 6)), mouth: pick(MOUTHS.slice(0, 5)), accessories: Math.random() < 0.3 ? pick(GLASSES.slice(1, 6)) : '',
     clothing: pick(CLOTHING), clothes: pick(CLOTHES.slice(0, 10)), bg: pick(BG.slice(0, 4)),
   };
@@ -72,7 +89,8 @@ async function toPng(svg: string, size = 512): Promise<Blob> {
 }
 
 type Tab = 'cabelo' | 'rosto' | 'barba' | 'roupa' | 'fundo';
-const TABS: [Tab, string][] = [['cabelo', 'Cabelo'], ['rosto', 'Pele e rosto'], ['barba', 'Barba e óculos'], ['roupa', 'Roupa'], ['fundo', 'Fundo']];
+const tabs = (sex: AvatarSex): [Tab, string][] => [['cabelo', 'Cabelo'], ['rosto', 'Pele e rosto'], ['barba', sex === 'm' ? 'Barba e óculos' : 'Óculos'], ['roupa', 'Roupa'], ['fundo', 'Fundo']];
+const SEX_LABEL: Record<AvatarSex, string> = { m: 'Masculino', f: 'Feminino' };
 
 function Swatches({ colors, value, onPick, label }: { colors: string[]; value: string; onPick: (c: string) => void; label: string }) {
   return (
@@ -92,11 +110,29 @@ export default function AvatarBuilder({ onClose }: { onClose: () => void }) {
   const { reloadProfile } = useAuth();
   const qc = useQueryClient();
   const toast = useToast();
-  const [cfg, setCfg] = useState<AvatarConfig>(() => ({ ...DEFAULT_AVATAR, ...((profile.avatar_config as Partial<AvatarConfig> | null) ?? {}) }));
+  const saved = profile.avatar_config as Partial<AvatarConfig> | null;
+  const [cfg, setCfg] = useState<AvatarConfig>(() => fromSaved(saved));
+  // Primeira vez: começa escolhendo masculino ou feminino.
+  const [started, setStarted] = useState(!!saved);
+  const [allStyles, setAllStyles] = useState(false);
   const [tab, setTab] = useState<Tab>('cabelo');
   const [busy, setBusy] = useState(false);
   const set = (patch: Partial<AvatarConfig>) => setCfg((c) => ({ ...c, ...patch }));
   const preview = useMemo(() => dataUrl(avatarSvg(cfg)), [cfg]);
+  const starts = useMemo(() => ({ m: dataUrl(avatarSvg(START.m)), f: dataUrl(avatarSvg(START.f)) }), []);
+
+  /** Troca de personagem: mantém pele, rosto, roupa e fundo; ajusta o cabelo e tira a barba no feminino. */
+  const chooseSex = (sex: AvatarSex) => {
+    setAllStyles(false);
+    setCfg((c) => (c.sex === sex ? c : { ...c, sex, top: TOPS[sex].includes(c.top) ? c.top : START[sex].top, facialHair: sex === 'f' ? '' : c.facialHair }));
+  };
+  const begin = (sex: AvatarSex) => {
+    setCfg({ ...START[sex] });
+    setTab('cabelo');
+    setStarted(true);
+  };
+  const otherSex: AvatarSex = cfg.sex === 'm' ? 'f' : 'm';
+  const styleList = allStyles ? [...TOPS[cfg.sex], ...TOPS[otherSex].filter((t) => !TOPS[cfg.sex].includes(t))] : TOPS[cfg.sex];
 
   useEffect(() => {
     const k = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
@@ -153,14 +189,35 @@ export default function AvatarBuilder({ onClose }: { onClose: () => void }) {
           </div>
           <button className="send-x" aria-label="Fechar" onClick={onClose}><X size={20} aria-hidden /></button>
         </div>
-        <div className="avb-body">
-          <div className="avb-stage">
-            <img src={preview} alt="Prévia do seu avatar" className="avb-preview" />
-            <button className="btn btn-secondary btn-sm" onClick={() => setCfg(randomAvatar())}><Dices size={16} aria-hidden /> Sortear</button>
+        <div className={'avb-body' + (started ? '' : ' pick')}>
+          {started && (
+            <div className="avb-stage">
+              <img src={preview} alt="Prévia do seu avatar" className="avb-preview" />
+              <button className="btn btn-secondary btn-sm" onClick={() => setCfg(randomAvatar(cfg.sex))}><Dices size={16} aria-hidden /> Sortear</button>
+            </div>
+          )}
+          {!started ? (
+          <div className="avb-panel avb-start">
+            <div className="avb-label">Para começar, escolha o seu personagem</div>
+            <p className="avb-start-sub">Depois você ajusta cabelo, pele, rosto, roupa e fundo. Dá para trocar a qualquer momento.</p>
+            <div className="avb-start-grid">
+              {(['m', 'f'] as AvatarSex[]).map((s) => (
+                <button key={s} className="avb-start-card" onClick={() => begin(s)}>
+                  <img src={starts[s]} alt="" />
+                  <b>{SEX_LABEL[s]}</b>
+                </button>
+              ))}
+            </div>
           </div>
+          ) : (
           <div className="avb-panel">
+            <div className="avb-sex" role="radiogroup" aria-label="Personagem">
+              {(['m', 'f'] as AvatarSex[]).map((s) => (
+                <button key={s} role="radio" aria-checked={cfg.sex === s} className={'avb-sex-btn' + (cfg.sex === s ? ' on' : '')} onClick={() => chooseSex(s)}>{SEX_LABEL[s]}</button>
+              ))}
+            </div>
             <div className="avb-tabs" role="tablist">
-              {TABS.map(([k, l]) => (
+              {tabs(cfg.sex).map(([k, l]) => (
                 <button key={k} role="tab" aria-selected={tab === k} className={'avb-tab' + (tab === k ? ' on' : '')} onClick={() => setTab(k)}>{l}</button>
               ))}
             </div>
@@ -168,7 +225,10 @@ export default function AvatarBuilder({ onClose }: { onClose: () => void }) {
               {tab === 'cabelo' && (
                 <>
                   <Swatches label={cover ? 'Cor do lenço/chapéu: escolha em Roupa' : 'Cor do cabelo'} colors={HAIR} value={cfg.hair} onPick={(c) => set({ hair: c, facialHairColor: c })} />
-                  {grid('top', TOPS, 'Estilo')}
+                  {grid('top', styleList, 'Estilo')}
+                  <button className="avb-more" onClick={() => setAllStyles((v) => !v)}>
+                    {allStyles ? `Mostrar só os estilos ${cfg.sex === 'm' ? 'masculinos' : 'femininos'}` : `Ver também os estilos ${otherSex === 'm' ? 'masculinos' : 'femininos'}`}
+                  </button>
                 </>
               )}
               {tab === 'rosto' && (
@@ -181,8 +241,8 @@ export default function AvatarBuilder({ onClose }: { onClose: () => void }) {
               )}
               {tab === 'barba' && (
                 <>
-                  {grid('facialHair', BEARDS, 'Barba ou bigode', { '': 'Nenhum' })}
-                  {cfg.facialHair && <Swatches label="Cor da barba" colors={HAIR} value={cfg.facialHairColor} onPick={(c) => set({ facialHairColor: c })} />}
+                  {cfg.sex === 'm' && grid('facialHair', BEARDS, 'Barba ou bigode', { '': 'Nenhum' })}
+                  {cfg.sex === 'm' && cfg.facialHair && <Swatches label="Cor da barba" colors={HAIR} value={cfg.facialHairColor} onPick={(c) => set({ facialHairColor: c })} />}
                   {grid('accessories', GLASSES, 'Óculos', { '': 'Nenhum' })}
                 </>
               )}
@@ -195,10 +255,11 @@ export default function AvatarBuilder({ onClose }: { onClose: () => void }) {
               {tab === 'fundo' && <Swatches label="Cor do fundo" colors={BG} value={cfg.bg} onPick={(c) => set({ bg: c })} />}
             </div>
           </div>
+          )}
         </div>
         <div className="avb-foot">
           <span className="avb-credit">Personagens: Avataaars, de Pablo Stanley</span>
-          <button className="btn btn-primary btn-md" disabled={busy} onClick={save}><Sparkles size={17} aria-hidden /> {busy ? 'Salvando…' : 'Salvar meu avatar'}</button>
+          <button className="btn btn-primary btn-md" disabled={busy || !started} onClick={save}><Sparkles size={17} aria-hidden /> {busy ? 'Salvando…' : 'Salvar meu avatar'}</button>
         </div>
       </div>
     </div>

@@ -1865,3 +1865,26 @@ a.k-row:hover, button.k-row:hover { text-decoration: none; transform: translateY
   .avb-foot .btn { flex: 1; }
   .avb-credit { width: 100%; text-align: center; order: 2; }
 }
+
+/* Avatar: masculino/feminino */
+.avb-sex { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin: 16px 20px 0; padding: 4px; border-radius: 16px; background: var(--alt2); flex: none; }
+.avb-sex-btn { display: flex; align-items: center; justify-content: center; text-align: center; height: 44px; border-radius: 12px; font-weight: 800; font-size: 15px; color: var(--t3); transition: background .15s, color .15s, box-shadow .15s; }
+.avb-sex-btn.on { background: #fff; color: var(--navy); box-shadow: 0 1px 2px rgba(12, 27, 47, .08), 0 6px 16px -10px rgba(12, 27, 47, .4); }
+.avb-more { align-self: flex-start; font-weight: 700; font-size: 14px; color: var(--steel); text-decoration: underline; text-underline-offset: 3px; padding: 4px 0; }
+.avb-more:hover { color: var(--navy); }
+.avb-body.pick { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); }
+.avb-start { padding: 28px 24px; gap: 8px; justify-content: center; align-items: center; text-align: center; overflow-y: auto; }
+.avb-start .avb-start-grid { width: 100%; }
+.avb-start .avb-label { font-family: var(--display); font-size: 22px; letter-spacing: -.02em; }
+.avb-start-sub { margin: 0 0 12px; color: var(--t3); font-size: 15px; }
+.avb-start-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; max-width: 520px; }
+.avb-start-card { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 14px 14px 18px; border-radius: 24px; background: var(--bg); border: 2px solid transparent; transition: border-color .15s, transform .15s, background .15s; }
+.avb-start-card:hover { border-color: var(--navy); background: var(--ac-soft); transform: translateY(-2px); }
+.avb-start-card img { width: 100%; aspect-ratio: 1; border-radius: 18px; display: block; }
+.avb-start-card b { font-family: var(--display); font-weight: 800; font-size: 19px; color: var(--t); }
+@media (max-width: 760px) {
+  .avb-sex { margin: 12px 16px 0; }
+  .avb-start { padding: 18px 16px; justify-content: flex-start; }
+  .avb-start .avb-label { font-size: 19px; }
+  .avb-start-grid { gap: 10px; }
+}
