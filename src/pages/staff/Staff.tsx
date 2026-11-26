@@ -1,7 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 const AvatarBuilder = lazy(() => import('../../components/AvatarBuilder'));
-import { CalendarDays, Check, ChevronDown, FileText, Inbox, LayoutDashboard, MonitorPlay, LogOut, PenLine, Settings, Sparkles, Upload, type LucideIcon } from 'lucide-react';
+import { CalendarDays, Check, ChevronDown, FileText, Inbox, Info, LayoutDashboard, MonitorPlay, LogOut, PenLine, Settings, Sparkles, Upload, type LucideIcon } from 'lucide-react';
 import { Link, Outlet, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useIsMobile } from '../../lib/useIsMobile';
 import { FILE_SUMMARY, forbiddenHits, MAX_UPLOAD_BYTES, POINT_SECS, SLOTS, VERDICTS, type Feedback, type FeedbackFile, type PointSec, type Verdict } from '../../../shared/domain';
@@ -120,6 +120,7 @@ export function StaffLayout() {
                   <div style={{ minWidth: 0 }}><b>{profile.full_name}</b><span>{profile.email}</span></div>
                 </div>
                   <button role="menuitem" onClick={() => { setMe(false); setBuilder(true); }}><Sparkles size={19} aria-hidden /> {profile.avatar_config ? 'Editar meu avatar' : 'Criar meu avatar'}</button>
+                <Link to="/equipe/plataforma" role="menuitem"><Info size={19} aria-hidden /> Sobre a plataforma</Link>
                 <Link to="/equipe/config" role="menuitem"><Settings size={19} aria-hidden /> Ajustes e grupos</Link>
                 <div className="tn-menu-sep" />
                 <button role="menuitem" onClick={logout}><LogOut size={19} aria-hidden /> Sair</button>

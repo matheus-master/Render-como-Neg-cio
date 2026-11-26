@@ -25,6 +25,7 @@ const AulasHome = lazy(() => import('./pages/Aulas').then((m) => ({ default: m.A
 const Curso = lazy(() => import('./pages/Aulas').then((m) => ({ default: m.Curso })));
 const Aula = lazy(() => import('./pages/Aulas').then((m) => ({ default: m.Aula })));
 const AulasAdmin = lazy(() => import('./pages/staff/AulasAdmin').then((m) => ({ default: m.AulasAdmin })));
+const Plataforma = lazy(() => import('./pages/staff/Plataforma').then((m) => ({ default: m.Plataforma })));
 const CursoAdmin = lazy(() => import('./pages/staff/AulasAdmin').then((m) => ({ default: m.CursoAdmin })));
 const lz = (el: ReactNode) => <Suspense fallback={<div className="page"><PageSkeleton /></div>}>{el}</Suspense>;
 import './styles.css';
@@ -67,6 +68,7 @@ function App() {
         <Route path="config" element={<Configuracoes />} />
         <Route path="aulas" element={lz(<AulasAdmin />)} />
         <Route path="aulas/:id" element={lz(<CursoAdmin />)} />
+        <Route path="plataforma" element={lz(<Plataforma />)} />
       </Route>
       <Route element={<Guard><StudentLayout /></Guard>}>
         <Route index element={<Inicio />} />
