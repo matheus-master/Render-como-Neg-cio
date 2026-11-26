@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowUp, Check, Copy, ImagePlus, MessageSquarePlus, PanelLeft, Trash2, X } from 'lucide-react';
+import { ArrowUp, BarChart3, Check, Clock, Copy, ImagePlus, Lock, MessageCircle, MessageSquarePlus, PanelLeft, Target, Trash2, Wand2, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -11,10 +11,10 @@ import { useToast } from '../lib/toast';
 import { useIsMobile } from '../lib/useIsMobile';
 
 const MODES = [
-  { k: '', label: 'Automático', hint: 'O Harvey escolhe o nível certo' },
-  { k: '/consultor', label: 'Consultor', hint: 'Resposta rápida e mensagem pronta' },
-  { k: '/estrategista', label: 'Estrategista', hint: 'Plano completo da negociação' },
-  { k: '/diretor', label: 'Diretor', hint: 'Seu negócio e seus números' },
+  { k: '', label: 'Automático', Icon: Wand2, desc: 'o Harvey escolhe sozinho o nível certo para a sua pergunta.' },
+  { k: '/consultor', label: 'Consultor', Icon: MessageCircle, desc: 'resposta rápida, com a análise da conversa e uma mensagem pronta para enviar ao cliente.' },
+  { k: '/estrategista', label: 'Estrategista', Icon: Target, desc: 'plano completo da negociação: perfil do cliente, objeções, riscos e o caminho até o fechamento.' },
+  { k: '/diretor', label: 'Diretor', Icon: BarChart3, desc: 'olha o seu negócio como um todo: funil, conversão e metas, com os números dos seus relatórios.' },
 ] as const;
 
 const STARTERS: { title: string; sub: string; text: string; print?: boolean; send?: boolean }[] = [
@@ -195,11 +195,6 @@ export default function Harvey() {
           {!empty && mobile && <button className="rv-x" aria-label="Nova conversa" onClick={newChat}><MessageSquarePlus size={18} aria-hidden /></button>}
         </header>
 
-        {!on && (
-          <div className="hv-off">
-            O Harvey está pronto, mas ainda não foi ligado no portal: falta a chave de IA. Assim que a equipe ligar, você já pode conversar por aqui.
-          </div>
-        )}
 
         <div className="hv-scroll">
           {empty ? (
@@ -265,40 +260,70 @@ export default function Harvey() {
           )}
         </div>
 
-        <div className="hv-composer">
-          <div className="hv-modes" role="radiogroup" aria-label="Nível de atuação">
-            {MODES.map((m) => (
-              <button key={m.label} role="radio" aria-checked={mode === m.k} className={mode === m.k ? 'on' : ''} title={m.hint} onClick={() => setMode(m.k)}>{m.label}</button>
-            ))}
-          </div>
-          {(prints.length > 0 || uploading > 0) && (
-            <div className="hv-prints">
-              {prints.map((p) => (
-                <div key={p.path} className="hv-print">
-                  <img src={p.url} alt="Print anexado" />
-                  <button aria-label="Tirar print" onClick={() => setPrints((x) => x.filter((y) => y.path !== p.path))}><X size={12} /></button>
+        {on ? (
+          <div className="hv-composer">
+            <div className="hv-mode">
+              <div className="hv-mode-row">
+                <span className="hv-mode-q">Como o Harvey responde</span>
+                <div className="hv-modes" role="radiogroup" aria-label="Como o Harvey responde">
+                  {MODES.map((m) => (
+                    <button key={m.label} role="radio" aria-checked={mode === m.k} className={mode === m.k ? 'on' : ''} onClick={() => setMode(m.k)}>
+                      <m.Icon size={14} aria-hidden /> {m.label}
+                    </button>
+                  ))}
                 </div>
-              ))}
-              {Array.from({ length: uploading }).map((_, i) => <div key={i} className="hv-print loading" />)}
+              </div>
+              <div className="hv-mode-desc">
+                <b>{MODES.find((m) => m.k === mode)!.label}:</b> {MODES.find((m) => m.k === mode)!.desc}
+              </div>
             </div>
-          )}
-          <div className="hv-box">
-            <input ref={fileIn} type="file" accept="image/*" multiple hidden onChange={(e) => { addFiles([...(e.target.files || [])]); e.target.value = ''; }} />
-            <button className="hv-attach" aria-label="Anexar print" title="Anexar print (até 4)" disabled={!on || busy || prints.length >= 4} onClick={() => fileIn.current?.click()}><ImagePlus size={19} aria-hidden /></button>
-            <textarea
-              ref={area}
-              rows={1}
-              value={text}
-              disabled={!on}
-              placeholder={on ? 'Conte a situação ou cole o print (Ctrl+V)…' : 'O Harvey ainda não foi ligado'}
-              onChange={(e) => setText(e.target.value)}
-              onPaste={(e) => { const f = [...e.clipboardData.files]; if (f.length) { e.preventDefault(); addFiles(f); } }}
-              onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey && !mobile) { e.preventDefault(); send(); } }}
-            />
-            <button className="hv-send" aria-label="Enviar" disabled={!on || busy || uploading > 0 || (!text.trim() && !prints.length)} onClick={() => send()}><ArrowUp size={18} aria-hidden /></button>
+            {(prints.length > 0 || uploading > 0) && (
+              <div className="hv-prints">
+                {prints.map((p) => (
+                  <div key={p.path} className="hv-print">
+                    <img src={p.url} alt="Print anexado" />
+                    <button aria-label="Tirar print" onClick={() => setPrints((x) => x.filter((y) => y.path !== p.path))}><X size={12} /></button>
+                  </div>
+                ))}
+                {Array.from({ length: uploading }).map((_, i) => <div key={i} className="hv-print loading" />)}
+              </div>
+            )}
+            <div className="hv-box">
+              <input ref={fileIn} type="file" accept="image/*" multiple hidden onChange={(e) => { addFiles([...(e.target.files || [])]); e.target.value = ''; }} />
+              <textarea
+                ref={area}
+                rows={2}
+                value={text}
+                aria-label="Mensagem para o Harvey"
+                placeholder={mobile ? 'Conte a situação do cliente…' : 'Conte a situação do cliente ou cole aqui o print da conversa (Ctrl+V)…'}
+                onChange={(e) => setText(e.target.value)}
+                onPaste={(e) => { const f = [...e.clipboardData.files]; if (f.length) { e.preventDefault(); addFiles(f); } }}
+                onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey && !mobile) { e.preventDefault(); send(); } }}
+              />
+              <div className="hv-box-bar">
+                <button className="hv-attach" title="Anexar prints da conversa (até 4)" disabled={busy || prints.length >= 4} onClick={() => fileIn.current?.click()}>
+                  <ImagePlus size={17} aria-hidden /> Anexar print{prints.length > 0 && <span className="hv-count">{prints.length}/4</span>}
+                </button>
+                <span style={{ flex: 1 }} />
+                {!mobile && <span className="hv-kbd"><kbd>Enter</kbd> envia · <kbd>Shift</kbd>+<kbd>Enter</kbd> quebra linha</span>}
+                <button className="hv-send" disabled={busy || uploading > 0 || (!text.trim() && !prints.length)} onClick={() => send()}>
+                  {busy ? 'Pensando…' : 'Enviar'} <ArrowUp size={16} aria-hidden />
+                </button>
+              </div>
+            </div>
+            <div className="hv-note"><Lock size={12} aria-hidden /> A equipe RCN pode ver suas conversas com o Harvey para te acompanhar. Não envie senhas nem dados bancários.</div>
           </div>
-          <div className="hv-note">A equipe RCN pode ver suas conversas com o Harvey para te acompanhar. Não envie senhas nem dados bancários.</div>
-        </div>
+        ) : (
+          <div className="hv-composer">
+            <div className="hv-soon">
+              <div className="hv-soon-ico"><Clock size={18} aria-hidden /></div>
+              <div>
+                <b>O Harvey está quase pronto</b>
+                <span>A equipe RCN está finalizando a ativação. Quando ele estiver ligado, é só voltar aqui: dá para mandar o print da conversa com o cliente ou contar a situação, e ele responde na hora.</span>
+              </div>
+            </div>
+          </div>
+        )}
       </section>
     </div>
   );
