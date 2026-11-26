@@ -203,6 +203,7 @@ export default function StudentLayout() {
                     <span className="tn-ico">
                       <Icon size={21} strokeWidth={isActive ? 2.3 : 1.8} aria-hidden />
                       {counts[to] > 0 && <span className="tn-count" aria-label={`${counts[to]} novos`}>{counts[to]}</span>}
+                      {to === '/harvey' && <span className="tn-ai" aria-label="com inteligência artificial">IA</span>}
                     </span>
                     <span className="tn-label">{label}</span>
                   </>
@@ -284,7 +285,7 @@ export default function StudentLayout() {
               {MORE.map(([to, label, Icon, sub]) => (
                 <Link key={to} to={to} onClick={() => setMore(false)} className={'more-tile' + (isOn(to) ? ' on' : '')}>
                   <Tile Icon={Icon} tone={to === '/sessoes' ? 'red' : 'blue'} />
-                  <b>{label}</b>
+                  <b>{label}{to === '/harvey' && <span className="tn-ai inline">IA</span>}</b>
                   <span>{sub}</span>
                 </Link>
               ))}
