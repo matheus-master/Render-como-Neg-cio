@@ -1,5 +1,5 @@
-import { BarChart3, Briefcase, CalendarDays, ChevronRight, FileStack, FileText, FileUp, House, LifeBuoy, LogOut, MessageSquareText, MoreHorizontal, Plus, Trophy, UserRound, X, type LucideIcon } from 'lucide-react';
-import { useState } from 'react';
+import { BarChart3, Briefcase, CalendarDays, ChevronDown, ChevronRight, FileStack, FileText, FileUp, House, LifeBuoy, LogOut, MessageSquareText, MoreHorizontal, Plus, Trophy, UserRound, X, type LucideIcon } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { accessOf, useAuth, useProfile } from '../lib/auth';
 import { useDocs, useGami } from '../lib/data';
@@ -9,15 +9,15 @@ import { Tile } from './kit';
 import { useMyEvents, useRespond } from '../lib/agenda';
 import { useIsMobile } from '../lib/useIsMobile';
 
-/** Menu do topo (computador): só palavras, como nas pranchas. Perfil, Feedback e Sair ficam no avatar. */
-const TOP: [string, string][] = [
-  ['/', 'Início'],
-  ['/documentos', 'Documentos'],
-  ['/relatorios', 'Relatórios'],
-  ['/gamificacao', 'Gamificação'],
-  ['/calendario', 'Agenda'],
-  ['/harvey', 'Harvey'],
-  ['/sessoes', 'Ajuda'],
+/** Menu do topo (computador): uma palavra embaixo de cada ícone. Perfil, Feedback e Sair ficam no menu da conta. */
+const TOP: [string, string, LucideIcon][] = [
+  ['/', 'Início', House],
+  ['/documentos', 'Documentos', FileText],
+  ['/relatorios', 'Relatórios', BarChart3],
+  ['/gamificacao', 'Gamificação', Trophy],
+  ['/calendario', 'Agenda', CalendarDays],
+  ['/harvey', 'Harvey', Briefcase],
+  ['/sessoes', 'Ajuda', LifeBuoy],
 ];
 /** Barra do celular: destinos com palavra + o "Enviar" no meio. */
 const TABS_L: [string, string, LucideIcon][] = [
@@ -139,7 +139,30 @@ export default function StudentLayout() {
   const [more, setMore] = useState(false);
   const [send, setSend] = useState(false);
   const [me, setMe] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+  const events = useMyEvents();
   const badge = unseen.length;
+  const invites = (events.data || []).filter((e) => !e.canceled && e.me.response === 'pendente' && new Date(e.ends_at).getTime() > Date.now()).length;
+  const counts: Record<string, number> = { '/documentos': badge, '/calendario': invites };
+  const xpPct = gami.xpMax ? Math.round((gami.xpLevel / gami.xpMax) * 100) : 0;
+  const nextLevel = gami.current ? gami.levels.find((l) => l.n === gami.current!.n + 1) : undefined;
+  const left = gami.tasksTotal - gami.tasksDone;
+
+  // Menu com sombra quando a página rola; menu da conta fecha ao trocar de tela ou com Esc.
+  useEffect(() => {
+    if (mobile) return;
+    const on = () => setScrolled(window.scrollY > 8);
+    on();
+    window.addEventListener('scroll', on, { passive: true });
+    return () => window.removeEventListener('scroll', on);
+  }, [mobile]);
+  useEffect(() => setMe(false), [pathname]);
+  useEffect(() => {
+    if (!me) return;
+    const k = (e: KeyboardEvent) => e.key === 'Escape' && setMe(false);
+    window.addEventListener('keydown', k);
+    return () => window.removeEventListener('keydown', k);
+  }, [me]);
   const inNova = pathname.startsWith('/documentos/nova');
   const isOn = (p: string) => (p === '/' ? pathname === '/' : pathname.startsWith(p));
   const onTab = (p: string) => isOn(p) && !more && !send;
@@ -170,37 +193,60 @@ export default function StudentLayout() {
           </Link>
         </header>
       ) : (
-        <header className="topnav-bar">
+        <header className={'topnav-bar' + (scrolled ? ' scrolled' : '')}>
           <Logo white />
           <nav className="tn-links" aria-label="Menu principal">
-            {TOP.map(([to, label]) => (
-              <NavLink key={to} to={to} end={to === '/'} className={({ isActive }) => (isActive ? 'on' : '')}>
-                {label}
-                {to === '/documentos' && badge > 0 && <span className="badge">{badge}</span>}
+            {TOP.map(([to, label, Icon]) => (
+              <NavLink key={to} to={to} end={to === '/'} className={({ isActive }) => 'tn-item' + (isActive ? ' on' : '')} title={label}>
+                {({ isActive }) => (
+                  <>
+                    <span className="tn-ico">
+                      <Icon size={21} strokeWidth={isActive ? 2.3 : 1.8} aria-hidden />
+                      {counts[to] > 0 && <span className="tn-count" aria-label={`${counts[to]} novos`}>{counts[to]}</span>}
+                    </span>
+                    <span className="tn-label">{label}</span>
+                  </>
+                )}
               </NavLink>
             ))}
           </nav>
-          {gami.current && (
-            <Link to="/gamificacao" className="tn-level" title={`${gami.xpLevel} de ${gami.xpMax} XP`}>
-              <span className="tn-ring" style={{ ['--p' as string]: (gami.xpMax ? Math.round((gami.xpLevel / gami.xpMax) * 100) : 0) + '%' }} />
-              {gami.current.name}
-            </Link>
-          )}
           <button className="tn-send" onClick={() => setSend(true)}>
-            <Plus size={19} strokeWidth={2.6} aria-hidden /> Enviar
+            <Plus size={20} strokeWidth={2.6} aria-hidden /> Enviar
           </button>
           <div className="tn-me">
-            <button className="tn-avatar" aria-label="Minha conta" aria-expanded={me} onClick={() => setMe(!me)}>
-              <Avatar path={profile.avatar_path} name={profile.full_name} className="avatar-btn" size={40} />
+            <button className={'tn-me-btn' + (me ? ' open' : '')} aria-haspopup="menu" aria-expanded={me} onClick={() => setMe(!me)}>
+              <span className="tn-ring" style={{ ['--p' as string]: xpPct + '%' }} title={gami.current ? `${gami.current.name}: ${xpPct}% do nível` : undefined}>
+                <Avatar path={profile.avatar_path} name={profile.full_name} className="avatar-btn" size={38} />
+              </span>
+              <span className="tn-me-txt">
+                <b>{profile.full_name.split(' ')[0]}</b>
+                <small>{gami.current ? `${gami.current.name} · ${xpPct}%` : profile.group_name}</small>
+              </span>
+              <ChevronDown size={17} className="tn-chev" aria-hidden />
             </button>
             {me && (
               <>
                 <div className="tn-scrim" onClick={() => setMe(false)} />
                 <div className="tn-menu" role="menu">
-                  <div className="tn-menu-head"><b>{profile.full_name}</b><span>{profile.group_name}</span></div>
-                  <Link to="/perfil" role="menuitem" onClick={() => setMe(false)}><UserRound size={18} aria-hidden /> Meu perfil</Link>
-                  <Link to="/feedback" role="menuitem" onClick={() => setMe(false)}><MessageSquareText size={18} aria-hidden /> Feedback da mentoria</Link>
-                  <button role="menuitem" onClick={() => { setMe(false); logout(); }}><LogOut size={18} aria-hidden /> Sair</button>
+                  <div className="tn-menu-head">
+                    <Avatar path={profile.avatar_path} name={profile.full_name} className="avatar-btn" size={44} />
+                    <div style={{ minWidth: 0 }}><b>{profile.full_name}</b><span>{profile.group_name || profile.email}</span></div>
+                  </div>
+                  {gami.current && (
+                    <Link to="/gamificacao" role="menuitem" className="tn-lvl">
+                      <div className="between" style={{ alignItems: 'baseline' }}>
+                        <span className="tn-lvl-k">Nível {gami.current.n} de {gami.levels.length}</span>
+                        <span className="tn-lvl-k">{xpPct}%</span>
+                      </div>
+                      <b>{gami.current.name}</b>
+                      <span className="tn-lvl-bar"><i style={{ width: xpPct + '%' }} /></span>
+                      <small>{left > 0 ? `${left === 1 ? 'Falta 1 tarefa' : `Faltam ${left} tarefas`}${nextLevel ? ` para ${nextLevel.name}` : ''}` : 'Nível completo'}</small>
+                    </Link>
+                  )}
+                  <Link to="/perfil" role="menuitem"><UserRound size={19} aria-hidden /> Meu perfil</Link>
+                  <Link to="/feedback" role="menuitem"><MessageSquareText size={19} aria-hidden /> Feedback da mentoria</Link>
+                  <div className="tn-menu-sep" />
+                  <button role="menuitem" onClick={() => { setMe(false); logout(); }}><LogOut size={19} aria-hidden /> Sair</button>
                 </div>
               </>
             )}
