@@ -11,6 +11,8 @@ export interface Env {
   /** Opcional: sem ele, o e-mail de devolutiva liberada não é enviado. */
   RESEND_API_KEY?: string;
   EMAIL_FROM?: string;
+  /** Opcional: token do Digisac (Conta > API > Tokens de acesso pessoal) para o "Cobrar" sair pelo WhatsApp da RCN. */
+  DIGISAC_TOKEN?: string;
 }
 
 export interface AnalysisMessage {

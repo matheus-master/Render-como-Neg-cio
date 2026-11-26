@@ -1,10 +1,12 @@
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import { MessageCircle } from 'lucide-react';
-import { useState } from 'react';
-import { planStatus, STALE_DAYS, usePlans, useMyPlans, useToggleItem, whatsappLink, type ActionPlan } from '../lib/agenda';
+import { Copy, MessageCircle, Send, X } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { BigButton, Note } from './kit';
+import { useFeatures } from '../lib/data';
+import { planStatus, STALE_DAYS, usePlans, useMyPlans, useToggleItem, type ActionPlan } from '../lib/agenda';
 import { fmtDay } from '../lib/format';
-import { supabase } from '../lib/supabase';
+import { apiPost, supabase } from '../lib/supabase';
 import { useToast } from '../lib/toast';
 import { Avatar } from './Avatar';
 import { Mark } from './ui';
@@ -160,27 +162,95 @@ export function StaffPlans({ studentId, name, phone }: { studentId: string; name
   );
 }
 
-/** Abre o WhatsApp com a mensagem pronta e registra a cobrança. */
+/** Configurações da equipe (lidas por todos; editadas só pela equipe). */
+export function useSettings() {
+  return useQuery({
+    queryKey: ['settings-all'],
+    queryFn: async () => Object.fromEntries(((await supabase.from('settings').select('key, value')).data || []).map((r) => [r.key, r.value])) as Record<string, string>,
+  });
+}
+
+/** "Cobrar": abre a mensagem pronta para revisar e envia pelo WhatsApp da RCN no Digisac (ou copia para colar lá). */
 function NudgeButton({ plan, name, phone, small }: { plan: ActionPlan; name: string; phone: string; small?: boolean }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <button className={'btn btn-sm ' + (small ? 'btn-secondary' : 'btn-primary')} onClick={() => setOpen(true)}>
+        <MessageCircle size={14} aria-hidden /> Cobrar
+      </button>
+      {open && <NudgeModal plan={plan} name={name} phone={phone} onClose={() => setOpen(false)} />}
+    </>
+  );
+}
+
+function NudgeModal({ plan, name, phone, onClose }: { plan: ActionPlan; name: string; phone: string; onClose: () => void }) {
   const qc = useQueryClient();
   const toast = useToast();
+  const feat = useFeatures();
+  const settings = useSettings();
   const st = planStatus(plan);
   const next = plan.items.find((i) => !i.done_at);
-  const msg = `Oi, ${name.split(' ')[0]}! Tudo bem? Passando para saber como está o seu plano de ação. Você já fez ${st.done} de ${st.total} passos${next ? ` — o próximo é "${next.text}"` : ''}. Está conseguindo aplicar? Se travou em algo, me conta que a gente te ajuda.`;
-  const link = whatsappLink(phone, msg);
-  const go = async () => {
-    await supabase.from('plan_nudges').insert({ plan_id: plan.id, channel: link ? 'whatsapp' : 'manual' });
+  const first = name.split(' ')[0];
+  const [text, setText] = useState(`Oi, ${first}! Tudo bem? Passando para saber como está o seu plano de ação. Você já fez ${st.done} de ${st.total} passos${next ? ` — o próximo é "${next.text}"` : ''}. Está conseguindo aplicar? Se travou em algo, me conta que a gente te ajuda.`);
+  const [busy, setBusy] = useState(false);
+  const dgUrl = settings.data?.digisac_url?.trim();
+  const ready = !!feat.data?.digisac && !!dgUrl && !!settings.data?.digisac_service_id;
+  const missing = !feat.data?.digisac ? 'falta o token do Digisac' : !dgUrl ? 'falta o endereço do Digisac' : 'falta escolher a conexão';
+
+  useEffect(() => {
+    const k = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
+    window.addEventListener('keydown', k);
+    return () => window.removeEventListener('keydown', k);
+  }, [onClose]);
+
+  const record = async (channel: string) => {
+    await supabase.from('plan_nudges').insert({ plan_id: plan.id, channel });
     qc.invalidateQueries({ queryKey: ['plans-staff'] });
-    if (link) window.open(link, '_blank');
-    else {
-      await navigator.clipboard?.writeText(msg).catch(() => undefined);
-      toast('Aluno sem WhatsApp no perfil. A mensagem foi copiada e a cobrança registrada.');
+  };
+  const send = async () => {
+    setBusy(true);
+    try {
+      await apiPost('/api/digisac/send', { studentId: plan.student_id, text });
+      await record('digisac');
+      toast(`Mensagem enviada pelo Digisac para ${first}.`);
+      onClose();
+    } catch (e) {
+      toast((e as Error).message || 'Não deu para enviar pelo Digisac.');
+    } finally {
+      setBusy(false);
     }
   };
+  const copy = async () => {
+    await navigator.clipboard?.writeText(text).catch(() => undefined);
+    await record('manual');
+    toast(`Mensagem copiada. Cole na conversa de ${first} no Digisac.`);
+    if (dgUrl) window.open(/^https?:/i.test(dgUrl) ? dgUrl : 'https://' + dgUrl, '_blank', 'noopener');
+    onClose();
+  };
+
   return (
-    <button className={'btn btn-sm ' + (small ? 'btn-secondary' : 'btn-primary')} onClick={go} title={msg}>
-      <MessageCircle size={14} aria-hidden /> Cobrar
-    </button>
+    <div className="modal-backdrop" onClick={onClose}>
+      <div className="modal nudge-modal" role="dialog" aria-modal="true" aria-label={`Cobrar ${name}`} onClick={(e) => e.stopPropagation()}>
+        <div className="between" style={{ alignItems: 'flex-start', gap: 12 }}>
+          <div style={{ minWidth: 0 }}>
+            <div className="k-eyebrow">Cobrar plano de ação</div>
+            <div className="nudge-title">{name}</div>
+            <div className="k-row-sub">{phone ? `WhatsApp ${phone}` : 'Sem WhatsApp no perfil'} · {st.done} de {st.total} passos · parado {days(st.idle)}</div>
+          </div>
+          <button className="send-x" aria-label="Fechar" onClick={onClose}><X size={20} aria-hidden /></button>
+        </div>
+        <label className="field">
+          <span>Mensagem (dá para editar)</span>
+          <textarea className="textarea" rows={6} value={text} onChange={(e) => setText(e.target.value)} />
+        </label>
+        {ready ? (
+          <BigButton a={{ label: busy ? 'Enviando…' : 'Enviar pelo Digisac', Icon: Send, onClick: send, disabled: busy || !text.trim() || !phone }} />
+        ) : (
+          <Note tone="amber">O envio direto pelo Digisac ainda não está ligado: {missing} (veja em Ajustes). Por enquanto, copie a mensagem e cole na conversa do aluno no Digisac.</Note>
+        )}
+        <BigButton a={{ label: dgUrl ? 'Copiar e abrir o Digisac' : 'Copiar mensagem', Icon: Copy, onClick: copy, disabled: !text.trim() }} variant={ready ? 'soft' : 'primary'} />
+      </div>
+    </div>
   );
 }
 

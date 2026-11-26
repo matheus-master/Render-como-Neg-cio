@@ -1,4 +1,5 @@
 import { FILE_SUMMARY, isPointSec, type Feedback } from '../shared/domain';
+import { digisacSend, digisacServices } from './digisac';
 import { markFailed, processSubmission } from './analyze';
 import { notifyReleased } from './email';
 import { PermanentError, type AnalysisMessage, type Env } from './env';
@@ -75,7 +76,7 @@ async function enqueue(env: Env, submissionId: string) {
 }
 
 async function api(req: Request, url: URL, env: Env, ctx: ExecutionContext): Promise<Response> {
-  if (url.pathname === '/api/health') return json({ ok: true, ai: !!(env.ANTHROPIC_API_KEY && env.SUPABASE_SERVICE_ROLE_KEY), harvey: !!env.ANTHROPIC_API_KEY, email: !!env.RESEND_API_KEY });
+  if (url.pathname === '/api/health') return json({ ok: true, ai: !!(env.ANTHROPIC_API_KEY && env.SUPABASE_SERVICE_ROLE_KEY), harvey: !!env.ANTHROPIC_API_KEY, email: !!env.RESEND_API_KEY, digisac: !!env.DIGISAC_TOKEN });
 
   // POST /api/agents/harvey · conversa com o agente de vendas (resposta em SSE)
   if (url.pathname === '/api/agents/harvey' && req.method === 'POST') {
@@ -89,6 +90,18 @@ async function api(req: Request, url: URL, env: Env, ctx: ExecutionContext): Pro
     const caller = await getCaller(env, req);
     if (!caller) return json({ error: 'Sessão expirada. Entre de novo.' }, 401);
     return instagramReview(req, env, caller, ctx);
+  }
+
+  // Digisac (só equipe): conexões e envio de mensagem pelo WhatsApp da RCN
+  if (url.pathname === '/api/digisac/services' && req.method === 'GET') {
+    const caller = await getCaller(env, req);
+    if (!caller) return json({ error: 'Sessão expirada. Entre de novo.' }, 401);
+    return digisacServices(env, caller);
+  }
+  if (url.pathname === '/api/digisac/send' && req.method === 'POST') {
+    const caller = await getCaller(env, req);
+    if (!caller) return json({ error: 'Sessão expirada. Entre de novo.' }, 401);
+    return digisacSend(req, env, caller);
   }
 
   // GET /api/calendar · eventos da agenda da mentoria (lidos do endereço iCal do Google Agenda)

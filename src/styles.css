@@ -1221,7 +1221,7 @@ a.card:active, button.card:active, .kpi:active { transform: none; }
 
 /* Movimento de entrada (só para quem não pediu menos movimento). */
 @media (prefers-reduced-motion: no-preference) {
-  .page > *, .staff-wrap > *, .flow > * { animation: rise .5s cubic-bezier(.2, .8, .2, 1) both; }
+  .page > *, .staff-wrap > *, .flow > * { animation: rise .5s cubic-bezier(.2, .8, .2, 1) backwards; }
   /* Janelas e avisos não entram com a página: têm a própria animação, imediata. */
   .page > .modal-backdrop, .page > .sheet-backdrop, .staff-wrap > .modal-backdrop, .flow > .modal-backdrop { animation: fade-in .18s ease-out both !important; animation-delay: 0s !important; }
   .page > :nth-child(2), .staff-wrap > :nth-child(2), .flow > :nth-child(2) { animation-delay: .04s; }
@@ -1254,7 +1254,7 @@ a.card:active, button.card:active, .kpi:active { transform: none; }
 .screen.wide { max-width: 1080px; }
 @media (max-width: 760px) { .screen { padding: 20px 16px 32px; gap: 22px; } .app.has-tabbar .screen { padding-bottom: 116px; } }
 @media (prefers-reduced-motion: no-preference) {
-  .screen > * { animation: rise .5s cubic-bezier(.2, .8, .2, 1) both; }
+  .screen > * { animation: rise .5s cubic-bezier(.2, .8, .2, 1) backwards; }
   .screen > :nth-child(2) { animation-delay: .04s; } .screen > :nth-child(3) { animation-delay: .08s; }
   .screen > :nth-child(4) { animation-delay: .12s; } .screen > :nth-child(n+5) { animation-delay: .16s; }
   .screen > .modal-backdrop, .screen > .sheet-backdrop { animation: fade-in .18s ease-out both !important; animation-delay: 0s !important; }
@@ -1620,7 +1620,7 @@ a.k-row:hover, button.k-row:hover { text-decoration: none; transform: translateY
   }
   .with-topnav .sh > * { grid-column: main-start / main-end; }
   .with-topnav .screen > .sh:has(+ .ws) { padding-bottom: 96px; }
-  .with-topnav .screen > .sh + .ws { margin-top: -84px; position: relative; z-index: 1; }
+  .with-topnav .screen > .sh + .ws { margin-top: -84px; position: relative; }
 
   /* Cabeçalho: título de app (não de capa), números em blocos */
   .with-topnav .sh-top { align-items: center; gap: 16px; }
@@ -1782,3 +1782,8 @@ a.k-row:hover, button.k-row:hover { text-decoration: none; transform: translateY
 .dev-file-frame { width: 100%; height: 72vh; border: 0; border-radius: 18px; background: #fff; box-shadow: 0 1px 2px rgba(12, 27, 47, .05); }
 .dev-file-img { width: 100%; border-radius: 18px; }
 @media (max-width: 760px) { .dev-file-frame { height: 60vh; } }
+
+/* Cobrar pelo Digisac */
+.nudge-modal { max-width: 560px; gap: 16px; }
+.nudge-title { font-weight: 900; font-size: 22px; color: var(--t); margin-top: 2px; }
+.nudge-modal .textarea { font-size: 15.5px; line-height: 1.5; min-height: 150px; }

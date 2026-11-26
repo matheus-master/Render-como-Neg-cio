@@ -1,7 +1,7 @@
 import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { ArrowRight, Check, FileText, PenLine, Search, Siren } from 'lucide-react';
 import { NextUp, Pill, Row, Screen, ScreenHead, Section, Side, Workspace } from '../../components/kit';
-import { useQueue } from '../../lib/data';
+import { useFeatures, useQueue } from '../../lib/data';
 import { useProfile } from '../../lib/auth';
 import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
@@ -9,7 +9,7 @@ import { SLOT_ORDER, SLOTS } from '../../../shared/domain';
 import { Chip, ErrorState, Mark, PageHead, VerdictChip } from '../../components/ui';
 import { firstName, fmtBRL, fmtDay, fmtDueRel, fmtLongToday, fmtPeriod, initials } from '../../lib/format';
 import { daysSince, LATE_DAYS, progressOf, useStaffOverview, type Overview, type StaffStudent } from '../../lib/staffData';
-import { supabase } from '../../lib/supabase';
+import { apiGet, supabase } from '../../lib/supabase';
 import { useToast } from '../../lib/toast';
 import { Avatar } from '../../components/Avatar';
 import { StaffPlans, StalePlansCard } from '../../components/Planos';
@@ -613,6 +613,38 @@ export function Configuracoes() {
   const [ics, setIcs] = useState<string | null>(null);
   const [calUrl, setCalUrl] = useState<string | null>(null);
   const icsVal = ics ?? settings.data?.calendar_ics_url ?? '';
+  const feat = useFeatures();
+  const [dgUrl, setDgUrl] = useState<string | null>(null);
+  const [svc, setSvc] = useState<string | null>(null);
+  const [services, setServices] = useState<{ id: string; name: string; type: string }[]>([]);
+  const [loadingSvc, setLoadingSvc] = useState(false);
+  const dgUrlVal = dgUrl ?? settings.data?.digisac_url ?? '';
+  const svcVal = svc ?? settings.data?.digisac_service_id ?? '';
+  const saveDigisac = async (silent = false) => {
+    const { error } = await supabase.from('settings').upsert([
+      { key: 'digisac_url', value: dgUrlVal.trim() },
+      { key: 'digisac_service_id', value: svcVal.trim() },
+    ]);
+    if (error) { toast('Não deu para salvar.'); return false; }
+    if (!silent) toast(svcVal ? 'Digisac salvo. O "Cobrar" já envia por lá.' : 'Endereço salvo. Agora escolha a conexão.');
+    qc.invalidateQueries({ queryKey: ['settings-all'] });
+    return true;
+  };
+  const loadServices = async () => {
+    setLoadingSvc(true);
+    try {
+      if (!(await saveDigisac(true))) return;
+      const r = await apiGet<{ services?: { id: string; name: string; type: string }[] }>('/api/digisac/services');
+      const list = r.services || [];
+      setServices(list);
+      if (!list.length) toast('Nenhuma conexão ativa encontrada no Digisac.');
+      else if (!svcVal && list.length === 1) setSvc(list[0]!.id);
+    } catch (e) {
+      toast((e as Error).message);
+    } finally {
+      setLoadingSvc(false);
+    }
+  };
   const calVal = calUrl ?? settings.data?.calendar_url ?? '';
   const validCode = /^[A-Z0-9]{2,}-?[A-Z0-9]{2,}$/.test(code.trim().toUpperCase());
 
@@ -727,6 +759,39 @@ export function Configuracoes() {
             <input className="input md" placeholder="https://calendar.google.com/…" value={calVal} onChange={(e) => setCalUrl(e.target.value)} />
           </label>
           <button className="btn btn-primary btn-sm" style={{ alignSelf: 'flex-start' }} onClick={saveCal}>Salvar agenda</button>
+        </div>
+
+        <div className="card stack" style={{ gap: 12 }}>
+          <div className="between" style={{ alignItems: 'center' }}>
+            <div className="h-card">Digisac</div>
+            {feat.data?.digisac ? <Pill tone="mint">Token configurado</Pill> : <Pill tone="amber">Falta o token</Pill>}
+          </div>
+          <div style={{ fontSize: 14, color: 'var(--t3)', marginTop: -6 }}>Com o Digisac ligado, o botão "Cobrar" envia a mensagem pelo WhatsApp da RCN, e a conversa fica no histórico do Digisac.</div>
+          {!feat.data?.digisac && (
+            <div className="k-note amber" style={{ fontSize: 13.5, fontWeight: 400 }}>
+              <div>
+                <b>1.</b> No Digisac: <b>Conta › API › Tokens de acesso pessoal</b>, gere um token (de preferência de um usuário supervisor).<br />
+                <b>2.</b> No Cloudflare: <b>Workers & Pages › rcn-portal › Settings › Variables and Secrets</b>, adicione o segredo <b>DIGISAC_TOKEN</b> com esse token.
+              </div>
+            </div>
+          )}
+          <label className="field">
+            <span>Endereço do Digisac</span>
+            <input className="input md" placeholder="https://suaempresa.digisac.app" value={dgUrlVal} onChange={(e) => setDgUrl(e.target.value)} />
+          </label>
+          <div style={{ fontSize: 12.5, color: 'var(--t3)', marginTop: -6 }}>Está em Conta › Informações, no Digisac.</div>
+          <label className="field">
+            <span>Conexão que envia (número da RCN)</span>
+            <div className="row" style={{ gap: 8 }}>
+              <select className="input md" style={{ flex: 1 }} value={svcVal} onChange={(e) => setSvc(e.target.value)} disabled={!services.length && !svcVal}>
+                {!svcVal && <option value="">{services.length ? 'Escolha a conexão' : 'Busque as conexões'}</option>}
+                {svcVal && !services.some((x) => x.id === svcVal) && <option value={svcVal}>Conexão salva ({svcVal.slice(0, 8)}…)</option>}
+                {services.map((x) => <option key={x.id} value={x.id}>{x.name}{x.type ? ` · ${x.type}` : ''}</option>)}
+              </select>
+              <button className="btn btn-secondary btn-sm" disabled={!feat.data?.digisac || !dgUrlVal.trim() || loadingSvc} onClick={loadServices}>{loadingSvc ? 'Buscando…' : 'Buscar conexões'}</button>
+            </div>
+          </label>
+          <button className="btn btn-primary btn-sm" style={{ alignSelf: 'flex-start' }} onClick={() => saveDigisac()}>Salvar Digisac</button>
         </div>
 
         <div className="card stack" style={{ gap: 10 }}>

@@ -375,7 +375,7 @@ export function useFeatures() {
     staleTime: 300_000,
     queryFn: async () => {
       const r = await fetch('/api/health').then((x) => x.json()).catch(() => ({}));
-      return { ai: !!r.ai, harvey: !!r.harvey, email: !!r.email };
+      return { ai: !!r.ai, harvey: !!r.harvey, email: !!r.email, digisac: !!r.digisac };
     },
   });
 }
